@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { PlusCircle, Search } from 'lucide-react'
+import { PlusCircle, Clock, Calendar as CalendarIcon, FileText, Users, X } from 'lucide-react'
 import AddArtistForm from './AddArtistForm'
 
 export default function AddEventForm({ isOpen, onClose, selectedDate, onAdded }: { isOpen: boolean, onClose: () => void, selectedDate: Date | null, onAdded?: () => void }) {
@@ -35,7 +35,6 @@ export default function AddEventForm({ isOpen, onClose, selectedDate, onAdded }:
     useEffect(() => {
         if (isOpen) {
             fetchArtists()
-            // Reset form
             setTitle('')
             setStartTime('')
             setEndTime('')
@@ -50,7 +49,6 @@ export default function AddEventForm({ isOpen, onClose, selectedDate, onAdded }:
 
         setLoading(true)
         try {
-            // Fix timezone offset by using local YYYY-MM-DD
             const offset = selectedDate.getTimezoneOffset()
             const d = new Date(selectedDate.getTime() - (offset * 60 * 1000))
             const dateStr = d.toISOString().split('T')[0]
@@ -65,7 +63,7 @@ export default function AddEventForm({ isOpen, onClose, selectedDate, onAdded }:
             })
 
             if (res.hasConflict) {
-                toast.warning("Evento salvo, mas atenção: Possível choque de data detectado com outro evento!")
+                toast.warning("Evento salvo, mas atenção: Possível choque de data detectado!")
             } else {
                 toast.success("Evento criado com sucesso!")
             }
@@ -88,68 +86,106 @@ export default function AddEventForm({ isOpen, onClose, selectedDate, onAdded }:
         }
     }
 
-    const formattedDate = selectedDate ? new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toLocaleDateString('pt-BR') : ''
+    const formattedDate = selectedDate ? new Date(selectedDate.getTime() - (selectedDate.getTimezoneOffset() * 60000)).toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+    }) : ''
 
     return (
         <>
             <Dialog open={isOpen} onOpenChange={onClose}>
-                <DialogContent className="sm:max-w-[500px] bg-zinc-900 border-zinc-800 text-zinc-100 max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Adicionar Evento</DialogTitle>
-                        <DialogDescription className="text-zinc-400">
-                            Data selecionada: {formattedDate}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="title">Nome do Evento *</Label>
-                            <Input id="title" value={title} onChange={e => setTitle(e.target.value)} required className="bg-zinc-800 border-zinc-700" />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="start_time">Horário de Início *</Label>
-                                <Input id="start_time" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} required className="bg-zinc-800 border-zinc-700" />
+                <DialogContent className="sm:max-w-[500px] bg-zinc-950 border-zinc-800 text-zinc-100 p-0 overflow-hidden shadow-2xl">
+                    <div className="bg-gradient-to-br from-zinc-900 to-black p-6 border-b border-zinc-800">
+                        <DialogHeader>
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+                                    <PlusCircle className="w-5 h-5 text-white" />
+                                </div>
+                                <DialogTitle className="text-xl font-bold tracking-tight text-white">Adicionar Evento</DialogTitle>
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="end_time">Horário de Fim</Label>
-                                <Input id="end_time" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="bg-zinc-800 border-zinc-700" />
-                            </div>
-                        </div>
+                            <DialogDescription className="text-zinc-500 text-sm flex items-center gap-1.5">
+                                <CalendarIcon className="w-3.5 h-3.5" /> {formattedDate}
+                            </DialogDescription>
+                        </DialogHeader>
+                    </div>
 
-                        <div className="grid gap-2 text-sm text-zinc-300">
-                            <Label>Atrações</Label>
-                            {selectedArtists.map(id => {
-                                const art = artists.find(a => a.id === id)
-                                return (
-                                    <div key={id} className="flex items-center justify-between bg-zinc-800 p-2 rounded border border-zinc-700">
-                                        <span>{art?.name}</span>
-                                        <button type="button" onClick={() => setSelectedArtists(selectedArtists.filter(ai => ai !== id))} className="text-red-400 text-xs">Remover</button>
+                    <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-6">
+                        <div className="space-y-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="title" className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                    <FileText className="w-3 h-3" /> Nome do Evento
+                                </Label>
+                                <Input id="title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Baile do Clubber" required className="bg-zinc-900 border-zinc-800 focus:border-white/20 h-10 transition-all" />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="start_time" className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                        <Clock className="w-3 h-3" /> Início
+                                    </Label>
+                                    <Input id="start_time" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} required className="bg-zinc-900 border-zinc-800 focus:border-white/20 h-10 transition-all" />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="end_time" className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                        <Clock className="w-3 h-3 text-zinc-500" /> Fim
+                                    </Label>
+                                    <Input id="end_time" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} className="bg-zinc-900 border-zinc-800 focus:border-white/20 h-10 transition-all" />
+                                </div>
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                    <Users className="w-3 h-3" /> Atrações
+                                </Label>
+                                
+                                {selectedArtists.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 p-3 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                                        {selectedArtists.map(id => {
+                                            const art = artists.find(a => a.id === id)
+                                            return (
+                                                <div key={id} className="flex items-center gap-2 bg-zinc-800 border border-zinc-700 px-2.5 py-1 rounded-full text-xs text-white">
+                                                    <span>{art?.name}</span>
+                                                    <button type="button" onClick={() => setSelectedArtists(selectedArtists.filter(ai => ai !== id))} className="text-zinc-500 hover:text-white transition-colors">
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            )
+                                        })}
                                     </div>
-                                )
-                            })}
+                                )}
 
-                            <Select onValueChange={handleArtistSelect}>
-                                <SelectTrigger className="bg-zinc-800 border-zinc-700 w-full mt-2">
-                                    <SelectValue placeholder="Adicionar Atração..." />
-                                </SelectTrigger>
-                                <SelectContent className="bg-zinc-800 border-zinc-700 text-zinc-100">
-                                    <SelectItem value="NEW" className="font-bold text-zinc-300"><PlusCircle className="inline w-4 h-4 mr-2" />Nova Atração</SelectItem>
-                                    {artists.filter(a => !selectedArtists.includes(a.id)).map(a => (
-                                        <SelectItem key={a.id} value={a.id}>{a.name} ({a.genre})</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                <Select onValueChange={handleArtistSelect}>
+                                    <SelectTrigger className="bg-zinc-900 border-zinc-800 focus:ring-0 focus:ring-offset-0 h-10 transition-all">
+                                        <SelectValue placeholder="Adicionar Atração..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-100 shadow-2xl">
+                                        <SelectItem value="NEW" className="font-bold text-white border-b border-zinc-900 mb-1 py-2">
+                                            <div className="flex items-center gap-2">
+                                                <PlusCircle className="w-4 h-4" /> Nova Atração
+                                            </div>
+                                        </SelectItem>
+                                        {artists.filter(a => !selectedArtists.includes(a.id)).map(a => (
+                                            <SelectItem key={a.id} value={a.id} className="py-2">{a.name} <span className="text-[10px] text-zinc-500 ml-1">({a.genre})</span></SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="desc" className="text-xs font-bold uppercase tracking-widest text-zinc-500">Descrição</Label>
+                                <textarea id="desc" rows={3} value={description} onChange={e => setDescription(e.target.value)} placeholder="Detalhes opcionais..." className="bg-zinc-900 border-zinc-800 rounded-xl p-3 text-sm outline-none focus:border-white/20 transition-all resize-none text-zinc-100" />
+                            </div>
                         </div>
 
-                        <div className="grid gap-2 mt-2">
-                            <Label htmlFor="desc">Descrição</Label>
-                            <textarea id="desc" rows={3} value={description} onChange={e => setDescription(e.target.value)} className="bg-zinc-800 border-zinc-700 rounded-md p-2 text-sm outline-none focus:ring-2 focus:ring-zinc-600" />
+                        <div className="flex gap-3 mt-2">
+                            <Button type="button" variant="outline" onClick={onClose} className="flex-1 border-zinc-800 hover:bg-zinc-900 text-zinc-400 font-bold h-11 rounded-xl transition-all">
+                                CANCELAR
+                            </Button>
+                            <Button type="submit" disabled={loading} className="flex-2 bg-white text-black hover:bg-zinc-200 font-bold h-11 rounded-xl transition-all shadow-lg shadow-white/5 uppercase tracking-wide">
+                                {loading ? 'SALVANDO...' : 'CRIAR EVENTO'}
+                            </Button>
                         </div>
-
-                        <Button type="submit" disabled={loading} className="w-full mt-4 bg-zinc-100 text-black hover:bg-zinc-300">
-                            {loading ? 'Salvando...' : 'Criar Evento'}
-                        </Button>
                     </form>
                 </DialogContent>
             </Dialog>

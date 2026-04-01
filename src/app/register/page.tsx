@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
+import { UserPlus, Mail, Lock } from 'lucide-react'
 
 export default async function RegisterPage({
     searchParams,
@@ -12,52 +13,72 @@ export default async function RegisterPage({
 }) {
     const resolvedParams = await searchParams
     return (
-        <div className="flex min-h-screen items-center justify-center p-4 bg-zinc-950 text-zinc-50">
-            <Card className="w-full max-w-sm bg-zinc-900 border-zinc-800">
-                <CardHeader>
-                    <CardTitle className="text-2xl font-bold tracking-tighter text-zinc-50">Cadastro</CardTitle>
-                    <CardDescription className="text-zinc-400">
-                        Crie sua conta no Agenda Clubber.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form action={signup} className="flex-1 flex flex-col w-full justify-center gap-4 text-foreground">
-                        <div className="grid gap-2">
-                            <Label htmlFor="email" className="text-zinc-300">Email</Label>
-                            <Input
-                                id="email"
-                                name="email"
-                                placeholder="seu@email.com"
-                                required
-                                className="bg-zinc-800 border-zinc-700 text-zinc-100"
-                            />
+        <div className="flex min-h-screen items-center justify-center p-4 bg-black text-zinc-50 font-sans selection:bg-zinc-50 selection:text-black">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(24,24,27,1)_0%,rgba(0,0,0,1)_100%)] z-0" />
+            
+            <Card className="w-full max-w-sm bg-zinc-950/50 border-zinc-800/50 backdrop-blur-2xl z-10 shadow-2xl overflow-hidden rounded-2xl">
+                <div className="bg-gradient-to-br from-zinc-900 to-black p-6 border-b border-zinc-800">
+                    <CardHeader className="p-0">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="bg-white p-2 rounded-xl shadow-lg shadow-white/10">
+                                <UserPlus className="w-6 h-6 text-black" />
+                            </div>
+                            <CardTitle className="text-2xl font-bold tracking-tighter text-white">Cadastro</CardTitle>
                         </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="password" className="text-zinc-300">Senha</Label>
-                            <Input
-                                id="password"
-                                name="password"
-                                type="password"
-                                placeholder="••••••••"
-                                required
-                                className="bg-zinc-800 border-zinc-700 text-zinc-100"
-                            />
+                        <CardDescription className="text-zinc-500 font-medium">
+                            Crie sua conta no Agenda Clubber.
+                        </CardDescription>
+                    </CardHeader>
+                </div>
+                
+                <CardContent className="p-6">
+                    <form action={signup} className="flex flex-col gap-6">
+                        <div className="space-y-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="email" className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                    <Mail className="w-3 h-3" /> Email
+                                </Label>
+                                <Input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    placeholder="seu@email.com"
+                                    required
+                                    className="bg-zinc-900 border-zinc-800 focus:border-white/20 transition-all h-11 rounded-xl"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="password" name="password" className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                    <Lock className="w-3 h-3" /> Senha
+                                </Label>
+                                <Input
+                                    id="password"
+                                    name="password"
+                                    type="password"
+                                    placeholder="••••••••"
+                                    required
+                                    className="bg-zinc-900 border-zinc-800 focus:border-white/20 transition-all h-11 rounded-xl"
+                                />
+                            </div>
                         </div>
-                        <Button type="submit" className="w-full mt-4 bg-zinc-50 text-zinc-900 hover:bg-zinc-200">
-                            Registrar
+
+                        <Button type="submit" className="w-full h-11 bg-white text-black hover:bg-zinc-200 font-bold rounded-xl transition-all shadow-lg shadow-white/5 uppercase tracking-wide">
+                            REGISTRAR
                         </Button>
+
                         {resolvedParams?.message && (
-                            <p className="mt-4 p-4 bg-zinc-800 border border-zinc-700 text-zinc-300 text-center text-sm rounded-md">
-                                {resolvedParams.message}
-                            </p>
+                            <div className="p-4 bg-zinc-900/50 border border-zinc-800/50 text-zinc-400 text-center text-xs rounded-xl font-medium italic">
+                                "{resolvedParams.message}"
+                            </div>
                         )}
                     </form>
                 </CardContent>
-                <CardFooter className="justify-center border-t border-zinc-800 pt-4 mt-2">
-                    <p className="text-sm text-zinc-400">
+                
+                <CardFooter className="justify-center border-t border-zinc-800/50 bg-zinc-950/30 py-4">
+                    <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
                         Já tem uma conta?{' '}
-                        <Link href="/login" className="text-zinc-50 underline hover:text-zinc-300 transition-colors">
-                            Fazer login
+                        <Link href="/login" className="text-white font-bold hover:underline transition-all">
+                            FAZER LOGIN
                         </Link>
                     </p>
                 </CardFooter>
