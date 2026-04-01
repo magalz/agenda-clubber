@@ -29,7 +29,7 @@ export default async function DashboardPage() {
                         await supa.auth.signOut()
                         redirect('/login')
                     }}>
-                        <Button variant="outline" className="border-zinc-700 bg-zinc-800 text-zinc-100 hover:bg-zinc-700">
+                        <Button type="submit" variant="outline" className="border-zinc-700 bg-zinc-800 text-zinc-100 hover:bg-zinc-700">
                             Sair
                         </Button>
                     </form>

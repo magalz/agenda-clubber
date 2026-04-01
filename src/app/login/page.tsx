@@ -21,7 +21,7 @@ export default async function LoginPage({
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form className="animate-in flex-1 flex flex-col w-full justify-center gap-4 text-foreground">
+                    <form action={login} className="animate-in flex-1 flex flex-col w-full justify-center gap-4 text-foreground">
                         <div className="grid gap-2">
                             <Label htmlFor="email" className="text-zinc-300">Email</Label>
                             <Input
@@ -43,7 +43,7 @@ export default async function LoginPage({
                                 className="bg-zinc-800 border-zinc-700 text-zinc-100"
                             />
                         </div>
-                        <Button formAction={login} className="w-full mt-4 bg-zinc-50 text-zinc-900 hover:bg-zinc-200">
+                        <Button type="submit" className="w-full mt-4 bg-zinc-50 text-zinc-900 hover:bg-zinc-200">
                             Entrar
                         </Button>
                         {resolvedParams?.message && (
