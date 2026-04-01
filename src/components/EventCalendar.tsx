@@ -5,12 +5,15 @@ import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
+import ptBrLocale from '@fullcalendar/core/locales/pt-br'
 import { getEvents } from '@/app/actions/calendar'
 import AddEventForm from './AddEventForm'
+import DayEventsModal from './DayEventsModal'
 import { toast } from 'sonner'
 
 export default function EventCalendar() {
-    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+    const [isDayModalOpen, setIsDayModalOpen] = useState(false)
     const [selectedDate, setSelectedDate] = useState<Date | null>(null)
     const [events, setEvents] = useState<any[]>([])
 
@@ -21,7 +24,9 @@ export default function EventCalendar() {
                 id: e.id,
                 title: e.title,
                 date: e.date,
-                allDay: !e.end_time, // Se não tiver endTime consideraremos allDay visualmente
+                allDay: !e.end_time,
+                start_time: e.start_time,
+                end_time: e.end_time,
                 start: e.start_time ? `${e.date}T${e.start_time}` : e.date,
                 end: e.end_time ? `${e.date}T${e.end_time}` : undefined,
                 extendedProps: {
@@ -41,7 +46,13 @@ export default function EventCalendar() {
 
     const handleDateClick = (arg: any) => {
         setSelectedDate(arg.date)
-        setIsModalOpen(true)
+        setIsDayModalOpen(true)
+    }
+
+    const handleEventClick = (info: any) => {
+        // Quando clica no evento, também abre o modal do dia para ver detalhes
+        setSelectedDate(new Date(info.event.startStr.split('T')[0] + 'T00:00:00'))
+        setIsDayModalOpen(true)
     }
 
     return (
@@ -55,22 +66,36 @@ export default function EventCalendar() {
                         center: 'title',
                         right: 'dayGridMonth,timeGridWeek'
                     }}
+                    locales={[ptBrLocale]}
                     locale="pt-br"
                     selectable={true}
                     dateClick={handleDateClick}
+                    eventClick={handleEventClick}
                     events={events}
                     height="100%"
                     timeZone="local"
-                    eventClick={(info) => {
-                        const artistsNames = info.event.extendedProps.artists?.map((a: any) => a.name).join(', ') || 'Nenhuma atração'
-                        toast.info(`${info.event.title} - Atrações: ${artistsNames}`)
+                    fixedWeekCount={false}
+                    handleWindowResize={true}
+                    expandRows={true}
+                    eventTimeFormat={{
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        meridiem: false
                     }}
                 />
             </div>
 
+            <DayEventsModal
+                isOpen={isDayModalOpen}
+                onClose={() => setIsDayModalOpen(false)}
+                selectedDate={selectedDate}
+                events={events}
+                onAddEvent={() => setIsAddModalOpen(true)}
+            />
+
             <AddEventForm
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
                 selectedDate={selectedDate}
                 onAdded={() => fetchEvents()}
             />
