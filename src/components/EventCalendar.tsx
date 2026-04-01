@@ -1,33 +1,43 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
-
-// Placeholder components that will be replaced later
-const AddEventDialog = ({ isOpen, onClose, selectedDate }: any) => {
-    if (!isOpen) return null;
-    return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
-            <div className="bg-zinc-900 p-6 rounded-md w-full max-w-md border border-zinc-800">
-                <h3 className="text-xl text-white mb-4">Adicionar Evento</h3>
-                <p className="text-zinc-400 mb-4">Data selecionada: {selectedDate?.toISOString()}</p>
-                <button onClick={onClose} className="bg-zinc-100 text-zinc-900 px-4 py-2 rounded-md">Fechar</button>
-            </div>
-        </div>
-    )
-}
+import { getEvents } from '@/app/actions/calendar'
+import AddEventForm from './AddEventForm'
+import { toast } from 'sonner'
 
 export default function EventCalendar() {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+    const [events, setEvents] = useState<any[]>([])
 
-    // Dummy events
-    const [events, setEvents] = useState([
-        { title: 'Techno Night', date: new Date().toISOString().split('T')[0] }
-    ])
+    const fetchEvents = async () => {
+        try {
+            const data = await getEvents()
+            const formatted = data?.map((e: any) => ({
+                id: e.id,
+                title: e.title,
+                date: e.date,
+                allDay: !e.end_time, // Se não tiver endTime consideraremos allDay visualmente
+                start: e.start_time ? `${e.date}T${e.start_time}` : e.date,
+                end: e.end_time ? `${e.date}T${e.end_time}` : undefined,
+                extendedProps: {
+                    description: e.description,
+                    artists: e.event_artists?.map((ea: any) => ea.artists)
+                }
+            })) || []
+            setEvents(formatted)
+        } catch (err: any) {
+            toast.error('Erro ao buscar eventos: ' + err.message)
+        }
+    }
+
+    useEffect(() => {
+        fetchEvents()
+    }, [])
 
     const handleDateClick = (arg: any) => {
         setSelectedDate(arg.date)
@@ -50,15 +60,19 @@ export default function EventCalendar() {
                     dateClick={handleDateClick}
                     events={events}
                     height="100%"
-                    navLinks={true}
-                    themeSystem="standard" // We will override styles in globals.css
+                    timeZone="local"
+                    eventClick={(info) => {
+                        const artistsNames = info.event.extendedProps.artists?.map((a: any) => a.name).join(', ') || 'Nenhuma atração'
+                        toast.info(`${info.event.title} - Atrações: ${artistsNames}`)
+                    }}
                 />
             </div>
 
-            <AddEventDialog
+            <AddEventForm
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 selectedDate={selectedDate}
+                onAdded={() => fetchEvents()}
             />
         </>
     )

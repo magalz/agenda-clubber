@@ -121,13 +121,16 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
   }
-}@import '@fullcalendar/react/dist/vdom.css';
+}
+
 .calendar-container {
   --fc-page-bg-color: #09090b;
   --fc-neutral-bg-color: #18181b;
@@ -142,4 +145,3 @@
   --fc-button-active-border-color: #a1a1aa;
   --fc-today-bg-color: #27272a;
 }
-
