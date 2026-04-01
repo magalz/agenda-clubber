@@ -127,4 +127,19 @@
   html {
     @apply font-sans;
   }
+}@import '@fullcalendar/react/dist/vdom.css';
+.calendar-container {
+  --fc-page-bg-color: #09090b;
+  --fc-neutral-bg-color: #18181b;
+  --fc-neutral-text-color: #f4f4f5;
+  --fc-border-color: #27272a;
+  --fc-button-text-color: #18181b;
+  --fc-button-bg-color: #fafafa;
+  --fc-button-border-color: #fafafa;
+  --fc-button-hover-bg-color: #d4d4d8;
+  --fc-button-hover-border-color: #d4d4d8;
+  --fc-button-active-bg-color: #a1a1aa;
+  --fc-button-active-border-color: #a1a1aa;
+  --fc-today-bg-color: #27272a;
 }
+
