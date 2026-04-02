@@ -48,7 +48,7 @@ export default async function RegisterPage({
                                 />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="password" name="password" className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                <Label htmlFor="password" className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                                     <Lock className="w-3 h-3" /> Senha
                                 </Label>
                                 <Input
