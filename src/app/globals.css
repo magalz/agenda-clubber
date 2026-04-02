@@ -145,30 +145,32 @@
 }
 
 .fc-toolbar-title {
-  @apply text-xl font-bold tracking-tight !important;
+  @apply text-xl font-bold tracking-tight;
+  font-weight: 700 !important;
 }
 
 .fc-button {
-  @apply rounded-md px-3 py-1 text-xs font-medium transition-all !important;
+  @apply rounded-md px-3 py-1 text-xs font-medium transition-all;
   text-transform: capitalize !important;
 }
 
 .fc-daygrid-day-number {
-  @apply text-xs font-medium text-zinc-400 p-2 !important;
+  @apply text-xs font-medium text-zinc-400 p-2;
 }
 
 .fc-day-today .fc-daygrid-day-number {
-  @apply text-white font-bold !important;
+  @apply text-white font-bold;
+  color: white !important;
 }
 
 .fc-col-header-cell-cushion {
-  @apply text-xs font-semibold text-zinc-500 py-3 uppercase tracking-wider !important;
+  @apply text-xs font-semibold text-zinc-500 py-3 uppercase tracking-wider;
 }
 
 .fc-event {
-  @apply rounded-md px-1.5 py-0.5 border-none shadow-sm cursor-pointer transition-transform active:scale-95 !important;
+  @apply rounded-md px-1.5 py-0.5 border-none shadow-sm cursor-pointer transition-transform active:scale-95;
 }
 
 .fc-event-title {
-  @apply font-medium text-[10px] !important;
+  @apply font-medium text-[10px];
 }
