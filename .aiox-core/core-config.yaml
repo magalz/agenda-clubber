@@ -1,7 +1,7 @@
 markdownExploder: true
 project:
-  type: greenfield
-  installedAt: '2026-04-08T22:17:21.233Z'
+  type: brownfield
+  installedAt: '2026-04-09T17:49:32.009Z'
   version: 2.1.0
 user_profile: bob
 ide:

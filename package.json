@@ -1,0 +1,33 @@
+{
+  "name": "agenda-clubber",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma de coordenação da cena eletrônica do Ceará",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspace=apps/web",
+    "start": "npm run start --workspace=apps/web",
+    "lint": "npm run lint --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test --workspaces",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "apps/web/**/*.{ts,tsx}": [
+      "npm run lint --workspace=apps/web"
+    ],
+    "packages/shared/**/*.{ts,tsx}": [
+      "npm run typecheck --workspace=packages/shared"
+    ]
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "supabase": "^2.88.1",
+    "typescript": "^5.0.0"
+  }
+}

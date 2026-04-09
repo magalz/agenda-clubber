@@ -1,0 +1,19 @@
+{
+  "name": "shared",
+  "version": "1.0.0",
+  "description": "Shared logic and types for agenda-clubber",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "echo 'No lint for shared yet'",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.4"
+  }
+}

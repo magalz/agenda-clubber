@@ -1,0 +1,32 @@
+﻿{
+    "generated_at":  "2026-04-08T20:48:01",
+    "project_name":  "agenda-clubber",
+    "repository":  {
+                       "branch":  "main",
+                       "initialized":  true,
+                       "remote_url":  "https://github.com/magalz/agenda-clubber.git"
+                   },
+    "cli_tools":  {
+                      "git":  {
+                                  "installed":  true,
+                                  "version":  "git version 2.53.0.windows.1"
+                              },
+                      "node":  {
+                                   "installed":  true,
+                                   "version":  "v24.14.0"
+                               },
+                      "npm":  {
+                                  "installed":  true,
+                                  "version":  "11.9.0"
+                              },
+                      "docker":  {
+                                     "installed":  true,
+                                     "version":  "Docker version 29.3.1, build c2be9cc"
+                                 },
+                      "gh":  {
+                                 "authenticated":  true,
+                                 "version":  "gh version 2.88.0 (2026-03-10)",
+                                 "installed":  true
+                             }
+                  }
+}
