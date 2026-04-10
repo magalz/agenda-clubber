@@ -1,5 +1,5 @@
 -- Enable necessary extensions
-create extension if not exists "uuid-ossp";
+create extension if not exists "uuid-ossp" with schema extensions;
 
 -- 1. Create custom enums
 create type user_role as enum ('collective', 'artist');
@@ -9,7 +9,7 @@ create type event_visibility as enum ('Anonymous', 'Identified', 'Public');
 -- 2. Create tables
 -- profiles (extends auth.users)
 create table profiles (
-  id uuid primary key, -- Temporarily removed references auth.users for seeding
+  id uuid primary key references auth.users on delete cascade,
   role user_role not null,
   username text unique not null,
   avatar_url text,
@@ -20,7 +20,7 @@ create table profiles (
 
 -- collectives
 create table collectives (
-  id uuid default uuid_generate_v4() primary key,
+  id uuid default gen_random_uuid() primary key,
   profile_id uuid references profiles(id) on delete cascade not null,
   name text not null,
   description text,
@@ -32,7 +32,7 @@ create table collectives (
 
 -- artists
 create table artists (
-  id uuid default uuid_generate_v4() primary key,
+  id uuid default gen_random_uuid() primary key,
   profile_id uuid references profiles(id) on delete set null,
   name text not null,
   slug text unique not null,
@@ -46,7 +46,7 @@ create table artists (
 
 -- locations
 create table locations (
-  id uuid default uuid_generate_v4() primary key,
+  id uuid default gen_random_uuid() primary key,
   name text not null,
   address text,
   city text default 'Fortaleza',
@@ -57,7 +57,7 @@ create table locations (
 
 -- events
 create table events (
-  id uuid default uuid_generate_v4() primary key,
+  id uuid default gen_random_uuid() primary key,
   collective_id uuid references collectives(id) on delete cascade not null,
   location_id uuid references locations(id) on delete set null,
   title text not null,
@@ -138,4 +138,3 @@ create policy "Owners can delete their events" on events for delete using (
 -- 5.4 artists
 create policy "Public artists are viewable by everyone" on artists for select using (true);
 create policy "Artists can manage their own data" on artists for all using (profile_id = auth.uid());
-
