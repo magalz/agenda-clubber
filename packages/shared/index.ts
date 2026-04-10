@@ -5,6 +5,11 @@
 
 export const APP_NAME = 'agenda-clubber';
 
+export const VALIDATION = {
+  BIO_MAX_LENGTH: 500,
+  USERNAME_MIN_LENGTH: 3,
+};
+
 export type EventStatus = 'Idea' | 'Planning' | 'Confirmed';
 export type EventVisibility = 'Anonymous' | 'Identified' | 'Public';
 

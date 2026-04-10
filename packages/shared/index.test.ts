@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { areDatesOverlapping, hasArtistConflict, Event } from './index';
+import { areDatesOverlapping, hasArtistConflict, Event, VALIDATION } from './index';
+
+describe('Validation Constants', () => {
+  it('should have correct default values', () => {
+    expect(VALIDATION.BIO_MAX_LENGTH).toBe(500);
+    expect(VALIDATION.USERNAME_MIN_LENGTH).toBe(3);
+  });
+});
 
 describe('Conflict Engine: Dates', () => {
   it('should detect overlapping date ranges', () => {
