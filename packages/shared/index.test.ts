@@ -1,5 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { areDatesOverlapping, hasArtistConflict, Event, VALIDATION } from './index';
+import { areDatesOverlapping, hasArtistConflict, Event, VALIDATION, validateEventDates } from './index';
+
+describe('Validation Helpers', () => {
+  it('should validate end time after start time', () => {
+    const s = '2026-05-01T22:00:00Z';
+    const e = '2026-05-02T06:00:00Z';
+    expect(validateEventDates(s, e).valid).toBe(true);
+  });
+
+  it('should invalidate end time before start time', () => {
+    const s = '2026-05-02T06:00:00Z';
+    const e = '2026-05-01T22:00:00Z';
+    expect(validateEventDates(s, e).valid).toBe(false);
+  });
+});
 
 describe('Validation Constants', () => {
   it('should have correct default values', () => {
