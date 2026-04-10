@@ -38,7 +38,7 @@ export default async function EventsPage() {
         <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
           <div>
             <h1 className="text-2xl font-bold tracking-widest uppercase">Event Management</h1>
-            <p className="text-xs text-zinc-500 mt-1 uppercase">Coordinate your organization's presence</p>
+            <p className="text-xs text-zinc-500 mt-1 uppercase">Coordinate your organization&apos;s presence</p>
           </div>
           <Link href="/" className="text-xs border border-zinc-800 px-3 py-1 hover:bg-zinc-900 transition uppercase">
             Back to Home
