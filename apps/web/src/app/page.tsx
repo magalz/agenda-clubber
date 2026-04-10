@@ -1,6 +1,8 @@
 import { createClient } from '@/utils/supabase/server';
 import { signOut } from './(auth)/actions';
+import { redirect } from 'next/navigation';
 import { APP_NAME } from 'shared';
+import Link from 'next/link';
 
 export default async function Home() {
   const supabase = await createClient();
@@ -16,7 +18,13 @@ export default async function Home() {
       .select('*')
       .eq('id', user.id)
       .single();
+    
     profile = data;
+
+    // If authenticated but no profile, redirect to onboarding
+    if (!profile) {
+      return redirect('/onboarding');
+    }
   }
 
   return (
@@ -49,7 +57,12 @@ export default async function Home() {
 
           {user ? (
             <div className="p-4 bg-zinc-900 border border-zinc-800 rounded space-y-4">
-              <h2 className="text-sm font-bold uppercase text-zinc-500">User Profile</h2>
+              <div className="flex justify-between items-start">
+                <h2 className="text-sm font-bold uppercase text-zinc-500">User Profile</h2>
+                <Link href="/settings/profile" className="text-[10px] border border-zinc-800 px-2 py-1 hover:bg-zinc-800 transition uppercase">
+                  Edit Profile
+                </Link>
+              </div>
               <div className="text-xs space-y-1">
                 <p><span className="text-zinc-500">ID:</span> {user.id}</p>
                 <p><span className="text-zinc-500">Email:</span> {user.email}</p>
@@ -66,12 +79,12 @@ export default async function Home() {
             <div className="p-4 bg-zinc-900 border border-zinc-800 rounded text-center space-y-4">
               <p className="text-xs text-zinc-400">Faça login para gerenciar sua agenda e detectar conflitos.</p>
               <div className="flex gap-4">
-                <a href="/login" className="flex-1 py-2 bg-zinc-100 text-black rounded hover:bg-zinc-300 transition text-xs uppercase font-bold">
+                <Link href="/login" className="flex-1 py-2 bg-zinc-100 text-black rounded hover:bg-zinc-300 transition text-xs uppercase font-bold">
                   Login
-                </a>
-                <a href="/signup" className="flex-1 py-2 border border-zinc-800 rounded hover:bg-zinc-900 transition text-xs uppercase font-bold">
+                </Link>
+                <Link href="/signup" className="flex-1 py-2 border border-zinc-800 rounded hover:bg-zinc-900 transition text-xs uppercase font-bold">
                   Sign Up
-                </a>
+                </Link>
               </div>
             </div>
           )}
