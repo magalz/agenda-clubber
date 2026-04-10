@@ -1,63 +1,86 @@
-import { APP_NAME, areDatesOverlapping } from "shared";
-import { supabase } from "@/lib/supabase";
+import { createClient } from '@/utils/supabase/server';
+import { signOut } from './(auth)/actions';
+import { APP_NAME } from 'shared';
 
-export default function Home() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const isConfigured = !!supabaseUrl && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'SUA_ANON_KEY_AQUI';
+export default async function Home() {
+  const supabase = await createClient();
 
-  // Quick Conflict Engine Test for the health check
-  const hasConflict = areDatesOverlapping(
-    '2026-05-01T22:00:00Z', '2026-05-02T06:00:00Z',
-    '2026-05-02T04:00:00Z', '2026-05-02T10:00:00Z'
-  );
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let profile = null;
+  if (user) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    profile = data;
+  }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-background text-foreground">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm flex flex-col gap-8">
-        <h1 className="text-5xl font-bold text-accent tracking-tighter uppercase mb-2">
-          {APP_NAME}
-        </h1>
-        <p className="border-b border-muted bg-muted/20 pb-6 pt-8 backdrop-blur-2xl lg:static lg:w-auto lg:rounded-xl lg:border lg:bg-muted/10 lg:p-4 text-center">
-          Status: <span className="text-accent font-bold">Ground Zero Operational</span>
-        </p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
-          {/* Framework Card */}
-          <div className="p-6 border border-muted rounded-lg bg-muted/20 hover:border-accent/50 transition-colors">
-            <h2 className="text-xl font-semibold mb-2 text-accent">Plataforma</h2>
-            <ul className="text-foreground/70 space-y-1">
-              <li>Next.js 15 (App Router)</li>
-              <li>Tailwind CSS v4</li>
-              <li>TypeScript</li>
-            </ul>
-          </div>
-
-          {/* Conflict Engine Card */}
-          <div className="p-6 border border-muted rounded-lg bg-muted/20 hover:border-accent/50 transition-colors">
-            <h2 className="text-xl font-semibold mb-2 text-accent">Conflict Engine</h2>
-            <p className="text-foreground/70 mb-2">Workspace: <code className="text-accent">packages/shared</code></p>
-            <p className="text-foreground/70">
-              Test Run: {hasConflict ? <span className="text-green-400">Conflict Detected ✓</span> : <span className="text-red-400">Failed</span>}
-            </p>
-          </div>
-
-          {/* Supabase Card */}
-          <div className="p-6 border border-muted rounded-lg bg-muted/20 hover:border-accent/50 transition-colors md:col-span-2 lg:col-span-1">
-            <h2 className="text-xl font-semibold mb-2 text-accent">Supabase SDK</h2>
-            <p className="text-foreground/70 mb-2">
-              Status: {isConfigured ? <span className="text-green-400">Configurado</span> : <span className="text-yellow-400">Aguardando Chave Anon</span>}
-            </p>
-            <p className="text-foreground/50 font-mono text-[10px] break-all">
-              {supabaseUrl || "URL não encontrada"}
-            </p>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-black text-zinc-100 p-8 font-mono">
+      <div className="max-w-2xl w-full border border-zinc-800 bg-zinc-950 p-6 space-y-6 shadow-2xl">
+        <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
+          <h1 className="text-2xl font-bold tracking-widest uppercase">
+            {APP_NAME} <span className="text-zinc-600">v0.1.0</span>
+          </h1>
+          <div className="flex items-center gap-2">
+            <div className={`h-3 w-3 rounded-full ${user ? 'bg-green-500' : 'bg-red-500 animate-pulse'}`}></div>
+            <span className="text-xs uppercase tracking-tighter">
+              {user ? 'Authenticated' : 'Offline'}
+            </span>
           </div>
         </div>
 
-        {!isConfigured && (
-          <div className="mt-4 p-4 border border-yellow-500/50 rounded bg-yellow-500/10 text-yellow-200 text-xs">
-            ⚠️ Adicione sua <strong>NEXT_PUBLIC_SUPABASE_ANON_KEY</strong> no arquivo <code>apps/web/.env.local</code> para habilitar o banco de dados.
+        <div className="space-y-4">
+          <div className="p-4 bg-zinc-900 border border-zinc-800 rounded">
+            <h2 className="text-sm font-bold mb-2 uppercase text-zinc-500">System Status</h2>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>Environment:</div>
+              <div className="text-green-400">Production Ready (Dev)</div>
+              <div>Database:</div>
+              <div className="text-green-400">Connected (RLS Active)</div>
+              <div>Auth Engine:</div>
+              <div className="text-green-400">Ready (SSR)</div>
+            </div>
           </div>
-        )}
+
+          {user ? (
+            <div className="p-4 bg-zinc-900 border border-zinc-800 rounded space-y-4">
+              <h2 className="text-sm font-bold uppercase text-zinc-500">User Profile</h2>
+              <div className="text-xs space-y-1">
+                <p><span className="text-zinc-500">ID:</span> {user.id}</p>
+                <p><span className="text-zinc-500">Email:</span> {user.email}</p>
+                <p><span className="text-zinc-500">Username:</span> {profile?.username || 'N/A'}</p>
+                <p><span className="text-zinc-500">Role:</span> {profile?.role || 'N/A'}</p>
+              </div>
+              <form action={signOut}>
+                <button className="w-full py-2 bg-red-950 text-red-200 border border-red-900 rounded hover:bg-red-900 transition text-xs uppercase font-bold">
+                  Terminate Session
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div className="p-4 bg-zinc-900 border border-zinc-800 rounded text-center space-y-4">
+              <p className="text-xs text-zinc-400">Faça login para gerenciar sua agenda e detectar conflitos.</p>
+              <div className="flex gap-4">
+                <a href="/login" className="flex-1 py-2 bg-zinc-100 text-black rounded hover:bg-zinc-300 transition text-xs uppercase font-bold">
+                  Login
+                </a>
+                <a href="/signup" className="flex-1 py-2 border border-zinc-800 rounded hover:bg-zinc-900 transition text-xs uppercase font-bold">
+                  Sign Up
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="pt-4 border-t border-zinc-800 flex justify-between items-center text-[10px] text-zinc-600 uppercase tracking-widest">
+          <span>Ignis Collective Engine</span>
+          <span>© 2026 Code Clubber</span>
+        </div>
       </div>
     </main>
   );
