@@ -12,6 +12,26 @@ export const eventSchema = z.object({
 export type EventSchema = z.infer<typeof eventSchema>;
 
 /**
+ * Masks sensitive event data based on visibility and ownership.
+ */
+export function maskEvent(event: any, currentUserId?: string) {
+  const isOwner = currentUserId && event.collective?.profile_id === currentUserId;
+  const isPublic = event.visibility === 'Public' || event.status !== 'Idea';
+
+  if (isOwner || isPublic) {
+    return event;
+  }
+
+  return {
+    ...event,
+    title: event.visibility === 'Anonymous' ? 'Reserved Slot' : event.title,
+    collective_id: event.visibility === 'Anonymous' ? null : event.collective_id,
+    collective: event.visibility === 'Anonymous' ? null : event.collective,
+    description: 'Private',
+  };
+}
+
+/**
  * Validates that end time is after start time.
  */
 export function validateEventDates(startTime: string, endTime: string) {
