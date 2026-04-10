@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "Plataforma de coordenação da cena eletrônica do Ceará",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"
