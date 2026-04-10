@@ -59,9 +59,16 @@ export default async function Home() {
             <div className="p-4 bg-zinc-900 border border-zinc-800 rounded space-y-4">
               <div className="flex justify-between items-start">
                 <h2 className="text-sm font-bold uppercase text-zinc-500">User Profile</h2>
-                <Link href="/settings/profile" className="text-[10px] border border-zinc-800 px-2 py-1 hover:bg-zinc-800 transition uppercase">
-                  Edit Profile
-                </Link>
+                <div className="flex gap-2">
+                  {profile?.role === 'collective' && (
+                    <Link href="/dashboard/events" className="text-[10px] border border-zinc-800 px-2 py-1 bg-zinc-100 text-black font-bold hover:bg-zinc-300 transition uppercase">
+                      Events
+                    </Link>
+                  )}
+                  <Link href="/settings/profile" className="text-[10px] border border-zinc-800 px-2 py-1 hover:bg-zinc-800 transition uppercase">
+                    Edit Profile
+                  </Link>
+                </div>
               </div>
               <div className="text-xs space-y-1">
                 <p><span className="text-zinc-500">ID:</span> {user.id}</p>

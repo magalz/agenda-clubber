@@ -3,6 +3,8 @@
  * Responsibility: Centralize validation logic shared between Frontend and Backend.
  */
 
+export * from './schemas';
+
 export const APP_NAME = 'agenda-clubber';
 
 export const VALIDATION = {
