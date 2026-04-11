@@ -16,6 +16,20 @@ describe('Conflict Interface', () => {
     };
     expect(conflict.title).toBe('Techno Night');
   });
+
+  it('should allow creating a valid warning object', () => {
+    const warning: Warning = {
+      event_id: 'e2',
+      title: 'Techno Event',
+      collective_name: 'Other Collective',
+      start_time: '2026-05-01T22:00:00Z',
+      end_time: '2026-05-02T06:00:00Z',
+      genre: 'Techno',
+      neighborhood: 'Praia do Futuro',
+      region: 'Fortaleza'
+    };
+    expect(warning.neighborhood).toBe('Praia do Futuro');
+  });
 });
 
 describe('Data Masking', () => {

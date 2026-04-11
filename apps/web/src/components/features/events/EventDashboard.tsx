@@ -1,62 +1,85 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createEvent, updateEvent, deleteEvent, checkConflicts } from '@/app/(dashboard)/events/actions';
-import { Conflict } from 'shared';
+import { createEvent, updateEvent, deleteEvent, checkConflicts, checkWarnings } from '@/app/(dashboard)/events/actions';
+import { Conflict, Warning, MUSICAL_GENRES } from 'shared';
 
 interface Artist {
   id: string;
   name: string;
 }
 
+interface Location {
+  id: string;
+  name: string;
+  neighborhood: string | null;
+  region: string | null;
+}
+
 interface Event {
   id: string;
   title: string;
+  genre: string;
   status: 'Idea' | 'Planning' | 'Confirmed';
   visibility: 'Anonymous' | 'Identified' | 'Public';
   start_time: string;
   end_time: string;
+  location_id: string | null;
   artists?: string[];
 }
 
 interface EventDashboardProps {
   initialEvents: Event[];
   availableArtists: Artist[];
+  availableLocations: Location[];
 }
 
-export function EventDashboard({ initialEvents, availableArtists }: EventDashboardProps) {
+export function EventDashboard({ initialEvents, availableArtists, availableLocations }: EventDashboardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedArtists, setSelectedArtists] = useState<string[]>([]);
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
+  const [warnings, setWarnings] = useState<Warning[]>([]);
 
   useEffect(() => {
     if (editingEvent) {
-      // In a real scenario, we'd fetch the artist IDs for this event
-      // For now, let's assume they are passed or fetched
       setSelectedArtists(editingEvent.artists || []);
     } else {
       setSelectedArtists([]);
     }
     setConflicts([]);
+    setWarnings([]);
   }, [editingEvent, isModalOpen]);
 
-  async function handleCheckConflicts(artists: string[], start: string, end: string) {
-    if (artists.length === 0 || !start || !end) {
+  async function handleCheckIntelligence(artists: string[], genre: string, locationId: string, start: string, end: string) {
+    if (!start || !end) return;
+
+    const isoStart = new Date(start).toISOString();
+    const isoEnd = new Date(end).toISOString();
+
+    // Check Artist Conflicts (Red)
+    if (artists.length > 0) {
+      try {
+        const detected = await checkConflicts(artists, isoStart, isoEnd, editingEvent?.id);
+        setConflicts(detected);
+      } catch (error) {
+        console.error('Conflict check failed:', error);
+      }
+    } else {
       setConflicts([]);
-      return;
     }
-    try {
-      const detected = await checkConflicts(
-        artists, 
-        new Date(start).toISOString(), 
-        new Date(end).toISOString(),
-        editingEvent?.id
-      );
-      setConflicts(detected);
-    } catch (error) {
-      console.error('Conflict check failed:', error);
+
+    // Check Genre/Region Warnings (Yellow)
+    if (genre && locationId) {
+      try {
+        const detected = await checkWarnings(genre, locationId, isoStart, isoEnd, editingEvent?.id);
+        setWarnings(detected);
+      } catch (error) {
+        console.error('Warning check failed:', error);
+      }
+    } else {
+      setWarnings([]);
     }
   }
 
@@ -110,8 +133,8 @@ export function EventDashboard({ initialEvents, availableArtists }: EventDashboa
           <thead className="bg-zinc-900 text-zinc-500 border-b border-zinc-800">
             <tr>
               <th className="p-4">Title</th>
+              <th className="p-4">Genre</th>
               <th className="p-4">Status</th>
-              <th className="p-4">Visibility</th>
               <th className="p-4">Date</th>
               <th className="p-4 text-right">Actions</th>
             </tr>
@@ -125,6 +148,7 @@ export function EventDashboard({ initialEvents, availableArtists }: EventDashboa
               initialEvents.map((event) => (
                 <tr key={event.id} className="hover:bg-zinc-900/50 transition">
                   <td className="p-4 font-bold text-zinc-200">{event.title}</td>
+                  <td className="p-4 text-zinc-500">{event.genre}</td>
                   <td className="p-4">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] ${
                       event.status === 'Confirmed' ? 'bg-green-950 text-green-400' :
@@ -133,7 +157,6 @@ export function EventDashboard({ initialEvents, availableArtists }: EventDashboa
                       {event.status}
                     </span>
                   </td>
-                  <td className="p-4 text-zinc-400">{event.visibility}</td>
                   <td className="p-4 text-zinc-500">
                     {new Date(event.start_time).toLocaleDateString()}
                   </td>
@@ -177,6 +200,48 @@ export function EventDashboard({ initialEvents, availableArtists }: EventDashboa
                   className="w-full bg-zinc-900 border border-zinc-800 p-2 text-zinc-100 outline-none focus:border-zinc-600"
                 />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-zinc-500 uppercase">Musical Genre</label>
+                  <select
+                    name="genre"
+                    defaultValue={editingEvent?.genre || 'Electronic (General)'}
+                    className="w-full bg-zinc-900 border border-zinc-800 p-2 text-zinc-100 outline-none focus:border-zinc-600"
+                    onChange={(e) => handleCheckIntelligence(
+                      selectedArtists, 
+                      e.target.value, 
+                      (document.getElementsByName('locationId')[0] as HTMLSelectElement).value,
+                      (document.getElementsByName('startTime')[0] as HTMLInputElement).value, 
+                      (document.getElementsByName('endTime')[0] as HTMLInputElement).value
+                    )}
+                  >
+                    {MUSICAL_GENRES.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-zinc-500 uppercase">Location</label>
+                  <select
+                    name="locationId"
+                    defaultValue={editingEvent?.location_id || ''}
+                    required
+                    className="w-full bg-zinc-900 border border-zinc-800 p-2 text-zinc-100 outline-none focus:border-zinc-600"
+                    onChange={(e) => handleCheckIntelligence(
+                      selectedArtists, 
+                      (document.getElementsByName('genre')[0] as HTMLSelectElement).value,
+                      e.target.value,
+                      (document.getElementsByName('startTime')[0] as HTMLInputElement).value, 
+                      (document.getElementsByName('endTime')[0] as HTMLInputElement).value
+                    )}
+                  >
+                    <option value="" disabled>Select Venue</option>
+                    {availableLocations.map(l => (
+                      <option key={l.id} value={l.id}>{l.name} ({l.neighborhood || l.region})</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-zinc-500 uppercase">Status</label>
@@ -206,32 +271,47 @@ export function EventDashboard({ initialEvents, availableArtists }: EventDashboa
                   </select>
                 </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-zinc-500 uppercase">Start Time</label>
-                <input
-                  name="startTime"
-                  type="datetime-local"
-                  defaultValue={editingEvent ? new Date(editingEvent.start_time).toISOString().slice(0, 16) : ''}
-                  required
-                  onChange={(e) => handleCheckConflicts(selectedArtists, e.target.value, (document.getElementsByName('endTime')[0] as HTMLInputElement).value)}
-                  className="w-full bg-zinc-900 border border-zinc-800 p-2 text-zinc-100 outline-none focus:border-zinc-600"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-zinc-500 uppercase">End Time</label>
-                <input
-                  name="endTime"
-                  type="datetime-local"
-                  defaultValue={editingEvent ? new Date(editingEvent.end_time).toISOString().slice(0, 16) : ''}
-                  required
-                  onChange={(e) => handleCheckConflicts(selectedArtists, (document.getElementsByName('startTime')[0] as HTMLInputElement).value, e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-800 p-2 text-zinc-100 outline-none focus:border-zinc-600"
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-zinc-500 uppercase">Start Time</label>
+                  <input
+                    name="startTime"
+                    type="datetime-local"
+                    defaultValue={editingEvent ? new Date(editingEvent.start_time).toISOString().slice(0, 16) : ''}
+                    required
+                    onChange={(e) => handleCheckIntelligence(
+                      selectedArtists, 
+                      (document.getElementsByName('genre')[0] as HTMLSelectElement).value,
+                      (document.getElementsByName('locationId')[0] as HTMLSelectElement).value,
+                      e.target.value, 
+                      (document.getElementsByName('endTime')[0] as HTMLInputElement).value
+                    )}
+                    className="w-full bg-zinc-900 border border-zinc-800 p-2 text-zinc-100 outline-none focus:border-zinc-600"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-zinc-500 uppercase">End Time</label>
+                  <input
+                    name="endTime"
+                    type="datetime-local"
+                    defaultValue={editingEvent ? new Date(editingEvent.end_time).toISOString().slice(0, 16) : ''}
+                    required
+                    onChange={(e) => handleCheckIntelligence(
+                      selectedArtists, 
+                      (document.getElementsByName('genre')[0] as HTMLSelectElement).value,
+                      (document.getElementsByName('locationId')[0] as HTMLSelectElement).value,
+                      (document.getElementsByName('startTime')[0] as HTMLInputElement).value, 
+                      e.target.value
+                    )}
+                    className="w-full bg-zinc-900 border border-zinc-800 p-2 text-zinc-100 outline-none focus:border-zinc-600"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1">
                 <label className="text-zinc-500 uppercase">Artists</label>
-                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-zinc-800 p-2 bg-zinc-900">
+                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-zinc-800 p-2 bg-zinc-900 text-[10px]">
                   {availableArtists.map(artist => (
                     <label key={artist.id} className="flex items-center gap-2 cursor-pointer hover:text-white transition">
                       <input
@@ -242,8 +322,10 @@ export function EventDashboard({ initialEvents, availableArtists }: EventDashboa
                             ? [...selectedArtists, artist.id]
                             : selectedArtists.filter(id => id !== artist.id);
                           setSelectedArtists(newArtists);
-                          handleCheckConflicts(
+                          handleCheckIntelligence(
                             newArtists, 
+                            (document.getElementsByName('genre')[0] as HTMLSelectElement).value,
+                            (document.getElementsByName('locationId')[0] as HTMLSelectElement).value,
                             (document.getElementsByName('startTime')[0] as HTMLInputElement).value, 
                             (document.getElementsByName('endTime')[0] as HTMLInputElement).value
                           );
@@ -256,20 +338,33 @@ export function EventDashboard({ initialEvents, availableArtists }: EventDashboa
                 </div>
               </div>
 
-              {conflicts.length > 0 && (
-                <div className="p-4 bg-red-950/50 border border-red-900 rounded text-red-200 space-y-2">
-                  <p className="font-bold uppercase text-[10px] flex items-center gap-2">
-                    <span className="animate-pulse">⚠️</span> Conflict Detected
-                  </p>
-                  <ul className="text-[9px] list-disc list-inside space-y-1">
-                    {conflicts.map((c, i) => (
-                      <li key={i}>
-                        {c.artist_name} is booked for &quot;{c.title}&quot; by {c.collective_name}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <div className="space-y-2">
+                {conflicts.length > 0 && (
+                  <div className="p-3 bg-red-950/50 border border-red-900 rounded text-red-200 space-y-1">
+                    <p className="font-bold uppercase text-[9px] flex items-center gap-2">
+                      <span className="animate-pulse text-xs">⚠️</span> Critical Conflict (Artist)
+                    </p>
+                    <ul className="text-[8px] list-disc list-inside space-y-0.5">
+                      {conflicts.map((c, i) => (
+                        <li key={i}>{c.artist_name} is in &quot;{c.title}&quot; by {c.collective_name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {warnings.length > 0 && (
+                  <div className="p-3 bg-yellow-950/50 border border-yellow-900 rounded text-yellow-200 space-y-1">
+                    <p className="font-bold uppercase text-[9px] flex items-center gap-2">
+                      <span className="text-xs">⚠️</span> Strategic Warning (Genre/Region)
+                    </p>
+                    <ul className="text-[8px] list-disc list-inside space-y-0.5">
+                      {warnings.map((w, i) => (
+                        <li key={i}>Another {w.genre} event &quot;{w.title}&quot; in {w.neighborhood || w.region}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
 
               <div className="flex gap-4 pt-4">
                 <button
