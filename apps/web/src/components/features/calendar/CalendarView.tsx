@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { 
   format, 
@@ -17,10 +17,11 @@ import {
   subWeeks,
   isToday
 } from 'date-fns';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import { getCalendarEvents } from '@/app/(dashboard)/calendar/actions';
 import { CalendarFilters } from './CalendarFilters';
 import { EventDetailModal } from './EventDetailModal';
+import { useEventsRealtime } from '@/hooks/useEventsRealtime';
 
 interface CalendarEvent {
   id: string;
@@ -34,6 +35,7 @@ interface CalendarEvent {
     name: string;
     instagram_handle?: string | null;
     website_url?: string | null;
+    profile_id?: string;
   };
   genre?: string;
   location?: { name: string; neighborhood: string; region: string };
@@ -44,18 +46,20 @@ interface CalendarViewProps {
   availableGenres: string[];
   availableRegions: string[];
   isCollective: boolean;
+  currentUserId: string;
 }
 
-export function CalendarView({ availableGenres, availableRegions, isCollective }: CalendarViewProps) {
+export function CalendarView({ availableGenres, availableRegions, isCollective, currentUserId }: CalendarViewProps) {
   const searchParams = useSearchParams();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'month' | 'week'>('month');
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  const genres = searchParams.get('genres')?.split(',').filter(Boolean) || [];
-  const regions = searchParams.get('regions')?.split(',').filter(Boolean) || [];
+  const genres = useMemo(() => searchParams.get('genres')?.split(',').filter(Boolean) || [], [searchParams]);
+  const regions = useMemo(() => searchParams.get('regions')?.split(',').filter(Boolean) || [], [searchParams]);
   const conflictsOnly = searchParams.get('conflicts') === 'true';
 
   const range = useMemo(() => {
@@ -70,24 +74,44 @@ export function CalendarView({ availableGenres, availableRegions, isCollective }
     }
   }, [currentDate, view]);
 
+  const fetchEvents = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await getCalendarEvents(
+        range.start.toISOString(),
+        range.end.toISOString(),
+        { genres, regions }
+      );
+      setEvents(data as CalendarEvent[]);
+    } catch (error) {
+      console.error('Failed to fetch calendar events:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [range, genres, regions]);
+
   useEffect(() => {
-    async function fetchEvents() {
-      setIsLoading(true);
-      try {
-        const data = await getCalendarEvents(
-          range.start.toISOString(),
-          range.end.toISOString(),
-          { genres, regions }
-        );
-        setEvents(data as CalendarEvent[]);
-      } catch (error) {
-        console.error('Failed to fetch calendar events:', error);
-      } finally {
-        setIsLoading(false);
+    fetchEvents();
+  }, [fetchEvents]);
+
+  // Realtime Integration
+  useEventsRealtime({
+    currentUserId,
+    onEventChange: (payload) => {
+      setLastUpdate(new Date());
+      setTimeout(() => setLastUpdate(null), 3000); // Clear notification after 3s
+
+      if (payload.eventType === 'INSERT' && payload.new) {
+        setEvents(prev => [...prev, payload.new as unknown as CalendarEvent]);
+      } else if (payload.eventType === 'UPDATE' && payload.new && 'id' in payload.new) {
+        const newEvent = payload.new as unknown as CalendarEvent;
+        setEvents(prev => prev.map(e => e.id === newEvent.id ? newEvent : e));
+      } else if (payload.eventType === 'DELETE' && payload.old && 'id' in payload.old) {
+        const oldId = (payload.old as { id: string }).id;
+        setEvents(prev => prev.filter(e => e.id !== oldId));
       }
     }
-    fetchEvents();
-  }, [range, searchParams, genres, regions]);
+  });
 
   const filteredEvents = useMemo(() => {
     if (!conflictsOnly) return events;
@@ -108,8 +132,16 @@ export function CalendarView({ availableGenres, availableRegions, isCollective }
   };
 
   return (
-    <div className="space-y-4 h-full">
+    <div className="space-y-4 h-full relative">
       <CalendarFilters availableGenres={availableGenres} availableRegions={availableRegions} />
+
+      {/* Realtime Notification */}
+      {lastUpdate && (
+        <div className="absolute top-20 right-4 z-40 bg-zinc-100 text-black px-3 py-1 rounded shadow-xl border border-zinc-300 flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+          <Zap size={12} className="fill-yellow-500 stroke-yellow-500" />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Scene Updated</span>
+        </div>
+      )}
 
       <div className="flex flex-col h-full bg-zinc-950 text-zinc-100 font-mono border border-zinc-800 rounded shadow-2xl relative">
         {/* Header */}
@@ -144,7 +176,6 @@ export function CalendarView({ availableGenres, availableRegions, isCollective }
 
         {/* Grid */}
         <div className="grid grid-cols-7 flex-1 overflow-hidden min-h-[600px]">
-          {/* Day Labels */}
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
             <div key={day} className="p-2 text-center text-[10px] uppercase font-bold text-zinc-600 border-b border-r border-zinc-900 bg-zinc-950/50">
               {day}
