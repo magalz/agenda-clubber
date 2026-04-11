@@ -57,12 +57,31 @@ export function maskEvent(event: any, currentUserId?: string) {
     return event;
   }
 
+  const maskedCollective = event.visibility === 'Anonymous' 
+    ? null 
+    : maskCollective(event.collective, false);
+
   return {
     ...event,
     title: event.visibility === 'Anonymous' ? 'Reserved Slot' : event.title,
     collective_id: event.visibility === 'Anonymous' ? null : event.collective_id,
-    collective: event.visibility === 'Anonymous' ? null : event.collective,
+    collective: maskedCollective,
     description: 'Private',
+  };
+}
+
+/**
+ * Masks sensitive collective data.
+ */
+export function maskCollective(collective: any, showPrivateInfo: boolean) {
+  if (!collective) return null;
+  if (showPrivateInfo) return collective;
+
+  return {
+    id: collective.id,
+    name: collective.name,
+    instagram_handle: null, // Private
+    website_url: null,      // Private
   };
 }
 
