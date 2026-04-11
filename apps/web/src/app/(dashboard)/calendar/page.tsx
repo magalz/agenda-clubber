@@ -16,6 +16,12 @@ export default async function CalendarDashboardPage() {
     return redirect('/login');
   }
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
   const filtersData = await getCalendarFilters();
 
   return (
@@ -36,6 +42,7 @@ export default async function CalendarDashboardPage() {
             <CalendarView 
               availableGenres={filtersData.genres} 
               availableRegions={filtersData.regions} 
+              isCollective={profile?.role === 'collective'}
             />
           </Suspense>
         </div>

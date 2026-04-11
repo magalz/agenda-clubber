@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { areDatesOverlapping, hasArtistConflict, Event, VALIDATION, validateEventDates, maskEvent, Conflict } from './index';
+import { areDatesOverlapping, hasArtistConflict, Event, VALIDATION, validateEventDates, maskEvent, Conflict, maskCollective } from './index';
 
 describe('Conflict Interface', () => {
   it('should allow creating a valid conflict object', () => {
@@ -57,6 +57,27 @@ describe('Data Masking', () => {
     const publicEvent = { ...event, visibility: 'Public' };
     const masked = maskEvent(publicEvent, 'u2');
     expect(masked.title).toBe('Secret Party');
+  });
+});
+
+describe('Collective Masking', () => {
+  const collective = {
+    id: 'c1',
+    name: 'Ignis',
+    instagram_handle: 'ignis_coll',
+    website_url: 'https://ignis.com'
+  };
+
+  it('should mask private info when showPrivateInfo is false', () => {
+    const masked = maskCollective(collective, false);
+    expect(masked.name).toBe('Ignis');
+    expect(masked.instagram_handle).toBe(null);
+    expect(masked.website_url).toBe(null);
+  });
+
+  it('should show private info when showPrivateInfo is true', () => {
+    const masked = maskCollective(collective, true);
+    expect(masked.instagram_handle).toBe('ignis_coll');
   });
 });
 
