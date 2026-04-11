@@ -39,7 +39,7 @@ export default async function EventsPage() {
 
   const events = eventsData?.map(e => ({
     ...e,
-    artists: e.event_artists.map((ea: any) => ea.artist_id)
+    artists: e.event_artists.map((ea: { artist_id: string }) => ea.artist_id)
   })) || [];
 
   // 3. Get all available artists for selection
