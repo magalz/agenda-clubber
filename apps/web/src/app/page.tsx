@@ -61,9 +61,14 @@ export default async function Home() {
                 <h2 className="text-sm font-bold uppercase text-zinc-500">User Profile</h2>
                 <div className="flex gap-2">
                   {profile?.role === 'collective' && (
-                    <Link href="/dashboard/events" className="text-[10px] border border-zinc-800 px-2 py-1 bg-zinc-100 text-black font-bold hover:bg-zinc-300 transition uppercase">
-                      Events
-                    </Link>
+                    <>
+                      <Link href="/dashboard/calendar" className="text-[10px] border border-zinc-800 px-2 py-1 hover:bg-zinc-800 transition uppercase">
+                        Calendar
+                      </Link>
+                      <Link href="/dashboard/events" className="text-[10px] border border-zinc-800 px-2 py-1 bg-zinc-100 text-black font-bold hover:bg-zinc-300 transition uppercase">
+                        Events
+                      </Link>
+                    </>
                   )}
                   <Link href="/settings/profile" className="text-[10px] border border-zinc-800 px-2 py-1 hover:bg-zinc-800 transition uppercase">
                     Edit Profile
