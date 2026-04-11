@@ -1,7 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { createEvent, updateEvent, deleteEvent } from '@/app/(dashboard)/events/actions';
+import { useState, useEffect } from 'react';
+import { createEvent, updateEvent, deleteEvent, checkConflicts } from '@/app/(dashboard)/events/actions';
+import { Conflict } from 'shared';
+
+interface Artist {
+  id: string;
+  name: string;
+}
 
 interface Event {
   id: string;
@@ -10,21 +16,55 @@ interface Event {
   visibility: 'Anonymous' | 'Identified' | 'Public';
   start_time: string;
   end_time: string;
+  artists?: string[];
 }
 
 interface EventDashboardProps {
   initialEvents: Event[];
+  availableArtists: Artist[];
 }
 
-export function EventDashboard({ initialEvents }: EventDashboardProps) {
+export function EventDashboard({ initialEvents, availableArtists }: EventDashboardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedArtists, setSelectedArtists] = useState<string[]>([]);
+  const [conflicts, setConflicts] = useState<Conflict[]>([]);
+
+  useEffect(() => {
+    if (editingEvent) {
+      // In a real scenario, we'd fetch the artist IDs for this event
+      // For now, let's assume they are passed or fetched
+      setSelectedArtists(editingEvent.artists || []);
+    } else {
+      setSelectedArtists([]);
+    }
+    setConflicts([]);
+  }, [editingEvent, isModalOpen]);
+
+  async function handleCheckConflicts(artists: string[], start: string, end: string) {
+    if (artists.length === 0 || !start || !end) {
+      setConflicts([]);
+      return;
+    }
+    try {
+      const detected = await checkConflicts(
+        artists, 
+        new Date(start).toISOString(), 
+        new Date(end).toISOString(),
+        editingEvent?.id
+      );
+      setConflicts(detected);
+    } catch (error) {
+      console.error('Conflict check failed:', error);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
+    formData.append('artists', JSON.stringify(selectedArtists));
 
     try {
       if (editingEvent) {
@@ -122,8 +162,8 @@ export function EventDashboard({ initialEvents }: EventDashboardProps) {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-zinc-950 border border-zinc-800 p-8 w-full max-w-md shadow-2xl space-y-6">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-zinc-950 border border-zinc-800 p-8 w-full max-w-md shadow-2xl space-y-6 my-8">
             <h3 className="text-lg font-bold uppercase tracking-widest">
               {editingEvent ? 'Edit Event' : 'Create New Event'}
             </h3>
@@ -153,16 +193,16 @@ export function EventDashboard({ initialEvents }: EventDashboardProps) {
                 <div className="space-y-1">
                   <label className="text-zinc-500 uppercase flex justify-between">
                     <span>Visibility</span>
-                    <span className="text-[8px] text-zinc-600 normal-case">Impacts &apos;Idea&apos; status</span>
+                    <span className="text-[8px] text-zinc-600 normal-case">Impacts &apos;Idea&apos;</span>
                   </label>
                   <select
                     name="visibility"
                     defaultValue={editingEvent?.visibility || 'Anonymous'}
                     className="w-full bg-zinc-900 border border-zinc-800 p-2 text-zinc-100 outline-none focus:border-zinc-600"
                   >
-                    <option value="Anonymous">Anonymous (Hide Name)</option>
-                    <option value="Identified">Identified (Show Name)</option>
-                    <option value="Public">Public (Full Details)</option>
+                    <option value="Anonymous">Anonymous</option>
+                    <option value="Identified">Identified</option>
+                    <option value="Public">Public</option>
                   </select>
                 </div>
               </div>
@@ -173,6 +213,7 @@ export function EventDashboard({ initialEvents }: EventDashboardProps) {
                   type="datetime-local"
                   defaultValue={editingEvent ? new Date(editingEvent.start_time).toISOString().slice(0, 16) : ''}
                   required
+                  onChange={(e) => handleCheckConflicts(selectedArtists, e.target.value, (document.getElementsByName('endTime')[0] as HTMLInputElement).value)}
                   className="w-full bg-zinc-900 border border-zinc-800 p-2 text-zinc-100 outline-none focus:border-zinc-600"
                 />
               </div>
@@ -183,22 +224,65 @@ export function EventDashboard({ initialEvents }: EventDashboardProps) {
                   type="datetime-local"
                   defaultValue={editingEvent ? new Date(editingEvent.end_time).toISOString().slice(0, 16) : ''}
                   required
+                  onChange={(e) => handleCheckConflicts(selectedArtists, (document.getElementsByName('startTime')[0] as HTMLInputElement).value, e.target.value)}
                   className="w-full bg-zinc-900 border border-zinc-800 p-2 text-zinc-100 outline-none focus:border-zinc-600"
                 />
               </div>
+
+              <div className="space-y-1">
+                <label className="text-zinc-500 uppercase">Artists</label>
+                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-zinc-800 p-2 bg-zinc-900">
+                  {availableArtists.map(artist => (
+                    <label key={artist.id} className="flex items-center gap-2 cursor-pointer hover:text-white transition">
+                      <input
+                        type="checkbox"
+                        checked={selectedArtists.includes(artist.id)}
+                        onChange={(e) => {
+                          const newArtists = e.target.checked
+                            ? [...selectedArtists, artist.id]
+                            : selectedArtists.filter(id => id !== artist.id);
+                          setSelectedArtists(newArtists);
+                          handleCheckConflicts(
+                            newArtists, 
+                            (document.getElementsByName('startTime')[0] as HTMLInputElement).value, 
+                            (document.getElementsByName('endTime')[0] as HTMLInputElement).value
+                          );
+                        }}
+                        className="accent-zinc-100"
+                      />
+                      <span className="truncate">{artist.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {conflicts.length > 0 && (
+                <div className="p-4 bg-red-950/50 border border-red-900 rounded text-red-200 space-y-2">
+                  <p className="font-bold uppercase text-[10px] flex items-center gap-2">
+                    <span className="animate-pulse">⚠️</span> Conflict Detected
+                  </p>
+                  <ul className="text-[9px] list-disc list-inside space-y-1">
+                    {conflicts.map((c, i) => (
+                      <li key={i}>
+                        {c.artist_name} is booked for &quot;{c.title}&quot; by {c.collective_name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               <div className="flex gap-4 pt-4">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 border border-zinc-800 py-2 hover:bg-zinc-900 transition uppercase font-bold"
+                  className="flex-1 border border-zinc-800 py-2 hover:bg-zinc-900 transition uppercase font-bold text-[10px]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 bg-zinc-100 text-black py-2 hover:bg-zinc-300 transition uppercase font-bold disabled:opacity-50"
+                  className="flex-1 bg-zinc-100 text-black py-2 hover:bg-zinc-300 transition uppercase font-bold text-[10px] disabled:opacity-50"
                 >
                   {isSubmitting ? 'Saving...' : 'Save'}
                 </button>

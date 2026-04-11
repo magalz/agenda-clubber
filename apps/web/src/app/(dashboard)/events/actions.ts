@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { eventSchema, validateEventDates } from 'shared';
+import { eventSchema, validateEventDates, Conflict } from 'shared';
 
 async function getCollective() {
   const supabase = await createClient();
@@ -29,9 +29,26 @@ async function getCollective() {
   return collective.id;
 }
 
+export async function checkConflicts(artistIds: string[], startTime: string, endTime: string, excludeEventId?: string) {
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase.rpc('check_artist_conflicts', {
+    p_artist_ids: artistIds,
+    p_start_time: startTime,
+    p_end_time: endTime,
+    p_exclude_event_id: excludeEventId || null
+  });
+
+  if (error) throw new Error(error.message);
+  return data as Conflict[];
+}
+
 export async function createEvent(formData: FormData) {
   const supabase = await createClient();
   const collectiveId = await getCollective();
+
+  const artistsRaw = formData.get('artists') as string; // Expecting JSON string from client
+  const artists = artistsRaw ? JSON.parse(artistsRaw) : [];
 
   const rawData = {
     title: formData.get('title'),
@@ -40,6 +57,7 @@ export async function createEvent(formData: FormData) {
     startTime: new Date(formData.get('startTime') as string).toISOString(),
     endTime: new Date(formData.get('endTime') as string).toISOString(),
     locationId: formData.get('locationId') || null,
+    artists: artists,
   };
 
   const validatedData = eventSchema.parse(rawData);
@@ -49,17 +67,32 @@ export async function createEvent(formData: FormData) {
     throw new Error(dateValidation.message);
   }
 
-  const { error } = await supabase.from('events').insert({
-    collective_id: collectiveId,
-    title: validatedData.title,
-    status: validatedData.status,
-    visibility: validatedData.visibility,
-    start_time: validatedData.startTime,
-    end_time: validatedData.endTime,
-    location_id: validatedData.locationId,
-  });
+  // 1. Create Event
+  const { data: event, error: eventError } = await supabase
+    .from('events')
+    .insert({
+      collective_id: collectiveId,
+      title: validatedData.title,
+      status: validatedData.status,
+      visibility: validatedData.visibility,
+      start_time: validatedData.startTime,
+      end_time: validatedData.endTime,
+      location_id: validatedData.locationId,
+    })
+    .select()
+    .single();
 
-  if (error) throw new Error(error.message);
+  if (eventError) throw new Error(eventError.message);
+
+  // 2. Add Artists
+  if (validatedData.artists.length > 0) {
+    const eventArtists = validatedData.artists.map(artistId => ({
+      event_id: event.id,
+      artist_id: artistId
+    }));
+    const { error: artistError } = await supabase.from('event_artists').insert(eventArtists);
+    if (artistError) throw new Error(artistError.message);
+  }
 
   revalidatePath('/dashboard/events');
   return { success: true };
@@ -69,6 +102,9 @@ export async function updateEvent(id: string, formData: FormData) {
   const supabase = await createClient();
   await getCollective(); // Verify role
 
+  const artistsRaw = formData.get('artists') as string;
+  const artists = artistsRaw ? JSON.parse(artistsRaw) : [];
+
   const rawData = {
     title: formData.get('title'),
     status: formData.get('status'),
@@ -76,6 +112,7 @@ export async function updateEvent(id: string, formData: FormData) {
     startTime: new Date(formData.get('startTime') as string).toISOString(),
     endTime: new Date(formData.get('endTime') as string).toISOString(),
     locationId: formData.get('locationId') || null,
+    artists: artists,
   };
 
   const validatedData = eventSchema.parse(rawData);
@@ -85,7 +122,8 @@ export async function updateEvent(id: string, formData: FormData) {
     throw new Error(dateValidation.message);
   }
 
-  const { error } = await supabase
+  // 1. Update Event
+  const { error: eventError } = await supabase
     .from('events')
     .update({
       title: validatedData.title,
@@ -98,7 +136,18 @@ export async function updateEvent(id: string, formData: FormData) {
     })
     .eq('id', id);
 
-  if (error) throw new Error(error.message);
+  if (eventError) throw new Error(eventError.message);
+
+  // 2. Sync Artists (Delete all and re-add for simplicity in this story)
+  await supabase.from('event_artists').delete().eq('event_id', id);
+  if (validatedData.artists.length > 0) {
+    const eventArtists = validatedData.artists.map(artistId => ({
+      event_id: id,
+      artist_id: artistId
+    }));
+    const { error: artistError } = await supabase.from('event_artists').insert(eventArtists);
+    if (artistError) throw new Error(artistError.message);
+  }
 
   revalidatePath('/dashboard/events');
   return { success: true };

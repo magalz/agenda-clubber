@@ -14,7 +14,7 @@ export default async function EventsPage() {
     return redirect('/login');
   }
 
-  // Get collective
+  // 1. Get collective
   const { data: collective } = await supabase
     .from('collectives')
     .select('id')
@@ -25,12 +25,28 @@ export default async function EventsPage() {
     return redirect('/onboarding');
   }
 
-  // Get events
-  const { data: events } = await supabase
+  // 2. Get events with their artists
+  const { data: eventsData } = await supabase
     .from('events')
-    .select('*')
+    .select(`
+      *,
+      event_artists (
+        artist_id
+      )
+    `)
     .eq('collective_id', collective.id)
     .order('start_time', { ascending: true });
+
+  const events = eventsData?.map(e => ({
+    ...e,
+    artists: e.event_artists.map((ea: any) => ea.artist_id)
+  })) || [];
+
+  // 3. Get all available artists for selection
+  const { data: artists } = await supabase
+    .from('artists')
+    .select('id, name')
+    .order('name');
 
   return (
     <div className="flex min-h-screen flex-col bg-black text-zinc-100 p-8 font-mono">
@@ -45,7 +61,7 @@ export default async function EventsPage() {
           </Link>
         </div>
 
-        <EventDashboard initialEvents={events || []} />
+        <EventDashboard initialEvents={events} availableArtists={artists || []} />
       </div>
     </div>
   );
