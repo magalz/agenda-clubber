@@ -3,10 +3,11 @@
 import { useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { maskEvent } from 'shared';
+import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 interface RealtimeConfig {
   currentUserId: string;
-  onEventChange: (payload: any) => void;
+  onEventChange: (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => void;
 }
 
 export function useEventsRealtime({ currentUserId, onEventChange }: RealtimeConfig) {
@@ -22,14 +23,14 @@ export function useEventsRealtime({ currentUserId, onEventChange }: RealtimeConf
           schema: 'public',
           table: 'events',
         },
-        async (payload) => {
+        async (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
           console.log('Realtime change received:', payload);
           
           let eventData = payload.new;
           
           // For INSERT and UPDATE, we need to fetch the collective details to apply masking correctly
           // as the realtime payload might not contain the joined collective data needed by maskEvent
-          if (payload.eventType !== 'DELETE') {
+          if (payload.eventType !== 'DELETE' && eventData && 'id' in eventData) {
             const { data: fullEvent } = await supabase
               .from('public_events')
               .select(`
@@ -48,7 +49,7 @@ export function useEventsRealtime({ currentUserId, onEventChange }: RealtimeConf
           onEventChange({
             ...payload,
             new: eventData
-          });
+          } as RealtimePostgresChangesPayload<Record<string, unknown>>);
         }
       )
       .subscribe();

@@ -58,8 +58,8 @@ export function CalendarView({ availableGenres, availableRegions, isCollective, 
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  const genres = searchParams.get('genres')?.split(',').filter(Boolean) || [];
-  const regions = searchParams.get('regions')?.split(',').filter(Boolean) || [];
+  const genres = useMemo(() => searchParams.get('genres')?.split(',').filter(Boolean) || [], [searchParams]);
+  const regions = useMemo(() => searchParams.get('regions')?.split(',').filter(Boolean) || [], [searchParams]);
   const conflictsOnly = searchParams.get('conflicts') === 'true';
 
   const range = useMemo(() => {
@@ -101,12 +101,14 @@ export function CalendarView({ availableGenres, availableRegions, isCollective, 
       setLastUpdate(new Date());
       setTimeout(() => setLastUpdate(null), 3000); // Clear notification after 3s
 
-      if (payload.eventType === 'INSERT') {
-        setEvents(prev => [...prev, payload.new as CalendarEvent]);
-      } else if (payload.eventType === 'UPDATE') {
-        setEvents(prev => prev.map(e => e.id === payload.new.id ? payload.new as CalendarEvent : e));
-      } else if (payload.eventType === 'DELETE') {
-        setEvents(prev => prev.filter(e => e.id !== payload.old.id));
+      if (payload.eventType === 'INSERT' && payload.new) {
+        setEvents(prev => [...prev, payload.new as unknown as CalendarEvent]);
+      } else if (payload.eventType === 'UPDATE' && payload.new && 'id' in payload.new) {
+        const newEvent = payload.new as unknown as CalendarEvent;
+        setEvents(prev => prev.map(e => e.id === newEvent.id ? newEvent : e));
+      } else if (payload.eventType === 'DELETE' && payload.old && 'id' in payload.old) {
+        const oldId = (payload.old as { id: string }).id;
+        setEvents(prev => prev.filter(e => e.id !== oldId));
       }
     }
   });
