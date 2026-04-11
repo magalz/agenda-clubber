@@ -1,7 +1,9 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import { CalendarView } from '@/components/features/calendar/CalendarView';
+import { getCalendarFilters } from './actions';
 import Link from 'next/link';
+import { Suspense } from 'react';
 
 export default async function CalendarDashboardPage() {
   const supabase = await createClient();
@@ -13,6 +15,8 @@ export default async function CalendarDashboardPage() {
   if (!user) {
     return redirect('/login');
   }
+
+  const filtersData = await getCalendarFilters();
 
   return (
     <div className="flex min-h-screen flex-col bg-black text-zinc-100 p-8 font-mono">
@@ -27,8 +31,13 @@ export default async function CalendarDashboardPage() {
           </Link>
         </div>
 
-        <div className="h-[calc(100vh-200px)]">
-          <CalendarView />
+        <div className="h-full">
+          <Suspense fallback={<div className="animate-pulse text-zinc-500 uppercase font-bold text-[10px]">Initializing Intelligence...</div>}>
+            <CalendarView 
+              availableGenres={filtersData.genres} 
+              availableRegions={filtersData.regions} 
+            />
+          </Suspense>
         </div>
       </div>
     </div>
