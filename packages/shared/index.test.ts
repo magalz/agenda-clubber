@@ -1,5 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import { areDatesOverlapping, hasArtistConflict, Event, VALIDATION, validateEventDates, maskEvent } from './index';
+import { areDatesOverlapping, hasArtistConflict, Event, VALIDATION, validateEventDates, maskEvent, Conflict } from './index';
+
+describe('Conflict Interface', () => {
+  it('should allow creating a valid conflict object', () => {
+    const conflict: Conflict = {
+      event_id: 'e1',
+      title: 'Techno Night',
+      collective_name: 'Ignis',
+      start_time: '2026-05-01T22:00:00Z',
+      end_time: '2026-05-02T06:00:00Z',
+      visibility: 'Public',
+      status: 'Confirmed',
+      artist_id: 'a1',
+      artist_name: 'DJ Test'
+    };
+    expect(conflict.title).toBe('Techno Night');
+  });
+});
 
 describe('Data Masking', () => {
   const event = {

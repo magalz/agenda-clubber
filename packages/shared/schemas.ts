@@ -7,9 +7,22 @@ export const eventSchema = z.object({
   startTime: z.string().datetime(),
   endTime: z.string().datetime(),
   locationId: z.string().uuid().optional().nullable(),
+  artists: z.array(z.string().uuid()).default([]),
 });
 
 export type EventSchema = z.infer<typeof eventSchema>;
+
+export interface Conflict {
+  event_id: string;
+  title: string;
+  collective_name: string;
+  start_time: string;
+  end_time: string;
+  visibility: string;
+  status: string;
+  artist_id: string;
+  artist_name: string;
+}
 
 /**
  * Masks sensitive event data based on visibility and ownership.
