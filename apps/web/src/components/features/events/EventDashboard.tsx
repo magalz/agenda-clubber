@@ -151,15 +151,18 @@ export function EventDashboard({ initialEvents }: EventDashboardProps) {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-zinc-500 uppercase">Visibility</label>
+                  <label className="text-zinc-500 uppercase flex justify-between">
+                    <span>Visibility</span>
+                    <span className="text-[8px] text-zinc-600 normal-case">Impacts &apos;Idea&apos; status</span>
+                  </label>
                   <select
                     name="visibility"
                     defaultValue={editingEvent?.visibility || 'Anonymous'}
                     className="w-full bg-zinc-900 border border-zinc-800 p-2 text-zinc-100 outline-none focus:border-zinc-600"
                   >
-                    <option value="Anonymous">Anonymous</option>
-                    <option value="Identified">Identified</option>
-                    <option value="Public">Public</option>
+                    <option value="Anonymous">Anonymous (Hide Name)</option>
+                    <option value="Identified">Identified (Show Name)</option>
+                    <option value="Public">Public (Full Details)</option>
                   </select>
                 </div>
               </div>

@@ -1,5 +1,33 @@
 import { describe, it, expect } from 'vitest';
-import { areDatesOverlapping, hasArtistConflict, Event, VALIDATION, validateEventDates } from './index';
+import { areDatesOverlapping, hasArtistConflict, Event, VALIDATION, validateEventDates, maskEvent } from './index';
+
+describe('Data Masking', () => {
+  const event = {
+    title: 'Secret Party',
+    status: 'Idea',
+    visibility: 'Anonymous',
+    collective_id: 'c1',
+    collective: { name: 'Ignis', profile_id: 'u1' }
+  };
+
+  it('should mask title and collective for Anonymous Ideas for non-owners', () => {
+    const masked = maskEvent(event, 'u2');
+    expect(masked.title).toBe('Reserved Slot');
+    expect(masked.collective_id).toBe(null);
+  });
+
+  it('should not mask for owners', () => {
+    const masked = maskEvent(event, 'u1');
+    expect(masked.title).toBe('Secret Party');
+    expect(masked.collective_id).toBe('c1');
+  });
+
+  it('should not mask Public events', () => {
+    const publicEvent = { ...event, visibility: 'Public' };
+    const masked = maskEvent(publicEvent, 'u2');
+    expect(masked.title).toBe('Secret Party');
+  });
+});
 
 describe('Validation Helpers', () => {
   it('should validate end time after start time', () => {
