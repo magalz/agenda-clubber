@@ -43,6 +43,7 @@ export default async function CalendarDashboardPage() {
               availableGenres={filtersData.genres} 
               availableRegions={filtersData.regions} 
               isCollective={profile?.role === 'collective'}
+              currentUserId={user.id}
             />
           </Suspense>
         </div>
