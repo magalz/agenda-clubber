@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { eventSchema, validateEventDates, Conflict } from 'shared';
+import { eventSchema, validateEventDates, Conflict, Warning } from 'shared';
 
 async function getCollective() {
   const supabase = await createClient();
@@ -43,15 +43,31 @@ export async function checkConflicts(artistIds: string[], startTime: string, end
   return data as Conflict[];
 }
 
+export async function checkWarnings(genre: string, locationId: string, startTime: string, endTime: string, excludeEventId?: string) {
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase.rpc('check_genre_region_warnings', {
+    p_genre: genre,
+    p_location_id: locationId,
+    p_start_time: startTime,
+    p_end_time: endTime,
+    p_exclude_event_id: excludeEventId || null
+  });
+
+  if (error) throw new Error(error.message);
+  return data as Warning[];
+}
+
 export async function createEvent(formData: FormData) {
   const supabase = await createClient();
   const collectiveId = await getCollective();
 
-  const artistsRaw = formData.get('artists') as string; // Expecting JSON string from client
+  const artistsRaw = formData.get('artists') as string;
   const artists = artistsRaw ? JSON.parse(artistsRaw) : [];
 
   const rawData = {
     title: formData.get('title'),
+    genre: formData.get('genre'),
     status: formData.get('status'),
     visibility: formData.get('visibility'),
     startTime: new Date(formData.get('startTime') as string).toISOString(),
@@ -73,6 +89,7 @@ export async function createEvent(formData: FormData) {
     .insert({
       collective_id: collectiveId,
       title: validatedData.title,
+      genre: validatedData.genre,
       status: validatedData.status,
       visibility: validatedData.visibility,
       start_time: validatedData.startTime,
@@ -107,6 +124,7 @@ export async function updateEvent(id: string, formData: FormData) {
 
   const rawData = {
     title: formData.get('title'),
+    genre: formData.get('genre'),
     status: formData.get('status'),
     visibility: formData.get('visibility'),
     startTime: new Date(formData.get('startTime') as string).toISOString(),
@@ -127,6 +145,7 @@ export async function updateEvent(id: string, formData: FormData) {
     .from('events')
     .update({
       title: validatedData.title,
+      genre: validatedData.genre,
       status: validatedData.status,
       visibility: validatedData.visibility,
       start_time: validatedData.startTime,
@@ -138,7 +157,7 @@ export async function updateEvent(id: string, formData: FormData) {
 
   if (eventError) throw new Error(eventError.message);
 
-  // 2. Sync Artists (Delete all and re-add for simplicity in this story)
+  // 2. Sync Artists
   await supabase.from('event_artists').delete().eq('event_id', id);
   if (validatedData.artists.length > 0) {
     const eventArtists = validatedData.artists.map(artistId => ({

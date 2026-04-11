@@ -48,6 +48,12 @@ export default async function EventsPage() {
     .select('id, name')
     .order('name');
 
+  // 4. Get all locations
+  const { data: locations } = await supabase
+    .from('locations')
+    .select('id, name, neighborhood, region')
+    .order('name');
+
   return (
     <div className="flex min-h-screen flex-col bg-black text-zinc-100 p-8 font-mono">
       <div className="max-w-4xl mx-auto w-full border border-zinc-800 bg-zinc-950 p-8 space-y-8 shadow-2xl">
@@ -61,7 +67,11 @@ export default async function EventsPage() {
           </Link>
         </div>
 
-        <EventDashboard initialEvents={events} availableArtists={artists || []} />
+        <EventDashboard 
+          initialEvents={events} 
+          availableArtists={artists || []} 
+          availableLocations={locations || []}
+        />
       </div>
     </div>
   );
