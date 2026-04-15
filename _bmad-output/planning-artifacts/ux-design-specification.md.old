@@ -1,0 +1,96 @@
+---
+stepsCompleted: [1, 2, 3, 4]
+inputDocuments: ["_bmad-output/planning-artifacts/prd.md", "_bmad-output/planning-artifacts/product-brief-agenda-clubber.md", "music-genres/genres.md"]
+workflowType: 'ux-design'
+project_name: 'Agenda Clubber'
+user_name: 'Magal'
+date: 'terça-feira, 14 de abril de 2026'
+---
+
+# UX Design Specification Agenda Clubber
+
+**Author:** Magal
+**Date:** terça-feira, 14 de abril de 2026
+
+---
+
+## Executive Summary
+
+### Project Vision
+
+O **Agenda Clubber** é o hub central de coordenação para o ecossistema de música eletrônica. Sua visão é profissionalizar a cena através da transparência logística, eliminando o "choque de datas" entre coletivos e democratizando a descoberta de talentos regionais. O produto atua como uma camada de inteligência coletiva, transformando a competição em colaboração proativa.
+
+### Target Users
+
+1.  **Produtores de Coletivos:** Profissionais que planejam eventos e buscam previsibilidade, segurança de dados e visibilidade instantânea de conflitos em uma janela de 30 dias.
+2.  **Artistas (DJs/Produtores):** Talentos que buscam visibilidade profissional através de presskits centralizados e controle soberano sobre sua imagem e agenda na plataforma.
+3.  **Administradores da Cena:** Curadores responsáveis por garantir a integridade e a confidencialidade do ecossistema através da aprovação criteriosa de novos membros.
+
+### Key Design Challenges
+
+- **Visualização de Impacto Multidimensional:** Exibir conflitos de data, gênero e line-up de forma clara usando a lógica de cores (Verde/Amarelo/Vermelho) sem gerar sobrecarga cognitiva.
+- **Onboarding de Confiança:** Equilibrar a fricção necessária para segurança (aceite de termos de sigilo e aprovação manual) com uma experiência de entrada fluida e profissional.
+- **Privacidade Diferencial de Perfis:** Distinguir intuitivamente entre perfis de artistas "reivindicados" e "on-the-fly", garantindo que a gestão de dados sensíveis seja clara para todos.
+
+### Design Opportunities
+
+- **Micro-interações Educativas:** Utilizar o delay de confirmação em conflitos críticos para reforçar a cultura de união e contato direto entre produtores.
+- **Descoberta Inspiradora de Talentos:** Transformar o Hub de Artistas em uma vitrine estética que valorize a diversidade musical e a identidade visual dos artistas locais.
+
+---
+
+## Core User Experience
+
+### Defining Experience
+O coração da experiência do Agenda Clubber é a **Consciência de Conflito em Tempo Real**. O usuário interage com uma interface viva que reage a cada entrada de dado (data, gênero, line-up), transformando o planejamento em um processo dinâmico e seguro.
+
+### Platform Strategy (Desktop-First / Mobile-Light)
+A estratégia prioriza a **Produtividade Web (Desktop/Laptop)** para o planejamento denso, adotando uma camada **Mobile Responsiva "Light"** para o MVP:
+- **Desktop:** Experiência completa de gestão, dashboards, edição de perfis e lógica de conflitos visual densa.
+- **Mobile (MVP):** Foco em **Consulta e Ação Rápida**. Visualização simplificada da agenda/line-up e acesso direto aos botões de contato (WhatsApp/E-mail) para resolução de conflitos "on-the-go".
+- **Post-MVP:** Otimização da UX mobile e desenvolvimento de funcionalidades de gestão avançadas para dispositivos móveis.
+
+### Effortless Interactions
+- **Busca Preditiva de Artistas:** Pesquisa por fragmentos de nome (Ex: "Magal" -> "DJ Magalz") com sugestão de perfis existentes ou opção de criação rápida.
+- **Resolução Direta em Um Clique:** Botões de ação imediata (WhatsApp, E-mail, Instagram) expostos no momento da detecção do conflito.
+- **Feedback Visual Reativo:** Atualização instantânea das cores de risco no calendário lateral (janela de 30 dias) conforme os campos são preenchidos.
+
+### Critical Success Moments
+- **O Momento da Prevenção:** Visualizar a janela de 30 dias ao selecionar uma data e identificar riscos antes do anúncio oficial.
+- **Notificação de Proteção:** Receber um alerta (E-mail/WhatsApp) proativo quando um novo evento ameaça uma data já reservada pelo coletivo.
+
+### Experience Principles
+- **Interatividade Reativa:** Feedback imediato sobre a saúde da data a cada campo preenchido.
+- **Transparência Acionável:** Todo problema de conflito deve ser acompanhado de um meio direto para resolvê-lo.
+- **Segurança Proativa:** Monitoramento constante e alertas automáticos de novos riscos.
+- **Responsabilidade Compartilhada:** Uso de justificativas por escrito e delays para formalizar a assunção de riscos em conflitos "Vermelhos".
+
+---
+
+## Desired Emotional Response
+
+### Primary Emotional Goals
+- **Segurança e Controle:** O sentimento de que os dados de planejamento estão protegidos e a visão do ecossistema é clara e confiável.
+- **Pertencimento Profissional:** Sensação de fazer parte de uma comunidade curada e exclusiva que preza pelo profissionalismo.
+- **Alívio Proativo:** O prazer de identificar e resolver um problema logístico complexo antes que ele cause prejuízos reais.
+
+### Emotional Journey Mapping
+- **Onboarding:** Curiosidade e antecipação por uma ferramenta que "entende as dores da cena".
+- **Cadastro de Evento:** Foco e clareza, acompanhados de uma sensação de "inteligência assistida".
+- **Detecção de Conflito:** Alerta vigilante ("Opa!"), transformado em suporte imediato ("Aqui está como resolver").
+- **Finalização:** Tranquilidade e dever cumprido — "Minha data está segura".
+
+### Micro-Emotions
+- **Confiança vs. Ceticismo:** Precisão total na busca de artistas e detecção de datas para manter a credibilidade.
+- **Alerta vs. Ansiedade:** Notificações que provocam ação (contato bilateral) sem causar pânico desnecessário.
+- **Satisfação de Claim:** O empoderamento do artista ao assumir o controle de sua página e presskit.
+
+### Design Implications
+- **Confiança →** Uso de UI limpa, tipografia técnica e precisão em dados (horários, fusos).
+- **Alívio →** Micro-interações de sucesso e confirmação visual forte quando uma data é marcada como "Verde".
+- **Pertencimento →** Elementos visuais que remetem à cultura clubber, mas com seriedade profissional.
+
+### Emotional Design Principles
+- **Acalmar o Caos:** Substituir a incerteza do WhatsApp por uma interface que transmite ordem e previsibilidade.
+- **Apoio Bilateral:** O sistema nunca deve ser um "juiz", mas um facilitador da conversa entre produtores.
+- **Orgulho de Artista:** A interface do Hub de Artistas deve ser uma vitrine que valorize a estética individual de cada talento.
