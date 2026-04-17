@@ -1,6 +1,6 @@
 # Story 1.4: Onboarding de Produtor (Criação de Coletivo)
 
-Status: review
+Status: done
 
 ## Story
 
