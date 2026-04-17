@@ -11,13 +11,16 @@ import { redirect } from "next/navigation";
 export async function checkDuplicateArtist(name: string) {
     if (!name || name.trim() === "") return false;
 
-    const existing = await db
-        .select({ id: artists.id })
-        .from(artists)
-        .where(ilike(artists.artisticName, name))
-        .limit(1);
-
-    return existing.length > 0;
+    try {
+        const existing = await db
+            .select({ id: artists.id })
+            .from(artists)
+            .where(ilike(artists.artisticName, name))
+            .limit(1);
+        return existing.length > 0;
+    } catch {
+        return false;
+    }
 }
 
 const trimmedStr = (min: number, max: number, minMsg: string) =>
@@ -60,6 +63,16 @@ export type ArtistOnboardingState = {
     data: { success: boolean } | null;
     error: { message: string; code: string; fieldErrors?: Record<string, string[]> } | null;
 };
+
+async function validateMagicBytes(file: File, type: "image" | "pdf"): Promise<boolean> {
+    const bytes = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+    if (type === "pdf") {
+        return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
+    }
+    const isJpeg = bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF;
+    const isPng  = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47;
+    return isJpeg || isPng;
+}
 
 export async function saveArtistOnboardingAction(
     _prevState: ArtistOnboardingState,
@@ -120,10 +133,39 @@ export async function saveArtistOnboardingAction(
         };
     }
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    // Validate magic bytes to prevent MIME type spoofing
+    if (fileParsed.data.photo) {
+        const valid = await validateMagicBytes(fileParsed.data.photo, "image");
+        if (!valid) {
+            return {
+                data: null,
+                error: {
+                    message: "Arquivo de foto inválido",
+                    code: "VALIDATION_ERROR",
+                    fieldErrors: { photo: ["Formato de imagem inválido. Use um JPEG ou PNG real."] },
+                },
+            };
+        }
+    }
 
-    if (!user) {
+    if (fileParsed.data.releasePdf) {
+        const valid = await validateMagicBytes(fileParsed.data.releasePdf, "pdf");
+        if (!valid) {
+            return {
+                data: null,
+                error: {
+                    message: "Arquivo PDF inválido",
+                    code: "VALIDATION_ERROR",
+                    fieldErrors: { releasePdf: ["Arquivo não é um PDF válido."] },
+                },
+            };
+        }
+    }
+
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
         return {
             data: null,
             error: { message: "Usuário não autenticado", code: "UNAUTHORIZED" },
@@ -131,16 +173,26 @@ export async function saveArtistOnboardingAction(
     }
 
     // Get Profile ID
-    const p = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.userId, user.id)).limit(1);
-    if (!p.length) {
+    let profileResult: { id: string }[];
+    try {
+        profileResult = await db.select({ id: profiles.id }).from(profiles).where(eq(profiles.userId, user.id)).limit(1);
+    } catch {
+        return {
+            data: null,
+            error: { message: "Erro ao buscar perfil", code: "DB_ERROR" },
+        };
+    }
+
+    if (!profileResult.length) {
         return {
             data: null,
             error: { message: "Perfil não encontrado", code: "NO_PROFILE" },
         };
     }
 
-    const profileId = p[0].id;
+    const profileId = profileResult[0].id;
 
+    // Check duplicate BEFORE uploading files to avoid orphaned storage objects
     const isDuplicate = await checkDuplicateArtist(artisticName);
     if (isDuplicate) {
         return {
@@ -149,7 +201,8 @@ export async function saveArtistOnboardingAction(
         };
     }
 
-    // Upload files before insert
+    // Upload files and track paths for rollback on DB failure
+    const uploadedPaths: string[] = [];
     let photoUrl: string | undefined;
     let releasePdfUrl: string | undefined;
 
@@ -157,19 +210,23 @@ export async function saveArtistOnboardingAction(
         const f = fileParsed.data.photo;
         const ext = f.type === "image/png" ? "png" : "jpg";
         const path = `${profileId}/photo.${ext}`;
+        // Use hardcoded contentType derived from magic-byte-validated ext, not client-supplied f.type
+        const contentType = ext === "png" ? "image/png" : "image/jpeg";
         const { error: uploadError } = await supabase.storage
-            .from('artist_media').upload(path, f, { upsert: true, contentType: f.type });
+            .from("artist_media").upload(path, f, { upsert: true, contentType });
         if (uploadError) return { data: null, error: { message: "Erro ao enviar foto", code: "UPLOAD_ERROR" } };
-        photoUrl = supabase.storage.from('artist_media').getPublicUrl(path).data.publicUrl;
+        uploadedPaths.push(path);
+        photoUrl = supabase.storage.from("artist_media").getPublicUrl(path).data.publicUrl;
     }
 
     if (fileParsed.data.releasePdf) {
         const f = fileParsed.data.releasePdf;
         const path = `${profileId}/release.pdf`;
         const { error: uploadError } = await supabase.storage
-            .from('artist_media').upload(path, f, { upsert: true, contentType: 'application/pdf' });
+            .from("artist_media").upload(path, f, { upsert: true, contentType: "application/pdf" });
         if (uploadError) return { data: null, error: { message: "Erro ao enviar Release PDF", code: "UPLOAD_ERROR" } };
-        releasePdfUrl = supabase.storage.from('artist_media').getPublicUrl(path).data.publicUrl;
+        uploadedPaths.push(path);
+        releasePdfUrl = supabase.storage.from("artist_media").getPublicUrl(path).data.publicUrl;
     }
 
     try {
@@ -189,7 +246,11 @@ export async function saveArtistOnboardingAction(
             isVerified: false,
         });
     } catch (err: any) {
-        if (err.code === '23505') { // Postgres Unique Violation
+        // Rollback: remove uploaded files to avoid orphaned storage objects
+        if (uploadedPaths.length > 0) {
+            await supabase.storage.from("artist_media").remove(uploadedPaths);
+        }
+        if (err.code === "23505") {
             return {
                 data: null,
                 error: { message: "Este perfil já completou o onboarding", code: "ALREADY_EXISTS" },

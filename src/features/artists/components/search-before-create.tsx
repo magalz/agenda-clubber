@@ -23,14 +23,18 @@ export function SearchBeforeCreate({ onProceed }: SearchBeforeCreateProps) {
         setIsSearching(true);
         setError(null);
 
-        const isDuplicate = await checkDuplicateArtist(query.trim());
+        try {
+            const isDuplicate = await checkDuplicateArtist(query.trim());
 
-        setIsSearching(false);
-
-        if (isDuplicate) {
-            setError("Já existe um artista com este nome cadastrado na plataforma.");
-        } else {
-            onProceed(query.trim());
+            if (isDuplicate) {
+                setError("Já existe um artista com este nome cadastrado na plataforma.");
+            } else {
+                onProceed(query.trim());
+            }
+        } catch {
+            setError("Erro ao verificar disponibilidade do nome. Tente novamente.");
+        } finally {
+            setIsSearching(false);
         }
     };
 
