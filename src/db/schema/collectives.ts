@@ -10,7 +10,7 @@ export const collectives = pgTable('collectives', {
     genrePrimary: text('genre_primary').notNull(),
     genreSecondary: text('genre_secondary'),
     socialLinks: jsonb('social_links'), // For soundcloud, youtube, instagram
-    status: text('status', { enum: ['pending', 'active', 'rejected'] }).default('pending').notNull(),
+    status: text('status', { enum: ['pending_approval', 'active', 'rejected'] }).default('pending_approval').notNull(),
     ownerId: uuid('owner_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull(), // Initial creator
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdateFn(() => new Date()),
