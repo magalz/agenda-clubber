@@ -11,6 +11,11 @@ export default {
   theme: {
     extend: {
       colors: {
+        neon: {
+          red: "#FF0000",
+          green: "#00FF00",
+          yellow: "#FFFF00",
+        },
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
