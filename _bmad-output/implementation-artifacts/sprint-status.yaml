@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: terça-feira, 14 de abril de 2026
-last_updated: quinta-feira, 17 de abril de 2026 (revisado)
+last_updated: quinta-feira, 17 de abril de 2026 (retrospectiva épico 1)
 project: Agenda Clubber
 project_key: NOKEY
 tracking_system: file-system
@@ -48,7 +48,7 @@ development_status:
   1-2-autenticacao-e-middleware-de-protecao: done
   1-3-onboarding-de-artista-perfil-essencial: done
   1-4-onboarding-de-produtor-criacao-de-coletivo: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
 
   epic-2: backlog
   2-1-criacao-de-perfil-on-the-fly-e-notificacao: backlog
