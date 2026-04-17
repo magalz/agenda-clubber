@@ -1,0 +1,38 @@
+[
+  {
+    "location": "drizzle.config.ts:4-4",
+    "trigger_condition": "glob de schema inclui arquivos de teste (*.test.ts)",
+    "guard_snippet": "schema: ['./src/db/schema/*.ts', '!./src/db/schema/*.test.ts']",
+    "potential_consequence": "drizzle-kit tenta processar arquivos de teste sem export de tabelas"
+  },
+  {
+    "location": "src/app/globals.css:57-57",
+    "trigger_condition": "border-width: 0 aplicado no seletor universal *",
+    "guard_snippet": "/* remover border-width: 0 do seletor universal */",
+    "potential_consequence": "quebra visual em elementos que dependem de bordas nativas ou de componentes"
+  },
+  {
+    "location": "playwright.config.ts:1-17",
+    "trigger_condition": "ausência de configuração webServer para gerenciar o ambiente",
+    "guard_snippet": "webServer: { command: 'npm run dev', port: 3000, reuseExistingServer: true }",
+    "potential_consequence": "testes E2E falham no CI se o servidor não estiver rodando previamente"
+  },
+  {
+    "location": "src/db/schema/collectives.ts:13-13",
+    "trigger_condition": "coluna status usa text livre sem constraint ou enum",
+    "guard_snippet": "status: text('status', { enum: ['pending', 'active'] }).default('pending').notNull()",
+    "potential_consequence": "inserção de valores inválidos corrompendo a lógica de negócio"
+  },
+  {
+    "location": "src/db/schema/collectives.ts:14-14",
+    "trigger_condition": "referência de ownerId sem comportamento ON DELETE definido",
+    "guard_snippet": "ownerId: uuid('owner_id').references(() => profiles.id, { onDelete: 'cascade' }).notNull()",
+    "potential_consequence": "deleção de usuário bloqueada no banco por constraint RESTRICT padrão"
+  },
+  {
+    "location": "e2e/home.spec.ts:5-5",
+    "trigger_condition": "regex permissiva aceita título de página genérica do Next.js",
+    "guard_snippet": "await expect(page).toHaveTitle(/Agenda Clubber/);",
+    "potential_consequence": "teste E2E passa mesmo se a aplicação renderizar erro genérico"
+  }
+]

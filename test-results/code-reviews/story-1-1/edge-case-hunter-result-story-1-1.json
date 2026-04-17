@@ -1,0 +1,44 @@
+[
+  {
+    "location": "src/features/auth/actions.ts:41-44",
+    "trigger_condition": "Inputs de email ou nickname com espaços ou capitalização inconsistente no email",
+    "guard_snippet": "email: formData.get(\"email\")?.toString().trim().toLowerCase()",
+    "potential_consequence": "Dificuldade de login por case-sensitivity ou falhas de busca por espaços invisíveis"
+  },
+  {
+    "location": "src/features/auth/actions.ts:98-106",
+    "trigger_condition": "Sucesso no Supabase Auth seguido de falha no db.insert (estado órfão)",
+    "guard_snippet": "// Considerar transação ou deleção compensatória do auth.user em caso de erro no DB",
+    "potential_consequence": "Usuário impedido de criar conta novamente por email já existir no Auth, mas sem perfil"
+  },
+  {
+    "location": "src/db/schema/collectives.ts:4",
+    "trigger_condition": "Tabela collectives criada sem habilitação de Row Level Security (RLS)",
+    "guard_snippet": "ALTER TABLE collectives ENABLE ROW LEVEL SECURITY;",
+    "potential_consequence": "Vulnerabilidade crítica de acesso total aos dados se o RLS não for ativado explicitamente"
+  },
+  {
+    "location": "src/db/schema/auth.ts:9-10",
+    "trigger_condition": "Campo updatedAt sem mecanismo de atualização automática em operações de UPDATE",
+    "guard_snippet": "updatedAt: timestamp(\"updated_at\").defaultNow().notNull().$onUpdate(() => new Date())",
+    "potential_consequence": "Perda de rastreabilidade temporal; updatedAt nunca refletirá modificações reais do perfil"
+  },
+  {
+    "location": "src/db/schema/collectives.ts:14",
+    "trigger_condition": "Exclusão de perfil que possui coletivos associados sem política de cascade",
+    "guard_snippet": "ownerId: uuid(\"owner_id\").references(() => profiles.id, { onDelete: \"cascade\" }).notNull()",
+    "potential_consequence": "Erro de FK no banco de dados impede a exclusão do usuário pelo sistema"
+  },
+  {
+    "location": "src/features/auth/actions.ts:101",
+    "trigger_condition": "Tentativa de inserção de user_id duplicado no banco (ex.: retry manual)",
+    "guard_snippet": "if (err.code === \"23505\") return { error: { message: \"Perfil já existe.\" } }",
+    "potential_consequence": "Usuário recebe erro genérico PROFILE_ERROR em vez de instrução clara sobre duplicidade"
+  },
+  {
+    "location": "src/db/index.ts:8",
+    "trigger_condition": "DATABASE_URL ausente em produção resultando em fallback para localhost",
+    "guard_snippet": "if (!process.env.DATABASE_URL && process.env.NODE_ENV === \"production\") throw Error(\"Missing DATABASE_URL\")",
+    "potential_consequence": "Crash de conexão no startup ou tentativa insegura de conexão local em prod"
+  }
+]

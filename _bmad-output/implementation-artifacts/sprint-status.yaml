@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: terça-feira, 14 de abril de 2026
-last_updated: terça-feira, 14 de abril de 2026
+last_updated: quinta-feira, 17 de abril de 2026
 project: Agenda Clubber
 project_key: NOKEY
 tracking_system: file-system
@@ -43,11 +43,11 @@ story_location: _bmad-output/implementation-artifacts
 
 development_status:
   epic-1: in-progress
-  1-0-inicializacao-do-projeto-e-infraestrutura-base: in-progress
-  1-1-cadastro-inicial-e-triagem-de-papel: ready-for-dev
-  1-2-autenticacao-e-middleware-de-protecao: ready-for-dev
-  1-3-onboarding-de-artista-perfil-essencial: ready-for-dev
-  1-4-onboarding-de-produtor-criacao-de-coletivo: ready-for-dev
+  1-0-inicializacao-do-projeto-e-infraestrutura-base: done
+  1-1-cadastro-inicial-e-triagem-de-papel: done
+  1-2-autenticacao-e-middleware-de-protecao: done
+  1-3-onboarding-de-artista-perfil-essencial: done
+  1-4-onboarding-de-produtor-criacao-de-coletivo: review
   epic-1-retrospective: optional
 
   epic-2: backlog
