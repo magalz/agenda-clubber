@@ -114,6 +114,12 @@ FR27: Épico 2 - E-mail para artistas em perfis "on-the-fly"
 ### Epic 1: Fundação, Acesso e Triagem de Perfil
 Estabelecendo a infraestrutura técnica e o portal de entrada da plataforma. Usuários passam por um onboarding interativo que os identifica, autentica e direciona para a jornada correta (Artista ou Produtor) com o mínimo de fricção.
 **FRs covered:** FR1, FR5.
+**Status:** ✅ Concluído.
+
+### Epic DevOps/Infra: Governança de Ambiente e Pipeline de Qualidade
+Fundação de automação, rastreabilidade e segurança de ambiente que protege o trabalho colaborativo de agentes e garante qualidade contínua. Decisão tomada na Retrospectiva do Épico 1 (17/04/2026).
+**Bloqueador para:** Épico 2 — não deve iniciar antes da conclusão deste épico.
+**Stories:** DI.1 (dívida técnica imediata), DI.2 (.env.example e docs), DI.3 (GitHub branch protection), DI.4 (CI/CD + Vercel), DI.5 (Supabase Branching).
 
 ### Epic 2: Hub de Talentos e Soberania do Artista (Claim)
 Foco na base de dados de artistas com fricção zero para produtores. Produtores criam perfis "on-the-fly" e artistas reivindicam seus perfis em um fluxo recompensador, assumindo o controle de seus dados e presskits.
@@ -213,6 +219,97 @@ So that I can start organizing events or join an existing team.
     3. **"Aguardar Convite / Não tomar ação"**: Displays a success message: "Seu cadastro está ativo. Se você quer gerenciar um coletivo, peça ao administrador para te adicionar via e-mail."
 **Then** if a Collective is created, the record is saved in the `collectives` table and the user is linked as an admin.
 **And** the user is redirected to the Collective Dashboard.
+
+## Epic DevOps/Infra: Governança de Ambiente e Pipeline de Qualidade
+
+Estabelecer as fundações de automação, rastreabilidade e segurança de ambiente que protegem o trabalho colaborativo de agentes e garantem qualidade contínua. Decisão aprovada na Retrospectiva do Épico 1 (17/04/2026) — **Épico 2 não deve iniciar antes da conclusão deste épico.**
+
+### Story DI.1: Limpeza de Dívida Técnica Imediata
+
+As a developer,
+I want the immediate technical debt from Epic 1 resolved,
+So that the codebase is clean before adding DevOps automation on top of it.
+
+**Acceptance Criteria:**
+
+**Given** the codebase after Epic 1 completion
+**When** this story is executed
+**Then** `src/lib/routes.ts` must exist with typed route constants for all current routes (`/`, `/login`, `/signup`, `/onboarding/artist`, `/onboarding/producer`, `/dashboard`, `/admin`)
+**And** `src/components/login-form.tsx` must be moved to `src/features/auth/components/login-form.tsx` with all imports updated
+**And** `src/components/nav-user.tsx` must be moved to `src/features/auth/components/nav-user.tsx` with all imports updated
+**And** the `status` field in the Story 1.1 implementation artifact file must be corrected from `review` to `done`
+**And** all existing tests must pass after the refactoring.
+
+### Story DI.2: Documentação de Setup e Arquivo `.env.example`
+
+As a developer (human or agent) joining the project,
+I want a complete environment configuration reference,
+So that I can set up a working local environment without guessing or reading source code.
+
+**Acceptance Criteria:**
+
+**Given** the project requires multiple external services (Supabase, Vercel, Upstash, Evolution API)
+**When** a developer clones the repository
+**Then** a `.env.example` file must exist at the project root listing ALL required environment variables with inline comments explaining each variable's purpose and where to obtain it
+**And** the `.env.example` must cover at minimum: Supabase (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`), Sentry (`SENTRY_DSN`), Upstash QStash, and Evolution API
+**And** the `README.md` (or a `CONTRIBUTING.md`) must include a "Local Setup" section with the steps: clone → `cp .env.example .env.local` → fill values → `npm install` → `npm run dev`
+**And** commit conventions (Conventional Commits: `feat:`, `fix:`, `chore:`, `docs:`, `test:`) must be documented
+**And** the worktree workflow used with Claude Code agents must be documented (create worktree → implement → merge → delete worktree).
+
+### Story DI.3: Configuração do Repositório GitHub e Proteção de Branch
+
+As a project lead,
+I want the main branch protected and all merges gated behind CI checks,
+So that no broken code reaches the integration branch.
+
+**Acceptance Criteria:**
+
+**Given** the GitHub repository for agenda-clubber already exists
+**When** branch protection rules are configured on `main`
+**Then** direct pushes to `main` must be blocked — all changes must go through Pull Requests
+**And** at least 1 PR review approval must be required before merge
+**And** the CI status check (GitHub Actions workflow defined in Story DI.4) must be required to pass before merge is allowed
+**And** the Vercel deployment check must be required to pass before merge is allowed
+**And** branch deletion protection must be enabled on `main`
+**And** the branch naming convention for feature branches must be documented (e.g., `feat/story-X-Y-description`, `fix/issue-description`).
+
+### Story DI.4: Pipeline CI/CD com GitHub Actions e Vercel
+
+As a developer,
+I want every PR to be automatically validated with a full quality pipeline and get a Vercel preview deployment,
+So that regressions are caught before merge and stakeholders can review changes live.
+
+**Acceptance Criteria:**
+
+**Given** a Pull Request is opened or updated
+**When** the GitHub Actions workflow triggers
+**Then** the pipeline must execute in order: install dependencies → TypeScript type-check → ESLint lint → Vitest unit tests → Playwright E2E tests
+**And** the Playwright E2E step must use a production build (`npm run build && npm start`) instead of the dev server, fixing the current `playwright.config.ts` that uses `npm run dev`
+**And** the fragile `NextRequest`/`NextResponse` mocks in `src/middleware.test.ts` must be replaced with a more robust approach (e.g., using actual `Request` constructors or `node-mocks-http`)
+**And** all required secrets (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, etc.) must be configured as GitHub Actions secrets with a test Supabase project
+**And** the Vercel–GitHub integration must be configured so that every PR automatically receives a Vercel Preview Deployment URL in the PR comments
+**And** the Vercel production deployment must trigger automatically on merge to `main`
+**And** Vercel environment variables must be configured for `preview` and `production` environments separately
+**And** the pipeline must complete successfully on the `main` branch before this story is considered done.
+
+### Story DI.5: Supabase Branching e Workflow de Migrações
+
+As a developer,
+I want each feature branch to have its own isolated database branch,
+So that schema migrations can be tested safely without affecting the shared development or production database.
+
+**Pre-requisite:** Supabase CLI already installed locally.
+
+**Acceptance Criteria:**
+
+**Given** the Supabase project for agenda-clubber and the Supabase CLI already installed
+**When** Supabase Branching is configured
+**Then** Supabase Branching must be enabled on the project dashboard
+**And** the GitHub Actions workflow from Story DI.4 must be extended to automatically create/destroy a Supabase branch for each PR using the Supabase CLI (`supabase branches create`, `supabase branches delete`)
+**And** Drizzle migrations (`drizzle-kit push` or `drizzle-kit migrate`) must run automatically against the PR's Supabase branch during CI
+**And** the Vercel Preview Deployment (Story DI.4) must use the PR's Supabase branch as its database, so preview and DB are always in sync
+**And** the migration workflow must be documented: generate migration → push to branch DB → merge PR → migrate production DB
+**And** the workflow for running migrations locally (`supabase db push`, `drizzle-kit generate`) must be documented.
 
 ## Epic 2: Hub de Talentos e Soberania do Artista (Claim)
 
