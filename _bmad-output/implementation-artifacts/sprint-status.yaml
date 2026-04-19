@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: terça-feira, 14 de abril de 2026
-last_updated: quinta-feira, 17 de abril de 2026 (retrospectiva épico 1)
+last_updated: domingo, 19 de abril de 2026 (criação épico devops/infra)
 project: Agenda Clubber
 project_key: NOKEY
 tracking_system: file-system
@@ -49,6 +49,16 @@ development_status:
   1-3-onboarding-de-artista-perfil-essencial: done
   1-4-onboarding-de-produtor-criacao-de-coletivo: done
   epic-1-retrospective: done
+
+  # Épico DevOps/Infra — inserido após a retrospectiva do Épico 1 (17/04/2026).
+  # Bloqueador para o Épico 2 — não iniciar Épico 2 antes deste concluído.
+  epic-devops-infra: ready-for-dev
+  di-1-limpeza-divida-tecnica-imediata: ready-for-dev
+  di-2-documentacao-de-setup-e-env-example: ready-for-dev
+  di-3-github-branch-protection: ready-for-dev
+  di-4-pipeline-ci-cd-github-actions-e-vercel: ready-for-dev
+  di-5-supabase-branching-e-migracoes: ready-for-dev
+  epic-devops-infra-retrospective: optional
 
   epic-2: backlog
   2-1-criacao-de-perfil-on-the-fly-e-notificacao: backlog
