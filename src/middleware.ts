@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { ROUTES } from "@/lib/routes";
 
 export async function middleware(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
@@ -31,32 +32,32 @@ export async function middleware(request: NextRequest) {
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    const isAuthRoute = request.nextUrl.pathname.startsWith("/auth") || request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/sign-up";
-    const isProtectedRoute = request.nextUrl.pathname.startsWith("/dashboard") || request.nextUrl.pathname.startsWith("/admin");
+    const isAuthRoute = request.nextUrl.pathname.startsWith(ROUTES.authPrefix);
+    const isProtectedRoute = request.nextUrl.pathname.startsWith(ROUTES.dashboard) || request.nextUrl.pathname.startsWith(ROUTES.admin);
 
     if (!user && isProtectedRoute) {
         const url = request.nextUrl.clone();
-        url.pathname = "/auth/login";
+        url.pathname = ROUTES.login;
         return NextResponse.redirect(url);
     }
 
     if (user && isAuthRoute) {
         const url = request.nextUrl.clone();
-        url.pathname = "/dashboard";
+        url.pathname = ROUTES.dashboard;
         return NextResponse.redirect(url);
     }
 
     // RBAC for /admin route
-    if (user && request.nextUrl.pathname.startsWith("/admin")) {
+    if (user && request.nextUrl.pathname.startsWith(ROUTES.admin)) {
         const { data: profile } = await supabase
             .from("profiles")
             .select("role")
             .eq("user_id", user.id)
             .single();
 
-        if (!profile || profile.role !== "admin") { // Assuming 'admin' role, or produtor. Wait, story says "only users with admin role"
+        if (!profile || profile.role !== "admin") {
             const url = request.nextUrl.clone();
-            url.pathname = "/dashboard";
+            url.pathname = ROUTES.dashboard;
             return NextResponse.redirect(url);
         }
     }

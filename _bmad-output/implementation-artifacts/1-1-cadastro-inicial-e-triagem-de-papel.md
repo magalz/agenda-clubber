@@ -1,6 +1,6 @@
 # Story 1.1: Cadastro Inicial e Triagem de Papel
 
-Status: review
+Status: done
 
 ## Story
 
