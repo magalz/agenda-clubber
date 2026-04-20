@@ -6,8 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 vi.mock("next/server", () => {
     return {
         NextRequest: class {
-            nextUrl: any;
-            cookies: any;
+            nextUrl: { pathname: string; clone: () => URL };
+            cookies: { getAll: () => unknown[]; set: (name: string, value: string) => void };
             constructor(url: string) {
                 const parsedUrl = new URL(url);
                 this.nextUrl = {
@@ -67,7 +67,7 @@ describe("middleware logic", () => {
 
     it("redirects unauthenticated users from /dashboard to /auth/login", async () => {
         const req = new NextRequest("http://localhost:3000/dashboard");
-        const res = await middleware(req);
+        await middleware(req);
         expect(NextResponse.redirect).toHaveBeenCalled();
         const mockRedirect = NextResponse.redirect as ReturnType<typeof vi.fn>;
         const urlPassed = mockRedirect.mock.calls[mockRedirect.mock.calls.length - 1][0];
@@ -77,7 +77,7 @@ describe("middleware logic", () => {
     it("redirects authenticated users from /auth/login to /dashboard", async () => {
         mockGetUser.mockResolvedValue({ data: { user: { id: "123" } }, error: null });
         const req = new NextRequest("http://localhost:3000/auth/login");
-        const res = await middleware(req);
+        await middleware(req);
         expect(NextResponse.redirect).toHaveBeenCalled();
         const mockRedirect = NextResponse.redirect as ReturnType<typeof vi.fn>;
         const urlPassed = mockRedirect.mock.calls[mockRedirect.mock.calls.length - 1][0];
@@ -86,7 +86,7 @@ describe("middleware logic", () => {
 
     it("allows unauthenticated users to access public routes", async () => {
         const req = new NextRequest("http://localhost:3000/public");
-        const res = await middleware(req);
+        await middleware(req);
         expect(NextResponse.next).toHaveBeenCalled();
     });
 
@@ -94,7 +94,7 @@ describe("middleware logic", () => {
         mockGetUser.mockResolvedValue({ data: { user: { id: "123" } }, error: null });
         mockSingle.mockResolvedValue({ data: { role: "admin" }, error: null });
         const req = new NextRequest("http://localhost:3000/admin/users");
-        const res = await middleware(req);
+        await middleware(req);
         expect(NextResponse.next).toHaveBeenCalled();
     });
 
@@ -102,7 +102,7 @@ describe("middleware logic", () => {
         mockGetUser.mockResolvedValue({ data: { user: { id: "123" } }, error: null });
         mockSingle.mockResolvedValue({ data: { role: "artista" }, error: null });
         const req = new NextRequest("http://localhost:3000/admin/users");
-        const res = await middleware(req);
+        await middleware(req);
         expect(NextResponse.redirect).toHaveBeenCalled();
         const mockRedirect = NextResponse.redirect as ReturnType<typeof vi.fn>;
         const urlPassed = mockRedirect.mock.calls[mockRedirect.mock.calls.length - 1][0];

@@ -6,7 +6,7 @@ export default defineConfig({
     plugins: [react()],
     test: {
         environment: 'jsdom',
-        exclude: ['node_modules', 'e2e', '.next'],
+        exclude: ['node_modules', 'e2e', '.next', '.claude', '**/*.spec.ts'],
     },
     resolve: {
         alias: {

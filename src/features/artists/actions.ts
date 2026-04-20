@@ -245,7 +245,7 @@ export async function saveArtistOnboardingAction(
             releasePdfUrl,
             isVerified: false,
         });
-    } catch (err: any) {
+    } catch (err: unknown) {
         // Rollback: remove uploaded files to avoid orphaned storage objects
         if (uploadedPaths.length > 0) {
             await supabase.storage.from("artist_media").remove(uploadedPaths);

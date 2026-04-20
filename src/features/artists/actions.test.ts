@@ -9,7 +9,7 @@ const mockLimit = vi.fn();
 vi.mock("@/db/index", () => {
     return {
         db: {
-            select: (...args: any[]) => mockSelect(...args),
+            select: (...args: unknown[]) => mockSelect(...args),
         }
     };
 });
