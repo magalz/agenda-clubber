@@ -4,7 +4,7 @@ test.describe('Artist Onboarding Flow', () => {
     // E2E test for Search Before Create forcing navigation
     test('requires searching for artistic name before filling the form', async ({ page }) => {
         // We navigate to the onboarding page
-        await page.goto('/dashboard/onboarding/artist');
+        await page.goto('/onboarding/artist');
 
         // Verify SearchBeforeCreate is visible first
         await expect(page.locator('text=Buscando seu perfil')).toBeVisible();

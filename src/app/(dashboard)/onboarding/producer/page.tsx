@@ -41,7 +41,7 @@ export default function ProducerOnboardingPage() {
 
                         {/* Path B */}
                         <Link
-                            href="/onboarding/artista"
+                            href="/onboarding/artist"
                             className="flex items-center p-4 border border-border rounded-lg cursor-pointer hover:border-neon-red transition-all group"
                         >
                             <div className="p-3 bg-neon-red/10 rounded-full mr-4 text-neon-red">

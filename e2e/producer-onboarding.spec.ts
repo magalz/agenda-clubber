@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Producer Onboarding Flow', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/dashboard/onboarding/producer');
+        await page.goto('/onboarding/producer');
     });
 
     test('should display 3 onboarding options', async ({ page }) => {
@@ -15,7 +15,7 @@ test.describe('Producer Onboarding Flow', () => {
     test('path B redirects to artist onboarding', async ({ page }) => {
         // Find the "Também sou Artista" link and verify its href
         const artistLink = page.locator('a', { hasText: 'Também sou Artista' });
-        await expect(artistLink).toHaveAttribute('href', '/onboarding/artista');
+        await expect(artistLink).toHaveAttribute('href', '/onboarding/artist');
     });
 
     test('path C shows waiting instructions', async ({ page }) => {
