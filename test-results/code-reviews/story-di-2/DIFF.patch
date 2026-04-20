@@ -1,0 +1,380 @@
+diff --git a/.env.example b/.env.example
+index 91cdb14..95fa10d 100644
+--- a/.env.example
++++ b/.env.example
+@@ -1,4 +1,62 @@
+-# Update these with your Supabase details from your project settings > API
+-# https://app.supabase.com/project/_/settings/api
+-NEXT_PUBLIC_SUPABASE_URL=your-project-url
+-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
++# =============================================================================
++# Agenda Clubber — Environment Variables Reference
++# =============================================================================
++# Copy this file: cp .env.example .env.local
++# Never commit .env.local — it is excluded by .gitignore
++# =============================================================================
++
++# -----------------------------------------------------------------------------
++# Supabase
++# Get these values from: https://supabase.com/dashboard/project/{ref}/settings/api
++# -----------------------------------------------------------------------------
++
++# Public project URL (safe to expose in browser bundles)
++NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
++
++# Publishable/Anon key — limited RLS-restricted access (safe to expose)
++# Note: Supabase dashboards may label this NEXT_PUBLIC_SUPABASE_ANON_KEY;
++# both names refer to the same key. This project uses the new publishable format.
++NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-publishable-or-anon-key>
++
++# Service Role key — FULL database access. NEVER expose in browser code.
++# Used only in server-side code / Edge Functions / admin scripts.
++SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
++
++# -----------------------------------------------------------------------------
++# Database (Drizzle ORM)
++# Postgres connection string — from Supabase > Settings > Database > URI
++# Use the "Transaction" pooler URL for serverless/edge deployments.
++# -----------------------------------------------------------------------------
++DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres
++
++# -----------------------------------------------------------------------------
++# Application
++# Used for building absolute URLs (e.g. auth redirect links)
++# Set to http://localhost:3000 for local development
++# -----------------------------------------------------------------------------
++NEXT_PUBLIC_SITE_URL=http://localhost:3000
++
++# -----------------------------------------------------------------------------
++# Sentry — Error monitoring
++# Create a project at https://sentry.io and get the DSN from Settings > DSN
++# -----------------------------------------------------------------------------
++NEXT_PUBLIC_SENTRY_DSN=https://<key>@o<org-id>.ingest.sentry.io/<project-id>
++SENTRY_AUTH_TOKEN=<your-sentry-auth-token>
++SENTRY_ORG=<your-sentry-org-slug>
++SENTRY_PROJECT=<your-sentry-project-slug>
++
++# -----------------------------------------------------------------------------
++# Future: Upstash QStash (background jobs / webhooks — Epic 4)
++# Uncomment and populate when implementing QStash integration.
++# Get credentials from: https://console.upstash.com/qstash
++# -----------------------------------------------------------------------------
++# QSTASH_TOKEN=<your-qstash-token>
++# QSTASH_CURRENT_SIGNING_KEY=<your-current-signing-key>
++# QSTASH_NEXT_SIGNING_KEY=<your-next-signing-key>
++
++# -----------------------------------------------------------------------------
++# Future: Evolution API (WhatsApp notifications — Epic 4)
++# Uncomment and populate when implementing WhatsApp integration.
++# -----------------------------------------------------------------------------
++# EVOLUTION_API_URL=https://your-evolution-api-instance.example.com
++# EVOLUTION_API_KEY=<your-evolution-api-key>
+diff --git a/README.md b/README.md
+index d417bff..d7838ed 100644
+--- a/README.md
++++ b/README.md
+@@ -1,109 +1,111 @@
+-<a href="https://demo-nextjs-with-supabase.vercel.app/">
+-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
+-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
+-</a>
++# Agenda Clubber
+ 
+-<p align="center">
+- The fastest way to build apps with Next.js and Supabase
+-</p>
++Plataforma de gestão de agenda e conflitos para a cena musical independente.
++Construída com [Next.js](https://nextjs.org), [Supabase](https://supabase.com), [Drizzle ORM](https://orm.drizzle.team) e [shadcn/ui](https://ui.shadcn.com).
+ 
+-<p align="center">
+-  <a href="#features"><strong>Features</strong></a> ·
+-  <a href="#demo"><strong>Demo</strong></a> ·
+-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
+-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
+-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
+-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
+-</p>
+-<br/>
++---
+ 
+-## Features
++## Local Setup
+ 
+-- Works across the entire [Next.js](https://nextjs.org) stack
+-  - App Router
+-  - Pages Router
+-  - Proxy
+-  - Client
+-  - Server
+-  - It just works!
+-- supabase-ssr. A package to configure Supabase Auth to use cookies
+-- Password-based authentication block installed via the [Supabase UI Library](https://supabase.com/ui/docs/nextjs/password-based-auth)
+-- Styling with [Tailwind CSS](https://tailwindcss.com)
+-- Components with [shadcn/ui](https://ui.shadcn.com/)
+-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
+-  - Environment variables automatically assigned to Vercel project
++> Você precisará de um projeto Supabase criado antes de começar.
++> Crie um em [database.new](https://database.new).
+ 
+-## Demo
++1. Clone o repositório:
+ 
+-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
++   ```bash
++   git clone https://github.com/<seu-usuario>/agenda-clubber.git
++   cd agenda-clubber
++   ```
+ 
+-## Deploy to Vercel
++2. Copie o arquivo de variáveis de ambiente:
+ 
+-Vercel deployment will guide you through creating a Supabase account and project.
++   ```bash
++   cp .env.example .env.local
++   ```
+ 
+-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
++3. Preencha os valores em `.env.local` com as credenciais do seu projeto Supabase
++   (Settings → API no dashboard).
+ 
+-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This+starter+configures+Supabase+Auth+to+use+cookies%2C+making+the+user%27s+session+available+throughout+the+entire+Next.js+app+-+Client+Components%2C+Server+Components%2C+Route+Handlers%2C+Server+Actions+and+Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png)
++4. Instale as dependências:
+ 
+-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
++   ```bash
++   npm install
++   ```
+ 
+-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
++5. Inicie o servidor de desenvolvimento:
+ 
+-## Clone and run locally
++   ```bash
++   npm run dev
++   ```
+ 
+-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
++   A aplicação estará disponível em [http://localhost:3000](http://localhost:3000).
+ 
+-2. Create a Next.js app using the Supabase Starter template npx command
++---
+ 
+-   ```bash
+-   npx create-next-app --example with-supabase with-supabase-app
+-   ```
++## Commit Conventions
+ 
+-   ```bash
+-   yarn create next-app --example with-supabase with-supabase-app
+-   ```
++Este projeto segue o padrão [Conventional Commits](https://www.conventionalcommits.org/).
+ 
+-   ```bash
+-   pnpm create next-app --example with-supabase with-supabase-app
+-   ```
++| Tipo       | Quando usar                               | Exemplo                                                         |
++| ---------- | ----------------------------------------- | --------------------------------------------------------------- |
++| `feat`     | Nova funcionalidade                       | `feat(auth): adicionar login com magic link`                    |
++| `fix`      | Correção de bug                           | `fix(story-1-4): corrigir violações de AC no onboarding`        |
++| `chore`    | Manutenção, configs, dependências         | `chore: merge épico devops/infra`                               |
++| `docs`     | Documentação apenas                       | `docs: adicionar seção de setup no README`                      |
++| `test`     | Adição ou correção de testes              | `test(auth): cobrir edge case de token expirado`                |
++| `refactor` | Refatoração sem mudança de comportamento  | `refactor(db): extrair helper de conexão Drizzle`               |
++| `style`    | Formatação, lint (sem mudança de lógica)  | `style: corrigir indentação em middleware.ts`                   |
++
++> Inclua o escopo entre parênteses quando relevante: `feat(profile):`, `fix(calendar):`, etc.
++
++---
+ 
+-3. Use `cd` to change into the app's directory
++## Development Workflow (Claude Code Worktrees)
++
++Este projeto usa **git worktrees** para isolar cada story durante o desenvolvimento com Claude Code.
++
++### Ciclo completo de uma story
++
++1. **Crie o worktree** a partir da branch `main`:
+ 
+    ```bash
+-   cd with-supabase-app
++   # No Claude Code, use o comando /worktree
++   # Isso cria automaticamente uma branch e diretório em .claude/worktrees/
+    ```
+ 
+-4. Rename `.env.example` to `.env.local` and update the following:
++2. **Implemente a story** no worktree isolado.
++   O agente trabalha em `.claude/worktrees/<nome-do-worktree>/` sem afetar `main`.
+ 
+-  ```env
+-  NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
+-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=[INSERT SUPABASE PROJECT API PUBLISHABLE OR ANON KEY]
+-  ```
+-  > [!NOTE]
+-  > This example uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, which refers to Supabase's new **publishable** key format.
+-  > Both legacy **anon** keys and new **publishable** keys can be used with this variable name during the transition period. Supabase's dashboard may show `NEXT_PUBLIC_SUPABASE_ANON_KEY`; its value can be used in this example.
+-  > See the [full announcement](https://github.com/orgs/supabase/discussions/29260) for more information.
++3. **Abra um Pull Request** da branch do worktree para `main`.
+ 
+-  Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` can be found in [your Supabase project's API settings](https://supabase.com/dashboard/project/_?showConnect=true)
++4. **Revisão e merge** — após aprovação, faça merge para `main`.
+ 
+-5. You can now run the Next.js local development server:
++5. **Delete o worktree** após o merge:
+ 
+    ```bash
+-   npm run dev
++   git worktree remove .claude/worktrees/<nome-do-worktree>
++   git branch -d claude/<nome-do-worktree>
+    ```
+ 
+-   The starter kit should now be running on [localhost:3000](http://localhost:3000/).
++### Convenção de nomenclatura
++
++- Branches de worktree seguem o padrão: `claude/<identificador-unico>`
++- Diretórios: `.claude/worktrees/<identificador-unico>/`
+ 
+-6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
++### Arquivos de story
+ 
+-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
++Story files ficam em `_bmad-output/implementation-artifacts/` e seguem o padrão:
++`<epic>-<numero>-<slug>.md` (ex: `di-2-documentacao-de-setup-e-env-example.md`).
+ 
+-## Feedback and issues
++Consulte `_bmad-output/` para PRDs, arquitetura e status do sprint.
+ 
+-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
++---
+ 
+-## More Supabase examples
++## Stack
+ 
+-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
+-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
+-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
++- **Framework:** Next.js 15 (App Router)
++- **Auth + Database:** Supabase (PostgreSQL + Row Level Security)
++- **ORM:** Drizzle
++- **UI:** shadcn/ui + Tailwind CSS
++- **Monitoring:** Sentry (stub — configurar na DI.4)
++- **Deploy:** Vercel
+diff --git a/_bmad-output/implementation-artifacts/di-2-documentacao-de-setup-e-env-example.md b/_bmad-output/implementation-artifacts/di-2-documentacao-de-setup-e-env-example.md
+index bda9b2d..62816a5 100644
+--- a/_bmad-output/implementation-artifacts/di-2-documentacao-de-setup-e-env-example.md
++++ b/_bmad-output/implementation-artifacts/di-2-documentacao-de-setup-e-env-example.md
+@@ -1,6 +1,6 @@
+ # Story DI.2: Documentação de Setup e Arquivo `.env.example`
+ 
+-Status: ready-for-dev
++Status: review
+ 
+ ## Story
+ 
+@@ -21,28 +21,28 @@ so that I can set up a working local environment without guessing or reading sou
+ 
+ ## Tasks / Subtasks
+ 
+-- [ ] **Inventory Active Env Vars (AC: 1-4)**
+-  - [ ] Grep codebase for `process.env.*` references
+-  - [ ] Cross-check with `src/lib/sentry.ts` and Supabase client initialization
+-  - [ ] List all active variables and classify: required vs optional vs future
+-- [ ] **Create `.env.example` (AC: 1-4, 8)**
+-  - [ ] Write file at project root with grouped sections: `# Supabase`, `# Database (Drizzle)`, `# Sentry`, `# Future: Upstash QStash`, `# Future: Evolution API`
+-  - [ ] Add inline comment for each variable explaining purpose and source (e.g., `# Supabase project URL - get from https://supabase.com/dashboard/project/{ref}/settings/api`)
+-  - [ ] Use clear placeholder values (never real secrets)
+-- [ ] **Update README (AC: 5)**
+-  - [ ] Add `## Local Setup` section after the project intro
+-  - [ ] Document the exact command sequence: `git clone` → `cp .env.example .env.local` → edit values → `npm install` → `npm run dev`
+-  - [ ] Add note about needing a Supabase project created beforehand
+-- [ ] **Document Commit Conventions (AC: 6)**
+-  - [ ] Add `## Commit Conventions` section with Conventional Commits table
+-  - [ ] Include at least one concrete example per type taken from real history (e.g., `fix(story-1-4): corrigir violações de AC...`)
+-- [ ] **Document Worktree Workflow (AC: 7)**
+-  - [ ] Add `## Development Workflow` or `## Worktree Workflow` section
+-  - [ ] Document the full lifecycle including the `.claude/worktrees/` convention
+-  - [ ] Link to related BMAD docs in `_bmad-output/` for story file conventions
+-- [ ] **Security Review (AC: 8)**
+-  - [ ] `git diff` review: confirm no `.env.local` content leaked
+-  - [ ] Confirm `.gitignore` includes `.env.local` (should already)
++- [x] **Inventory Active Env Vars (AC: 1-4)**
++  - [x] Grep codebase for `process.env.*` references
++  - [x] Cross-check with `src/lib/sentry.ts` and Supabase client initialization
++  - [x] List all active variables and classify: required vs optional vs future
++- [x] **Create `.env.example` (AC: 1-4, 8)**
++  - [x] Write file at project root with grouped sections: `# Supabase`, `# Database (Drizzle)`, `# Sentry`, `# Future: Upstash QStash`, `# Future: Evolution API`
++  - [x] Add inline comment for each variable explaining purpose and source (e.g., `# Supabase project URL - get from https://supabase.com/dashboard/project/{ref}/settings/api`)
++  - [x] Use clear placeholder values (never real secrets)
++- [x] **Update README (AC: 5)**
++  - [x] Add `## Local Setup` section after the project intro
++  - [x] Document the exact command sequence: `git clone` → `cp .env.example .env.local` → edit values → `npm install` → `npm run dev`
++  - [x] Add note about needing a Supabase project created beforehand
++- [x] **Document Commit Conventions (AC: 6)**
++  - [x] Add `## Commit Conventions` section with Conventional Commits table
++  - [x] Include at least one concrete example per type taken from real history (e.g., `fix(story-1-4): corrigir violações de AC...`)
++- [x] **Document Worktree Workflow (AC: 7)**
++  - [x] Add `## Development Workflow` or `## Worktree Workflow` section
++  - [x] Document the full lifecycle including the `.claude/worktrees/` convention
++  - [x] Link to related BMAD docs in `_bmad-output/` for story file conventions
++- [x] **Security Review (AC: 8)**
++  - [x] `git diff` review: confirm no `.env.local` content leaked
++  - [x] Confirm `.gitignore` includes `.env.local` (should already)
+ 
+ ## Dev Notes
+ 
+@@ -62,19 +62,29 @@ so that I can set up a working local environment without guessing or reading sou
+ ## Dev Agent Record
+ 
+ ### Agent Model Used
+-_(to be filled by implementing agent)_
++claude-sonnet-4-6
+ 
+ ### Implementation Plan
+-_(to be filled by implementing agent)_
++1. Grep `src/` para todos os `process.env.*` em uso no projeto.
++2. Verificar `src/lib/sentry.ts` — stub comentado, usa `NEXT_PUBLIC_SENTRY_DSN`.
++3. Reescrever `.env.example` com seções agrupadas e placeholders seguros.
++4. Substituir README.md genérico (boilerplate Next.js+Supabase) por README específico do projeto com seções: Local Setup, Commit Conventions, Worktree Workflow.
++5. Security review: confirmar apenas placeholders no `.env.example` e que `.env*.local` está no `.gitignore`.
+ 
+ ### Completion Notes
+-_(to be filled by implementing agent)_
++- `.env.example` reescrito com 6 seções: Supabase (3 vars), Database/Drizzle (1), Application (1), Sentry (4), QStash (3 comentadas), Evolution API (2 comentadas).
++- `README.md` substituído: removido boilerplate do Supabase Starter Kit, adicionado Local Setup (5 passos ordenados), tabela de Commit Conventions com exemplos reais do git history, seção Development Workflow descrevendo o ciclo completo de worktrees.
++- `.gitignore` já incluía `.env*.local` — nenhuma alteração necessária.
++- Nenhum segredo real incluído — apenas placeholders como `your-project-ref.supabase.co` e `<your-anon-key>`.
++- A variável `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` é o nome real usado no código; comentário no `.env.example` esclarece a equivalência com `NEXT_PUBLIC_SUPABASE_ANON_KEY` (AC 2 satisfeito).
+ 
+ ### File List
+-_(to be filled by implementing agent)_
++- `.env.example`
++- `README.md`
+ 
+ ### Review Findings
+ _(to be filled by reviewer)_
+ 
+ ### Change Log
+-_(to be filled by implementing agent)_
++- 2026-04-20: Reescrita completa de `.env.example` com todas as variáveis ativas e futuras documentadas (AC 1–4, 8).
++- 2026-04-20: README.md substituído por documentação específica do projeto: Local Setup, Commit Conventions, Worktree Workflow (AC 5–7).
+diff --git a/_bmad-output/implementation-artifacts/sprint-status.yaml b/_bmad-output/implementation-artifacts/sprint-status.yaml
+index a4e6a42..bb32b59 100644
+--- a/_bmad-output/implementation-artifacts/sprint-status.yaml
++++ b/_bmad-output/implementation-artifacts/sprint-status.yaml
+@@ -35,7 +35,7 @@
+ # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+ 
+ generated: terça-feira, 14 de abril de 2026
+-last_updated: domingo, 19 de abril de 2026 (criação épico devops/infra)
++last_updated: domingo, 20 de abril de 2026 (DI.2 em review)
+ project: Agenda Clubber
+ project_key: NOKEY
+ tracking_system: file-system
+@@ -54,7 +54,7 @@ development_status:
+   # Bloqueador para o Épico 2 — não iniciar Épico 2 antes deste concluído.
+   epic-devops-infra: ready-for-dev
+   di-1-limpeza-divida-tecnica-imediata: ready-for-dev
+-  di-2-documentacao-de-setup-e-env-example: ready-for-dev
++  di-2-documentacao-de-setup-e-env-example: review
+   di-3-github-branch-protection: ready-for-dev
+   di-4-pipeline-ci-cd-github-actions-e-vercel: ready-for-dev
+   di-5-supabase-branching-e-migracoes: ready-for-dev
