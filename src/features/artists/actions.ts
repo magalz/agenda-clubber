@@ -250,7 +250,7 @@ export async function saveArtistOnboardingAction(
         if (uploadedPaths.length > 0) {
             await supabase.storage.from("artist_media").remove(uploadedPaths);
         }
-        if (err.code === "23505") {
+        if (typeof err === "object" && err !== null && "code" in err && err.code === "23505") {
             return {
                 data: null,
                 error: { message: "Este perfil já completou o onboarding", code: "ALREADY_EXISTS" },

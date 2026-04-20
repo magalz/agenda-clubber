@@ -15,3 +15,10 @@
 - **Mocks manuais de NextRequest/NextResponse frágeis** [`src/middleware.test.ts:5-35`] — Reconstrução manual pode divergir do runtime real. Considerar `@edge-runtime/jest-environment` ou similar.
 - **Rotas de redirecionamento hardcoded** — `/auth/login`, `/dashboard` escritos em string em múltiplos arquivos. Centralizar em `src/lib/routes.ts` quando o volume de rotas crescer.
 - **login-form e nav-user fora de `src/features/auth/`** [`src/components/`] — Ambiguidade de convenção: são componentes UI/shared mas dependem do domínio auth. Reorganizar junto com a estrutura de features.
+
+## Deferred from: code review di-3-github-branch-protection (2026-04-20)
+
+- **Sem script/IaC reproduzível para branch protection** — AC1–AC7 configurados via `gh api` sem artefato versionado. Se as regras forem resetadas, precisam ser reaplicadas manualmente. Considerar script de bootstrap em DI.4 ou future infra epic.
+- **Check names CI/Vercel são placeholders** — `ci / build-and-test` e `Vercel – agenda-clubber` não foram validados contra os checks reais. Verificar nomes exatos quando DI.4 land e Vercel for conectado; atualizar via `gh api` se necessário.
+- **Padrão inconsistente de erro em `src/features/auth/actions.ts:110`** — usa cast sem guards (`err as { code?: string }`), enquanto `artists/actions.ts` foi corrigido para type narrowing. Unificar quando auth for tocado novamente.
+- **Storage cleanup sem tratamento de erro** [`src/features/artists/actions.ts:251`] — `supabase.storage.from("artist_media").remove()` pode falhar silenciosamente, deixando arquivos órfãos no storage.
