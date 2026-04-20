@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db/index";
 import { profiles } from "@/db/schema/auth";
 import { redirect } from "next/navigation";
+import { ROUTES } from "@/lib/routes";
 
 const signUpSchema = z.object({
     email: z.string().email("Email inválido"),
@@ -122,9 +123,9 @@ export async function signUpAction(
     }
 
     if (role === "artista") {
-        redirect("/onboarding/artista");
+        redirect(ROUTES.onboardingArtist);
     } else {
-        redirect("/onboarding/produtor");
+        redirect(ROUTES.onboardingProducer);
     }
 }
 
@@ -179,13 +180,13 @@ export async function signInAction(
         };
     }
 
-    redirect("/dashboard");
+    redirect(ROUTES.dashboard);
 }
 
 export async function signOutAction() {
     const supabase = await createClient();
     await supabase.auth.signOut();
-    redirect("/");
+    redirect(ROUTES.home);
 }
 
 export { signUpSchema };
