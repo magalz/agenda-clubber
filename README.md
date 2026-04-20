@@ -97,10 +97,16 @@ Este projeto usa **git worktrees** para isolar cada story durante o desenvolvime
    git branch -D claude/<nome-do-worktree>
    ```
 
-### Convenção de nomenclatura
+### Convenção de nomenclatura de branches
 
-- Branches de worktree seguem o padrão: `claude/<identificador-unico>`
-- Diretórios: `.claude/worktrees/<identificador-unico>/`
+| Tipo | Padrão | Exemplo |
+|------|--------|---------|
+| Feature / Story | `feat/story-X-Y-descricao` | `feat/story-2-1-perfil-on-the-fly` |
+| Bug fix | `fix/descricao-do-problema` | `fix/auth-redirect-loop` |
+| Tarefa técnica | `chore/descricao` | `chore/atualizar-dependencias` |
+| Claude Code worktree | `claude/<identificador-unico>` | `claude/bold-banach-b8ac4f` |
+
+> **Nota:** branches `claude/*` são criadas automaticamente pelo Claude Code e são permitidas pela proteção de branch (via PR).
 
 ### Arquivos de story
 
