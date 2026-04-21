@@ -11,11 +11,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
-    name: Quality Pipeline
+  db-migrate:
+    name: Migrate CI Database
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+      - run: npm ci
+      - name: Apply Drizzle migrations to CI database
+        run: npx drizzle-kit migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  lint-and-test:
+    name: Lint, Build & Test
+    needs: [db-migrate]
+    if: always() && !cancelled() && (needs.db-migrate.result == 'success' || needs.db-migrate.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}

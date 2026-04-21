@@ -1,0 +1,31 @@
+name: Deploy Migrations — Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Digite exatamente "deploy" (minúsculas) para confirmar'
+        required: true
+
+jobs:
+  migrate:
+    name: Apply Drizzle migrations to production
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate confirmation input
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "deploy" ]; then
+            echo "❌ Confirmação inválida: '${{ github.event.inputs.confirm }}'. Digite exatamente 'deploy' (minúsculas)."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Apply Drizzle migrations to production database
+        run: npx drizzle-kit migrate
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
