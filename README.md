@@ -52,6 +52,43 @@ Construída com [Next.js](https://nextjs.org), [Supabase](https://supabase.com),
 
 ---
 
+## CI/CD Setup (GitHub Actions + Vercel)
+
+### GitHub Secrets necessários
+
+Configure estes secrets em **Settings → Secrets and variables → Actions** do repositório:
+
+| Secret | Descrição |
+|--------|-----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase de CI (crie um projeto dedicado — free tier) |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Anon/Publishable key do projeto Supabase de CI |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service Role key do projeto Supabase de CI (**nunca use o de produção**) |
+| `DATABASE_URL` | Connection string do banco Supabase de CI (porta 5432 — Direct URL) |
+| `SENTRY_DSN` | DSN do projeto Sentry (opcional até o monitoramento ser ativado) |
+
+> **Importante:** use um projeto Supabase **separado** para CI. Jamais aponte CI para o banco de produção.
+
+Para adicionar via CLI:
+```bash
+gh secret set NEXT_PUBLIC_SUPABASE_URL
+gh secret set NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+gh secret set SUPABASE_SERVICE_ROLE_KEY
+gh secret set DATABASE_URL
+gh secret set SENTRY_DSN
+```
+
+### Vercel
+
+1. Acesse [vercel.com](https://vercel.com) → **Add New Project** → conecte o repositório GitHub.
+2. Framework preset: **Next.js** (auto-detectado).
+3. Configure as variáveis de ambiente **por environment**:
+   - **Preview** — use as credenciais do projeto Supabase de CI/staging.
+   - **Production** — use as credenciais do projeto Supabase de produção.
+4. Após conectar, todo PR receberá um comentário automático com a Preview URL.
+5. Merge para `main` dispara deploy de produção automaticamente.
+
+---
+
 ## Commit Conventions
 
 Este projeto segue o padrão [Conventional Commits](https://www.conventionalcommits.org/).

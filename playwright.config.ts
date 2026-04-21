@@ -5,7 +5,7 @@ export default defineConfig({
     fullyParallel: true,
     reporter: 'html',
     webServer: {
-        command: 'npm run dev',
+        command: 'npm run start',
         port: 3000,
         reuseExistingServer: !process.env.CI,
     },

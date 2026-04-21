@@ -19,7 +19,7 @@ test.describe('Authentication Flows', () => {
 
     test('login page has correct UI elements', async ({ page }) => {
         await page.goto('/auth/login');
-        await expect(page.locator('text=Entrar')).toBeVisible();
+        await expect(page.locator('text=Entrar').first()).toBeVisible();
         await expect(page.locator('input[type="email"]')).toBeVisible();
         await expect(page.locator('input[type="password"]')).toBeVisible();
         await expect(page.getByRole('button', { name: "Entrar" })).toBeVisible();

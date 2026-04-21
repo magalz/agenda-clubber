@@ -26,7 +26,8 @@ mockSelect.mockReturnValue({ from: mockFrom });
 mockFrom.mockReturnValue({ where: mockWhere });
 mockWhere.mockReturnValue({ limit: mockLimit });
 
-import { checkDuplicateArtist, artistOnboardingSchema, fileSchema } from "./actions";
+import { checkDuplicateArtist } from "./actions";
+import { artistOnboardingSchema, fileSchema } from "./schemas";
 
 describe("checkDuplicateArtist", () => {
     beforeEach(() => {
