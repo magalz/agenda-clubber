@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: terça-feira, 14 de abril de 2026
-last_updated: domingo, 20 de abril de 2026 (DI.4 in-progress)
+last_updated: segunda-feira, 21 de abril de 2026 (DI.4 review)
 project: Agenda Clubber
 project_key: NOKEY
 tracking_system: file-system
@@ -56,7 +56,7 @@ development_status:
   di-1-limpeza-divida-tecnica-imediata: ready-for-dev
   di-2-documentacao-de-setup-e-env-example: review
   di-3-github-branch-protection: done
-  di-4-pipeline-ci-cd-github-actions-e-vercel: in-progress
+  di-4-pipeline-ci-cd-github-actions-e-vercel: review
   di-5-supabase-branching-e-migracoes: ready-for-dev
   epic-devops-infra-retrospective: optional
 
