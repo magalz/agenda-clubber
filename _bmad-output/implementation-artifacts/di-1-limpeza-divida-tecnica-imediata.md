@@ -1,6 +1,6 @@
 # Story DI.1: Limpeza de Dívida Técnica Imediata
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 

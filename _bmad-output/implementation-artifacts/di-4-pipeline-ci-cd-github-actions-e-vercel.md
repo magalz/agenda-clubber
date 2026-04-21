@@ -1,6 +1,6 @@
 # Story DI.4: Pipeline CI/CD com GitHub Actions e Vercel
 
-Status: review
+Status: done
 
 ## Story
 
