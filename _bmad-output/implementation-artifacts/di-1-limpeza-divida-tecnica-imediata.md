@@ -1,6 +1,6 @@
 # Story DI.1: Limpeza de Dívida Técnica Imediata
 
-Status: done
+Status: ready-for-dev
 
 ## Story
 
@@ -21,22 +21,22 @@ so that the codebase is clean before adding DevOps automation on top of it.
 
 ## Tasks / Subtasks
 
-- [ ] **Create `src/lib/routes.ts` (AC: 1, 5)**
-  - [ ] Define `export const ROUTES = { home: '/', login: '/login', signup: '/signup', onboardingArtist: '/onboarding/artist', onboardingProducer: '/onboarding/producer', dashboard: '/dashboard', admin: '/admin' } as const;`
-  - [ ] Export a `Route` type derived from `typeof ROUTES[keyof typeof ROUTES]` for type-safe navigation
-  - [ ] Replace hard-coded route strings in `src/middleware.ts`, redirects, and `Link`s with `ROUTES.*`
-- [ ] **Relocate Auth Components (AC: 2, 5)**
-  - [ ] Create directory `src/features/auth/components/` if it does not exist
-  - [ ] Move `src/components/login-form.tsx` → `src/features/auth/components/login-form.tsx` (use `git mv` to preserve history)
-  - [ ] Move `src/components/nav-user.tsx` → `src/features/auth/components/nav-user.tsx`
-  - [ ] Update all import paths via project-wide grep (`@/components/login-form` → `@/features/auth/components/login-form` e análogo para `nav-user`)
-- [ ] **Fix Story 1.1 Status (AC: 3)**
-  - [ ] Edit `_bmad-output/implementation-artifacts/1-1-cadastro-inicial-e-triagem-de-papel.md`: change `Status: review` to `Status: done`
-- [ ] **Verify Non-Regression (AC: 4)**
-  - [ ] Run `npm run lint`
-  - [ ] Run `npm run build`
-  - [ ] Run `npm run test` (Vitest)
-  - [ ] Run `npm run test:e2e` (Playwright, if viable locally)
+- [x] **Create `src/lib/routes.ts` (AC: 1, 5)**
+  - [x] Define `export const ROUTES = { home: '/', login: '/auth/login', signup: '/auth/sign-up', onboardingArtist: '/onboarding/artist', onboardingProducer: '/onboarding/producer', dashboard: '/dashboard', admin: '/admin', authPrefix: '/auth' } as const;`
+  - [x] Export a `Route` type derived from `typeof ROUTES[keyof typeof ROUTES]` for type-safe navigation
+  - [x] Replace hard-coded route strings in `src/middleware.ts`, redirects, and `Link`s with `ROUTES.*`
+- [x] **Relocate Auth Components (AC: 2, 5)**
+  - [x] Create directory `src/features/auth/components/` if it does not exist
+  - [x] Move `src/components/login-form.tsx` → `src/features/auth/components/login-form.tsx` (use `git mv` to preserve history)
+  - [x] Move `src/components/nav-user.tsx` → `src/features/auth/components/nav-user.tsx`
+  - [x] Update all import paths via project-wide grep (`@/components/login-form` → `@/features/auth/components/login-form` e análogo para `nav-user`)
+- [x] **Fix Story 1.1 Status (AC: 3)**
+  - [x] Edit `_bmad-output/implementation-artifacts/1-1-cadastro-inicial-e-triagem-de-papel.md`: change `Status: review` to `Status: done`
+- [x] **Verify Non-Regression (AC: 4)**
+  - [x] Run `npm run lint`
+  - [x] Run `npm run build`
+  - [x] Run `npm run test` (Vitest)
+  - [x] Run `npm run test:e2e` (Playwright, if viable locally)
 
 ## Dev Notes
 
@@ -59,19 +59,36 @@ so that the codebase is clean before adding DevOps automation on top of it.
 ## Dev Agent Record
 
 ### Agent Model Used
-_(to be filled by implementing agent)_
+claude-sonnet-4-6
 
 ### Implementation Plan
-_(to be filled by implementing agent)_
+1. Criar `src/lib/routes.ts` com constante `ROUTES` e tipo `Route`.
+2. Mover `login-form.tsx` e `nav-user.tsx` para `src/features/auth/components/` via `git mv`.
+3. Atualizar todos os imports afetados (`@/components/login-form` → `@/features/auth/components/login-form`, idem `nav-user`).
+4. Substituir strings hardcoded de rota em `src/middleware.ts` e `src/features/auth/actions.ts` por `ROUTES.*`.
+5. Corrigir `status: review → done` no arquivo da story 1.1.
+6. Revisão adversarial Gemini (3 revisores): edge-case-hunter, blind-test, acceptance-auditor.
 
 ### Completion Notes
-_(to be filled by implementing agent)_
+- `ROUTES` criado com 7 rotas + `authPrefix: '/auth'` — o `startsWith` hardcoded no middleware precisava de `authPrefix` como constante extra.
+- Pós-review Gemini: valores de rota corrigidos para bater com a estrutura real de rotas Next.js do projeto (`login: '/auth/login'`, `signup: '/auth/sign-up'`).
+- Todos os imports atualizados. Build, lint e testes passando.
 
 ### File List
-_(to be filled by implementing agent)_
+- `src/lib/routes.ts` (criado)
+- `src/features/auth/components/login-form.tsx` (movido de `src/components/`)
+- `src/features/auth/components/nav-user.tsx` (movido de `src/components/`)
+- `src/middleware.ts` (atualizado — usa `ROUTES.*`)
+- `src/features/auth/actions.ts` (atualizado — usa `ROUTES.*`)
+- `src/app/auth/login/page.tsx` (atualizado — import corrigido)
+- `_bmad-output/implementation-artifacts/1-1-cadastro-inicial-e-triagem-de-papel.md` (status: review → done)
+- `_bmad-output/implementation-artifacts/di-1-gemini-review-prompts.md` (criado — prompts de revisão LLM)
 
 ### Review Findings
-_(to be filled by reviewer)_
+Revisão adversarial Gemini (3 revisores) — 2026-04-20.
+- Rotas `login` e `signup` apontavam para `/login` e `/signup` mas o projeto usa `/auth/login` e `/auth/sign-up` — corrigido.
+- `authPrefix` ausente no `ROUTES` inicial — adicionado para substituir o último `startsWith` hardcoded no middleware.
 
 ### Change Log
-_(to be filled by implementing agent)_
+- 2026-04-20: Implementação completa — `routes.ts` criado, componentes movidos, imports atualizados, middleware refatorado, status 1.1 corrigido.
+- 2026-04-20: Pós-review Gemini — valores de rota corrigidos para bater com estrutura real do projeto.
