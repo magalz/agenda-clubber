@@ -1,6 +1,6 @@
 # Story DI.2: Documentação de Setup e Arquivo `.env.example`
 
-Status: review
+Status: done
 
 ## Story
 
