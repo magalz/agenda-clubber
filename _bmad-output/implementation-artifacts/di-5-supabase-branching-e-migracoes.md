@@ -1,12 +1,14 @@
-# Story DI.5: Supabase Branching e Workflow de Migrações
+# Story DI.5: Workflow de Migrações CI/CD com Banco Dedicado
+
+> **Nota arquitetural:** O título original desta story era "Supabase Branching e Workflow de Migrações". Supabase Branching **não foi implementado** — o projeto não possui Supabase Pro. Em vez disso, adotou-se um **banco CI dedicado** para isolamento de migrations em PRs. Ver seção "Implementation Plan" para detalhes da decisão.
 
 Status: done
 
 ## Story
 
 As a developer,
-I want each feature branch to have its own isolated database branch with automated migrations,
-so that schema changes can be tested safely without affecting shared development or production databases.
+I want each PR to run Drizzle migrations against an isolated CI database before tests,
+so that schema changes can be validated safely without affecting the production database.
 
 ## Pre-requisites
 
