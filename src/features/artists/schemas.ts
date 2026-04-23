@@ -20,6 +20,14 @@ export const artistOnboardingSchema = z.object({
     presskitUrl: z.union([z.literal(""), z.string().url("Must be a valid URL")]).optional(),
 });
 
+export const createOnTheFlyArtistSchema = z.object({
+    artisticName: trimmedStr(2, 100, "Nome artístico obrigatório"),
+    location: trimmedStr(2, 100, "Localidade obrigatória"),
+    email: z.union([z.literal(""), z.string().email("E-mail inválido")]).optional(),
+});
+
+export type CreateOnTheFlyArtistInput = z.infer<typeof createOnTheFlyArtistSchema>;
+
 export const MAX_PHOTO_SIZE = 5 * 1024 * 1024;   // 5MB
 export const MAX_PDF_SIZE   = 20 * 1024 * 1024;  // 20MB
 

@@ -3,10 +3,10 @@ import { profiles } from './auth';
 
 export const artists = pgTable('artists', {
     id: uuid('id').defaultRandom().primaryKey(),
-    profileId: uuid('profile_id').references(() => profiles.id).notNull().unique(),
+    profileId: uuid('profile_id').references(() => profiles.id).unique(),
     artisticName: text('artistic_name').notNull().unique(),
     location: text('location').notNull(),
-    genrePrimary: text('genre_primary').notNull(),
+    genrePrimary: text('genre_primary'),
     genreSecondary: text('genre_secondary'),
     socialLinks: jsonb('social_links'), // For SoundCloud, YouTube, Instagram
     presskitUrl: text('presskit_url'),

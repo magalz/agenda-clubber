@@ -22,3 +22,14 @@
 - **Check names CI/Vercel são placeholders** — `ci / build-and-test` e `Vercel – agenda-clubber` não foram validados contra os checks reais. Verificar nomes exatos quando DI.4 land e Vercel for conectado; atualizar via `gh api` se necessário.
 - **Padrão inconsistente de erro em `src/features/auth/actions.ts:110`** — usa cast sem guards (`err as { code?: string }`), enquanto `artists/actions.ts` foi corrigido para type narrowing. Unificar quando auth for tocado novamente.
 - **Storage cleanup sem tratamento de erro** [`src/features/artists/actions.ts:251`] — `supabase.storage.from("artist_media").remove()` pode falhar silenciosamente, deixando arquivos órfãos no storage.
+
+## Deferred from: code review de 2-1-criacao-de-perfil-on-the-fly-e-notificacao (2026-04-23)
+
+- **Missing `created_by`/`collective_id` em artistas on-the-fly** — Registros criados sem vínculo auditável de quem os criou. Endereçar na story de claim (2.3) quando o link ao perfil do artista for estabelecido.
+- **Email do convite não persistido no banco** — O email passado na action não é salvo; apenas enviado ao QStash. Sem persistência, não é possível auditar envios ou reenviar convites. Endereçar quando email real for integrado.
+- **Ausência de CHECK constraint DB** — Sem constraint garantindo que `is_verified=true` implica `profile_id NOT NULL` e `genre_primary NOT NULL`. Risco de corrupção de estado. Candidato a migration de hardening no Épico 2 ou 3.
+- **`NEXT_PUBLIC_SITE_URL` usado em módulo de backend** [`src/features/notifications/qstash.ts`] — Pattern preexistente no projeto; vaza para o bundle do browser. Criar variável privada `SITE_URL` quando o projeto tiver contexto de múltiplos ambientes.
+- **Webhook sem idempotência** [`src/app/api/webhooks/notifications/artist-claim/route.ts`] — QStash garante at-least-once; duplicatas causarão emails duplicados quando integração real for feita. Adicionar dedup por `Upstash-Message-Id` na story de integração transacional.
+- **Rate limiting ausente em `createOnTheFlyArtistAction`** — Admin com token comprometido pode fazer flood de inserts + chamadas QStash. Endereçar com middleware de rate limiting (Vercel Edge / Upstash Ratelimit) em epic de segurança.
+- **`err.code === "23505"` sem tipagem** [`src/features/artists/actions.ts`] — Pattern frágil preexistente em `saveArtistOnboardingAction` também. Unificar com helper tipado quando Drizzle for atualizado.
+- **Signing keys QStash ausentes em produção** — `QSTASH_CURRENT_SIGNING_KEY` / `QSTASH_NEXT_SIGNING_KEY` ausentes causam rejeição de todos os webhooks. Documentado no `.env.example`; adicionar validação de startup em produção.
