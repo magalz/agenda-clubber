@@ -1,40 +1,67 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock the db to avoid real queries
+// ─── DB mocks ────────────────────────────────────────────────────────────────
 const mockSelect = vi.fn();
 const mockFrom = vi.fn();
+const mockInnerJoin = vi.fn();
 const mockWhere = vi.fn();
 const mockLimit = vi.fn();
+const mockInsert = vi.fn();
+const mockValues = vi.fn();
+const mockReturning = vi.fn();
 
-vi.mock("@/db/index", () => {
-    return {
-        db: {
-            select: (...args: unknown[]) => mockSelect(...args),
-        }
-    };
-});
+vi.mock("@/db/index", () => ({
+    db: {
+        select: (...args: unknown[]) => mockSelect(...args),
+        insert: (...args: unknown[]) => mockInsert(...args),
+    },
+}));
 
-vi.mock('drizzle-orm', () => {
-    return {
-        eq: vi.fn(),
-        ilike: vi.fn(),
-    }
-});
+vi.mock("drizzle-orm", () => ({
+    eq: vi.fn(),
+    ilike: vi.fn(),
+    and: vi.fn(),
+}));
 
-// Setting up the chain
-mockSelect.mockReturnValue({ from: mockFrom });
-mockFrom.mockReturnValue({ where: mockWhere });
-mockWhere.mockReturnValue({ limit: mockLimit });
+// ─── Supabase mock ───────────────────────────────────────────────────────────
+const mockGetUser = vi.fn();
+vi.mock("@/lib/supabase/server", () => ({
+    createClient: vi.fn().mockResolvedValue({
+        auth: { getUser: (...args: unknown[]) => mockGetUser(...args) },
+    }),
+}));
 
-import { checkDuplicateArtist } from "./actions";
-import { artistOnboardingSchema, fileSchema } from "./schemas";
+// ─── QStash mock ─────────────────────────────────────────────────────────────
+const mockEnqueueArtistClaimInvitation = vi.fn();
+vi.mock("@/features/notifications/qstash", () => ({
+    enqueueArtistClaimInvitation: (...args: unknown[]) => mockEnqueueArtistClaimInvitation(...args),
+}));
 
+// ─── Chain helpers ────────────────────────────────────────────────────────────
+function setupSelectChain() {
+    mockFrom.mockReturnValue({ where: mockWhere, innerJoin: mockInnerJoin });
+    mockInnerJoin.mockReturnValue({ where: mockWhere });
+    mockWhere.mockReturnValue({ limit: mockLimit });
+    mockSelect.mockReturnValue({ from: mockFrom });
+}
+
+function setupInsertChain(returnedId = "artist-uuid-123") {
+    mockReturning.mockResolvedValue([{ id: returnedId }]);
+    mockValues.mockReturnValue({ returning: mockReturning });
+    mockInsert.mockReturnValue({ values: mockValues });
+}
+
+// ─── Imports after mocks ──────────────────────────────────────────────────────
+import { checkDuplicateArtist, createOnTheFlyArtistAction } from "./actions";
+import { artistOnboardingSchema, fileSchema, createOnTheFlyArtistSchema } from "./schemas";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// checkDuplicateArtist
+// ─────────────────────────────────────────────────────────────────────────────
 describe("checkDuplicateArtist", () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mockSelect.mockReturnValue({ from: mockFrom });
-        mockFrom.mockReturnValue({ where: mockWhere });
-        mockWhere.mockReturnValue({ limit: mockLimit });
+        setupSelectChain();
     });
 
     it("returns false for empty or whitespace strings without hitting db", async () => {
@@ -58,6 +85,9 @@ describe("checkDuplicateArtist", () => {
     });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// artistOnboardingSchema
+// ─────────────────────────────────────────────────────────────────────────────
 describe("artistOnboardingSchema", () => {
     const validBase = {
         artisticName: "DJ Test",
@@ -109,7 +139,43 @@ describe("artistOnboardingSchema", () => {
     });
 });
 
-// Helper to create a mock File with a given size
+// ─────────────────────────────────────────────────────────────────────────────
+// createOnTheFlyArtistSchema
+// ─────────────────────────────────────────────────────────────────────────────
+describe("createOnTheFlyArtistSchema", () => {
+    const validBase = { artisticName: "DJ On The Fly", location: "Recife, PE" };
+
+    it("aceita dados mínimos sem e-mail", () => {
+        expect(createOnTheFlyArtistSchema.safeParse(validBase).success).toBe(true);
+    });
+
+    it("aceita dados com e-mail válido", () => {
+        expect(createOnTheFlyArtistSchema.safeParse({ ...validBase, email: "dj@cena.com" }).success).toBe(true);
+    });
+
+    it("aceita e-mail vazio (string vazia)", () => {
+        expect(createOnTheFlyArtistSchema.safeParse({ ...validBase, email: "" }).success).toBe(true);
+    });
+
+    it("rejeita e-mail inválido", () => {
+        expect(createOnTheFlyArtistSchema.safeParse({ ...validBase, email: "not-an-email" }).success).toBe(false);
+    });
+
+    it("rejeita nome com menos de 2 chars", () => {
+        const result = createOnTheFlyArtistSchema.safeParse({ ...validBase, artisticName: "A" });
+        expect(result.success).toBe(false);
+    });
+
+    it("faz trim no nome", () => {
+        const result = createOnTheFlyArtistSchema.safeParse({ ...validBase, artisticName: "  DJ Trim  " });
+        expect(result.success).toBe(true);
+        if (result.success) expect(result.data.artisticName).toBe("DJ Trim");
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// fileSchema
+// ─────────────────────────────────────────────────────────────────────────────
 function makeFile(name: string, type: string, sizeBytes: number): File {
     const content = new Uint8Array(sizeBytes);
     return new File([content], name, { type });
@@ -178,5 +244,142 @@ describe("fileSchema", () => {
             releasePdf: null,
         });
         expect(result.success).toBe(true);
+    });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// createOnTheFlyArtistAction
+// ─────────────────────────────────────────────────────────────────────────────
+describe("createOnTheFlyArtistAction", () => {
+    const ARTIST_ID = "artist-uuid-123";
+    const INITIAL_STATE = { data: null, error: null } as const;
+
+    function makeFormData(overrides: Record<string, string> = {}): FormData {
+        const fd = new FormData();
+        fd.set("artisticName", "DJ On The Fly");
+        fd.set("location", "São Paulo, SP");
+        Object.entries(overrides).forEach(([k, v]) => fd.set(k, v));
+        return fd;
+    }
+
+    function setupAuthenticatedUser() {
+        mockGetUser.mockResolvedValue({ data: { user: { id: "user-uuid" } }, error: null });
+    }
+
+    function setupAdminCheck(isAdmin: boolean) {
+        mockLimit.mockResolvedValueOnce(isAdmin ? [{ id: "admin-member-id" }] : []);
+    }
+
+    function setupDuplicateCheck(isDuplicate: boolean) {
+        mockLimit.mockResolvedValueOnce(isDuplicate ? [{ id: "existing-artist-id" }] : []);
+    }
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        setupSelectChain();
+        setupInsertChain(ARTIST_ID);
+        mockEnqueueArtistClaimInvitation.mockResolvedValue({ queued: true });
+    });
+
+    it("happy path com e-mail → emailQueued true, artista com profileId=null e genrePrimary=null", async () => {
+        setupAuthenticatedUser();
+        setupAdminCheck(true);
+        setupDuplicateCheck(false);
+
+        const result = await createOnTheFlyArtistAction(
+            INITIAL_STATE,
+            makeFormData({ email: "artista@cena.com" })
+        );
+
+        expect(result.error).toBeNull();
+        expect(result.data?.success).toBe(true);
+        expect(result.data?.artistId).toBe(ARTIST_ID);
+        expect(result.data?.emailQueued).toBe(true);
+        expect(mockValues).toHaveBeenCalledWith(expect.objectContaining({
+            profileId: null,
+            isVerified: false,
+            genrePrimary: null,
+            artisticName: "DJ On The Fly",
+        }));
+        expect(mockEnqueueArtistClaimInvitation).toHaveBeenCalledWith(expect.objectContaining({
+            artistId: ARTIST_ID,
+            email: "artista@cena.com",
+        }));
+    });
+
+    it("happy path sem e-mail → emailQueued false, sem chamada ao QStash", async () => {
+        setupAuthenticatedUser();
+        setupAdminCheck(true);
+        setupDuplicateCheck(false);
+
+        const result = await createOnTheFlyArtistAction(INITIAL_STATE, makeFormData());
+
+        expect(result.error).toBeNull();
+        expect(result.data?.emailQueued).toBe(false);
+        expect(mockEnqueueArtistClaimInvitation).not.toHaveBeenCalled();
+        expect(mockInsert).toHaveBeenCalled();
+    });
+
+    it("nome < 2 chars → VALIDATION_ERROR com fieldErrors.artisticName", async () => {
+        setupAuthenticatedUser();
+        setupAdminCheck(true);
+
+        const result = await createOnTheFlyArtistAction(
+            INITIAL_STATE,
+            makeFormData({ artisticName: "A" })
+        );
+
+        expect(result.error?.code).toBe("VALIDATION_ERROR");
+        expect(result.error?.fieldErrors?.artisticName).toBeDefined();
+        expect(mockInsert).not.toHaveBeenCalled();
+        expect(mockEnqueueArtistClaimInvitation).not.toHaveBeenCalled();
+    });
+
+    it("nome duplicado → DUPLICATE_NAME, sem insert, sem enqueue", async () => {
+        setupAuthenticatedUser();
+        setupAdminCheck(true);
+        setupDuplicateCheck(true);
+
+        const result = await createOnTheFlyArtistAction(INITIAL_STATE, makeFormData());
+
+        expect(result.error?.code).toBe("DUPLICATE_NAME");
+        expect(mockInsert).not.toHaveBeenCalled();
+        expect(mockEnqueueArtistClaimInvitation).not.toHaveBeenCalled();
+    });
+
+    it("sem autenticação → UNAUTHORIZED", async () => {
+        mockGetUser.mockResolvedValue({ data: { user: null }, error: new Error("not authenticated") });
+
+        const result = await createOnTheFlyArtistAction(INITIAL_STATE, makeFormData());
+
+        expect(result.error?.code).toBe("UNAUTHORIZED");
+        expect(mockInsert).not.toHaveBeenCalled();
+    });
+
+    it("user sem collective_admin em coletivo → FORBIDDEN", async () => {
+        setupAuthenticatedUser();
+        setupAdminCheck(false);
+
+        const result = await createOnTheFlyArtistAction(INITIAL_STATE, makeFormData());
+
+        expect(result.error?.code).toBe("FORBIDDEN");
+        expect(mockInsert).not.toHaveBeenCalled();
+    });
+
+    it("falha de enqueue → insert persiste, retorna emailQueued false", async () => {
+        setupAuthenticatedUser();
+        setupAdminCheck(true);
+        setupDuplicateCheck(false);
+        mockEnqueueArtistClaimInvitation.mockResolvedValue({ queued: false, error: "QStash timeout" });
+
+        const result = await createOnTheFlyArtistAction(
+            INITIAL_STATE,
+            makeFormData({ email: "artista@cena.com" })
+        );
+
+        expect(result.error).toBeNull();
+        expect(result.data?.success).toBe(true);
+        expect(result.data?.emailQueued).toBe(false);
+        expect(mockInsert).toHaveBeenCalled();
     });
 });

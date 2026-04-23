@@ -42,7 +42,20 @@ Construída com [Next.js](https://nextjs.org), [Supabase](https://supabase.com),
 
    > **Importante:** este comando usa a `DATABASE_URL` do `.env.local`. Para migrations, use a **Direct URL** (porta `5432`) em vez do Transaction Pooler (porta `6543`). Obtenha em Supabase → Settings → Database → Connection string → Direct.
 
-6. Inicie o servidor de desenvolvimento:
+6. (Opcional) Configure as credenciais do **Upstash QStash** em `.env.local`:
+
+   ```
+   QSTASH_TOKEN=<seu-token>
+   QSTASH_CURRENT_SIGNING_KEY=<chave-atual>
+   QSTASH_NEXT_SIGNING_KEY=<chave-próxima>
+   ```
+
+   > **Atenção (dev local):** o consumer webhook em `/api/webhooks/notifications/artist-claim`
+   > valida a assinatura QStash, que exige uma **URL pública** — use [ngrok](https://ngrok.com)
+   > ou [localtunnel](https://theboroer.github.io/localtunnel-www/) para expor `localhost:3000`.
+   > Para testes unitários do consumer, a assinatura é mockada e nenhum túnel é necessário.
+
+7. Inicie o servidor de desenvolvimento:
 
    ```bash
    npm run dev

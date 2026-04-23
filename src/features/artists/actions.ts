@@ -4,9 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db/index";
 import { artists } from "@/db/schema/artists";
 import { profiles } from "@/db/schema/auth";
-import { eq, ilike } from "drizzle-orm";
+import { collectiveMembers } from "@/db/schema/collective-members";
+import { and, eq, ilike } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { artistOnboardingSchema, fileSchema } from "./schemas";
+import { artistOnboardingSchema, createOnTheFlyArtistSchema, fileSchema } from "./schemas";
+import { enqueueArtistClaimInvitation } from "@/features/notifications/qstash";
 
 export async function checkDuplicateArtist(name: string) {
     if (!name || name.trim() === "") return false;
@@ -227,4 +229,87 @@ export async function saveArtistOnboardingAction(
     }
 
     redirect("/dashboard/artist");
+}
+
+export type CreateOnTheFlyArtistState = {
+    data: { success: boolean; artistId: string; emailQueued: boolean } | null;
+    error: { message: string; code: string; fieldErrors?: Record<string, string[]> } | null;
+};
+
+export async function createOnTheFlyArtistAction(
+    _prevState: CreateOnTheFlyArtistState,
+    formData: FormData
+): Promise<CreateOnTheFlyArtistState> {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        return { data: null, error: { message: "Usuário não autenticado", code: "UNAUTHORIZED" } };
+    }
+
+    const adminCheck = await db
+        .select({ id: collectiveMembers.id })
+        .from(collectiveMembers)
+        .innerJoin(profiles, eq(profiles.id, collectiveMembers.profileId))
+        .where(and(eq(profiles.userId, user.id), eq(collectiveMembers.role, "collective_admin")))
+        .limit(1);
+
+    if (!adminCheck.length) {
+        return { data: null, error: { message: "Apenas admins de coletivo podem criar artistas", code: "FORBIDDEN" } };
+    }
+
+    const rawData = {
+        artisticName: formData.get("artisticName"),
+        location: formData.get("location"),
+        email: formData.get("email") || undefined,
+    };
+
+    const parsed = createOnTheFlyArtistSchema.safeParse(rawData);
+    if (!parsed.success) {
+        return {
+            data: null,
+            error: {
+                message: "Dados inválidos. Corrija os campos abaixo.",
+                code: "VALIDATION_ERROR",
+                fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
+            },
+        };
+    }
+
+    const { artisticName, location, email } = parsed.data;
+    const normalizedEmail = email === "" ? undefined : email;
+
+    const isDuplicate = await checkDuplicateArtist(artisticName);
+    if (isDuplicate) {
+        return { data: null, error: { message: "Já existe um artista com este nome", code: "DUPLICATE_NAME" } };
+    }
+
+    let artistId: string;
+    try {
+        const [inserted] = await db.insert(artists).values({
+            profileId: null,
+            artisticName,
+            location,
+            genrePrimary: null,
+            isVerified: false,
+        }).returning({ id: artists.id });
+        artistId = inserted.id;
+    } catch (err: unknown) {
+        if (typeof err === "object" && err !== null && "code" in err && err.code === "23505") {
+            return { data: null, error: { message: "Já existe um artista com este nome", code: "DUPLICATE_NAME" } };
+        }
+        return { data: null, error: { message: "Erro ao criar perfil do artista", code: "DB_ERROR" } };
+    }
+
+    let emailQueued = false;
+    if (normalizedEmail) {
+        const result = await enqueueArtistClaimInvitation({ artistId, email: normalizedEmail, artisticName });
+        if (result.queued) {
+            emailQueued = true;
+        } else {
+            console.error("[createOnTheFlyArtistAction] enqueue falhou:", result.error);
+        }
+    }
+
+    return { data: { success: true, artistId, emailQueued }, error: null };
 }
