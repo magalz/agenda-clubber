@@ -27,7 +27,7 @@ vi.mock("drizzle-orm", () => ({
 const mockGetUser = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
     createClient: vi.fn().mockResolvedValue({
-        auth: { getUser: mockGetUser },
+        auth: { getUser: (...args: unknown[]) => mockGetUser(...args) },
     }),
 }));
 
