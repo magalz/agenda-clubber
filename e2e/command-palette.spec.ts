@@ -12,9 +12,12 @@ test.describe('Command Palette', () => {
     await expect(page).toHaveURL(/\/auth\/login/);
   });
 
-  test('onboarding sem autenticação redireciona para login', async ({ page }) => {
+  test('onboarding é acessível sem autenticação (fluxo pós-cadastro)', async ({ page }) => {
+    // /onboarding/* is intentionally not protected by middleware — users access it
+    // right after sign-up before they have a session. CommandPalette is not mounted
+    // outside the (dashboard) route group, so it won't be available here.
     await page.goto('/onboarding/artist');
-    await expect(page).toHaveURL(/\/auth\/login/);
+    await expect(page).not.toHaveURL(/\/auth\/login/);
   });
 
   test('página de login não abre Command Palette com Cmd+K', async ({ page }) => {
