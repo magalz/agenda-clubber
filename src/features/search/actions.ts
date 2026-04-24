@@ -38,7 +38,8 @@ export async function searchTalents(
   }
 
   const { query, types } = parsed.data;
-  const pattern = `%${query}%`;
+  const escaped = query.replace(/[%_]/g, '\\$&');
+  const pattern = `%${escaped}%`;
 
   try {
     const results: SearchHit[] = [];

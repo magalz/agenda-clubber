@@ -307,7 +307,28 @@ claude-sonnet-4-6
 - `package.json` (atualizado — cmdk, @testing-library/* adicionados)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (atualizado — 2-2 → review)
 
+### Review Findings
+
+Revisão por três papéis LLM (Blind Hunter, Edge Case Hunter, Acceptance Auditor) — 2026-04-24.
+
+**Corrigido:**
+- **cmdk shouldFilter ausente** — `CommandDialog` não envolvia filhos em `<Command>`. Adicionado `<Command shouldFilter={false}>` dentro do dialog para desabilitar filtragem interna do cmdk (que comparava `value="artist-{uuid}"` com a query, ocultando todos os resultados). Fix crítico para funcionalidade.
+- **Wildcard injection em `pattern`** — `%${query}%` não escapava `%` e `_`. Corrigido para `query.replace(/[%_]/g, '\\$&')` antes de montar o pattern.
+- **`res.error` ignorado no cliente** — `CommandPalette` ignorava erros retornados pela action. Adicionado early return com `setResults([])` quando `res.error` está presente.
+
+**Falsos positivos rejeitados:**
+- `render` prop no Button — correto para `@base-ui/react/button` (base-nova style).
+- Filtro de status ausente em artists — by design: spec exige retornar TODOS.
+- `artisticName` null crash — coluna é `notNull()` no schema.
+- CommandPalette ausente em `/onboarding/*` — onboarding está dentro do route group `(dashboard)`, já coberto.
+
+**Deferred (documentado):**
+- Sentry capture no catch de `searchTalents` — Sentry ainda não configurado no projeto.
+- E2E fluxo autenticado — auth state management em CI é infra pendente.
+- `pg_trgm` para performance de `ilike` — explicitamente deferido para volume alto (ver Dev Notes).
+
 ### Change Log
 
 - 2026-04-24: Story criada via `/bmad-create-story 2.2`. Escopo: Command Palette Shadcn + Cmd+K global + Server Action de busca multi-coluna + Artist Identity Card (UX-DR7). `ArtistIdentityCard` desenhado para reuso na Story 2.3 (prop `onClaim` reservada). Status → ready-for-dev.
 - 2026-04-24: Implementação completa por claude-sonnet-4-6. Command Palette global (Cmd+K), Server Action `searchTalents`, `ArtistIdentityCard` (verified/restricted), `CollectiveCard`, layout autenticado, 77 testes passando. Status → review.
+- 2026-04-24: Code review (3 papéis LLM). 3 bugs reais corrigidos: `shouldFilter={false}` no cmdk, wildcard injection no LIKE pattern, `res.error` ignorado no cliente. Status mantido → review (aguarda aprovação humana).

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import {
+  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -39,6 +40,10 @@ export function CommandPalette() {
     const timeout = setTimeout(() => {
       startTransition(async () => {
         const res = await searchTalents({ query });
+        if (res.error) {
+          setResults([]);
+          return;
+        }
         setResults(res.data ?? []);
       });
     }, 300);
@@ -66,6 +71,7 @@ export function CommandPalette() {
       title="Buscar talentos"
       description="Busque artistas e coletivos por nome, gênero ou cidade"
     >
+      <Command shouldFilter={false}>
       <CommandInput
         placeholder="Buscar por nome, gênero ou cidade..."
         value={query}
@@ -123,6 +129,7 @@ export function CommandPalette() {
           </CommandGroup>
         )}
       </CommandList>
+      </Command>
     </CommandDialog>
   );
 }
