@@ -1,6 +1,6 @@
 # Story 2.3: Busca Obrigatória, Claim e Gestão de Privacidade
 
-Status: review
+Status: done
 
 **Epic:** 2 — Hub de Talentos e Soberania do Artista (Claim)
 **FRs:** FR9, FR12
@@ -440,7 +440,29 @@ claude-sonnet-4-6
 
 ### Review Findings
 
+Revisão paralela de 3 camadas (Blind Hunter + Edge Case Hunter + Acceptance Auditor) via Gemini 2.5 Pro em 2026-04-25.
+Triage: 4 patches · 8 deferred · 9 dismissed (27 findings brutos).
+
+**Patches (requerem correção antes de merge):**
+
+- [x] [Review][Patch] Wildcard `_`/`%` em nome não escapados antes de `ilike` em `searchRestrictedArtistByName` — `ilike(trimmedName)` sem `%` mas `_` no nome ainda funciona como match-any-char no Postgres. **Corrigido:** `escapedName = trimmedName.replace(/[%_\\]/g, '\\$&')` antes das duas chamadas `ilike`. [`src/features/artists/actions.ts:345`]
+- [x] [Review][Patch] `rowCount ?? 1` fallback silencia proteção de race condition — se o driver Drizzle retornar `rowCount: undefined`, o fallback `?? 1` trata como "linha atualizada" e o claim prossegue erroneamente. **Corrigido:** trocado para `?? 0` (conservador). [`src/features/artists/actions.ts:566`]
+- [x] [Review][Patch] `validateMagicBytes` sem try/catch em `arrayBuffer()` — `file.slice(0,8).arrayBuffer()` pode lançar exception (stream abortada, Blob inválido) resultando em 500 não tratado. **Corrigido:** try/catch retornando `false`. [`src/features/artists/validators.ts:4`]
+- [x] [Review][Patch] `ALREADY_HAS_ARTIST` verificado pós-upload → arquivos órfãos em storage — o catch do 23505 ocorria após upload de foto/PDF. **Corrigido:** SELECT pre-upload verifica se `profileId` já tem artista vinculado antes de qualquer upload. [`src/features/artists/actions.ts:516-529`]
+
+**Deferred:**
+
+- [x] [Review][Defer] ESCAPE ausente em `searchTalents` wildcard pattern `%query%` [`src/features/search/actions.ts:41`] — deferred, pré-existente da Story 2.2
+- [x] [Review][Defer] `Promise.all` falha parcial em `searchRestrictedArtistByName` retorna DB_ERROR genérico [`src/features/artists/actions.ts:339`] — deferred, comportamento aceitável para MVP
+- [x] [Review][Defer] Mensagem de erro Zod confusa para JSON inválido em privacySettings [`src/features/artists/schemas.ts:13`] — deferred, VALIDATION_ERROR retornado; melhoria de UX futura
+- [x] [Review][Defer] Ausência de CHECK constraint JSONB validando estrutura de `privacy_settings` na migration [`supabase/migrations/005_artists_claim_privacy.sql:6`] — deferred, enhancement de hardening
+- [x] [Review][Defer] Mocks de testes com ordenação frágil (`mockResolvedValueOnce`) [`src/features/artists/actions.test.ts:400`] — deferred, melhoria de qualidade de teste
+- [x] [Review][Defer] Perda de estado do onboarding ao dar F5 durante step `claim` [`src/app/(dashboard)/onboarding/artist/page.tsx:12`] — deferred, UX enhancement fora de escopo MVP
+- [x] [Review][Defer] `getArtistStatus` no dashboard sem gate de role [`src/app/(dashboard)/dashboard/artist/page.tsx:7`] — deferred, middleware garante autenticação; role-routing é decisão de produto futura
+- [x] [Review][Defer] `isPlatformAdmin` retorna false silenciosamente se role é null/corrompida [`src/features/auth/helpers.ts:20`] — deferred, fallback conservador é comportamento correto
+
 ### Change Log
 
 - 2026-04-24: Story criada via `/bmad-create-story 2.3`. Escopo: migration 005 (status + bio + privacy_settings + RLS atualizado), `searchRestrictedArtistByName`, `claimArtistProfileAction`, extensão de `saveArtistOnboardingAction` + `OnboardingForm`, `PrivacySettingsFieldset`, máquina de estado de onboarding 3-steps, filtro de visibilidade `status='approved'` em `searchTalents`, ativação do CTA `onClaim` em `ArtistIdentityCard`. Status → ready-for-dev.
+- 2026-04-25: Code review paralelo (Gemini 2.5 Pro — Blind Hunter + Edge Case Hunter + Acceptance Auditor). Triage: 4 patches aplicados, 8 deferred, 9 dismissed. Patches: escape de wildcards em `searchRestrictedArtistByName`; `rowCount ?? 0`; try/catch em `validateMagicBytes`; SELECT pre-upload para `ALREADY_HAS_ARTIST`. Status → done.
 - 2026-04-25: Implementação completa por `claude-sonnet-4-6`. Migration 005 criada; schema Drizzle atualizado; `searchRestrictedArtistByName` e `claimArtistProfileAction` implementadas; `saveArtistOnboardingAction` estendida; `PrivacySettingsFieldset` criado; `OnboardingForm` estendido com mode prop; máquina de estado 3-steps no onboarding; filtro de status em `searchTalents`; `isPlatformAdmin` em `src/features/auth/helpers.ts`; banner pending_approval no dashboard; 105 testes passando. Status → review.

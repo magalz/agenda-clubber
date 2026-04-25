@@ -342,6 +342,8 @@ export async function searchRestrictedArtistByName(name: string): Promise<Search
     }
 
     const trimmedName = parsed.data;
+    // Escape Postgres LIKE metacharacters so the name is matched literally.
+    const escapedName = trimmedName.replace(/[%_\\]/g, '\\$&');
 
     try {
         // Single query: get restricted hit (profile_id IS NULL, status='approved')
@@ -357,7 +359,7 @@ export async function searchRestrictedArtistByName(name: string): Promise<Search
                 })
                 .from(artists)
                 .where(and(
-                    ilike(artists.artisticName, trimmedName),
+                    ilike(artists.artisticName, escapedName),
                     isNull(artists.profileId),
                     eq(artists.status, 'approved')
                 ))
@@ -366,7 +368,7 @@ export async function searchRestrictedArtistByName(name: string): Promise<Search
                 .select({ id: artists.id })
                 .from(artists)
                 .where(and(
-                    ilike(artists.artisticName, trimmedName),
+                    ilike(artists.artisticName, escapedName),
                     not(isNull(artists.profileId))
                 ))
                 .limit(1),
@@ -511,7 +513,22 @@ export async function claimArtistProfileAction(
         return { data: null, error: { message: "Perfil não está disponível para claim", code: "NOT_CLAIMABLE" } };
     }
 
-    // 7. Upload files
+    // 7a. Pre-upload check: ensure this profile doesn't already own another artist record.
+    // This avoids uploading files only to hit the 23505 unique constraint on profile_id.
+    try {
+        const existing = await db
+            .select({ id: artists.id })
+            .from(artists)
+            .where(eq(artists.profileId, profileId))
+            .limit(1);
+        if (existing.length > 0) {
+            return { data: null, error: { message: "Você já possui um perfil de artista", code: "ALREADY_HAS_ARTIST" } };
+        }
+    } catch {
+        return { data: null, error: { message: "Erro ao verificar artista existente", code: "DB_ERROR" } };
+    }
+
+    // 7b. Upload files
     const uploadedPaths: string[] = [];
     let photoUrl: string | undefined;
     let releasePdfUrl: string | undefined;
@@ -560,8 +577,9 @@ export async function claimArtistProfileAction(
             })
             .where(and(eq(artists.id, artistId), isNull(artists.profileId)));
 
-        // rowCount === 0 means another claim completed concurrently
-        const rowCount = (result as unknown as { rowCount?: number }).rowCount ?? 1;
+        // rowCount === 0 means another claim completed concurrently.
+        // Default to 0 (not 1) so that an undefined rowCount is treated as "no row updated" — conservative.
+        const rowCount = (result as unknown as { rowCount?: number }).rowCount ?? 0;
         if (rowCount === 0) {
             if (uploadedPaths.length > 0) {
                 await supabase.storage.from("artist_media").remove(uploadedPaths);

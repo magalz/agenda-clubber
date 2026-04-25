@@ -1,5 +1,10 @@
 export async function validateMagicBytes(file: File, type: 'image' | 'pdf'): Promise<boolean> {
-    const bytes = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+    let bytes: Uint8Array;
+    try {
+        bytes = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+    } catch {
+        return false;
+    }
     if (type === 'pdf') {
         return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
     }
