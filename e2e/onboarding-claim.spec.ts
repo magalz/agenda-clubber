@@ -1,20 +1,20 @@
 import { test, expect } from '@playwright/test';
+import { STORAGE_STATE } from './global-setup';
 
 /**
  * E2E tests for the Claim flow introduced in Story 2.3.
  *
- * Pre-condition: a seed artist with artistic_name='Test DJ', profile_id IS NULL,
- * status='approved' must exist in the database before these tests run.
- * The seed is typically created via fixture SQL or a seed migration in the test environment.
+ * Pre-condition: global-setup.ts creates the e2e-artist test user, seeds 'Test DJ'
+ * (profile_id IS NULL, status='approved') and 'Already Claimed DJ' (profile_id != NULL).
  *
  * These tests verify the full 3-step onboarding state machine:
  *   search → claim (if hit) | create (if no hit)
  */
 
 test.describe('Onboarding Claim Flow', () => {
+    test.use({ storageState: STORAGE_STATE });
+
     test.beforeEach(async ({ page }) => {
-        // Navigate to the artist onboarding page (requires authenticated session)
-        // In CI, a test user session cookie is set via global setup
         await page.goto('/onboarding/artist');
     });
 
