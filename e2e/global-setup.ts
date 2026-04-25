@@ -46,6 +46,9 @@ async function globalSetup() {
         const mainUserId = await upsertUser(allUsers, E2E_EMAIL, E2E_PASSWORD);
         const claimerUserId = await upsertUser(allUsers, E2E_CLAIMER_EMAIL, E2E_CLAIMER_PASSWORD);
 
+        await assertAuthUserVisible(sql, supabaseUrl, databaseUrl, mainUserId);
+        await assertAuthUserVisible(sql, supabaseUrl, databaseUrl, claimerUserId);
+
         // ── 2. Ensure profiles exist (direct SQL — bypasses PostgREST schema cache) ──
         const mainProfileId = await upsertProfile(sql, mainUserId, 'E2E Artist', 'artista');
         const claimerProfileId = await upsertProfile(sql, claimerUserId, 'E2E Claimer', 'artista');
@@ -141,6 +144,28 @@ async function globalSetup() {
         });
         if (error) throw new Error(`[global-setup] Failed to create user ${email}: ${error.message}`);
         return data.user.id;
+    }
+}
+
+async function assertAuthUserVisible(
+    sql: ReturnType<typeof postgres>,
+    supabaseUrl: string,
+    databaseUrl: string,
+    userId: string
+): Promise<void> {
+    const rows = await sql<{ exists: boolean }[]>`
+        SELECT EXISTS(SELECT 1 FROM auth.users WHERE id = ${userId}) AS exists
+    `;
+    if (!rows[0].exists) {
+        const supabaseHost = new URL(supabaseUrl).host;
+        const dbHost = (() => {
+            try { return new URL(databaseUrl).host; } catch { return '<invalid DATABASE_URL>'; }
+        })();
+        throw new Error(
+            `[global-setup] Auth user ${userId} foi criado via Supabase Auth API (${supabaseHost}) ` +
+            `mas não existe em auth.users acessada via DATABASE_URL (${dbHost}). ` +
+            `Verifique que NEXT_PUBLIC_SUPABASE_URL e DATABASE_URL apontam para o MESMO projeto Supabase.`
+        );
     }
 }
 
