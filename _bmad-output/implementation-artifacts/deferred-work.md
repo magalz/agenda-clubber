@@ -33,3 +33,10 @@
 - **Rate limiting ausente em `createOnTheFlyArtistAction`** — Admin com token comprometido pode fazer flood de inserts + chamadas QStash. Endereçar com middleware de rate limiting (Vercel Edge / Upstash Ratelimit) em epic de segurança.
 - **`err.code === "23505"` sem tipagem** [`src/features/artists/actions.ts`] — Pattern frágil preexistente em `saveArtistOnboardingAction` também. Unificar com helper tipado quando Drizzle for atualizado.
 - **Signing keys QStash ausentes em produção** — `QSTASH_CURRENT_SIGNING_KEY` / `QSTASH_NEXT_SIGNING_KEY` ausentes causam rejeição de todos os webhooks. Documentado no `.env.example`; adicionar validação de startup em produção.
+
+## Deferred from: Story 2.3 — Busca Obrigatória, Claim e Gestão de Privacidade (2026-04-24)
+
+- **UI granular por campo de privacy** [`src/features/artists/components/privacy-settings-fieldset.tsx`] — O MVP deriva todos os `fields` automaticamente do `mode` selecionado. Controle individual por campo (social_links, presskit, bio, genre) fica deferido para uma iteração de produto futura.
+- **enum `profiles.role` sem 'admin'** [`src/db/schema/auth.ts`] — O role 'admin' não está no enum Drizzle/Postgres (`['artista', 'produtor']`). O helper `isPlatformAdmin` usa `@ts-expect-error` temporariamente. Adicionar 'admin' ao enum + migration na Story 5.1 quando o dashboard administrativo for implementado.
+- **Notificação QStash ao admin de novo `pending_approval`** [`src/features/notifications/qstash.ts`] — Reutilizar QStash existente para notificar admins quando um artista faz claim/onboarding com status='pending_approval'. Deferido pois exige novo webhook handler. Avaliar na Story 5.1.
+- **`supabase db reset` não validado no worktree** — Migration 005 criada mas Supabase local não estava rodando no worktree. Validar `supabase db reset` no ambiente de dev antes do merge para garantir que a migration aplica sem erros.

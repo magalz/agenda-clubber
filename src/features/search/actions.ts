@@ -7,6 +7,7 @@ import { collectives } from '@/db/schema/collectives';
 import { or, ilike, eq, sql, and } from 'drizzle-orm';
 import { searchTalentsSchema } from './schemas';
 import type { SearchHit, SearchErrorCode } from './types';
+import { isPlatformAdmin } from '@/features/auth/helpers';
 
 export type SearchTalentsResult = {
   data: SearchHit[] | null;
@@ -41,10 +42,27 @@ export async function searchTalents(
   const escaped = query.replace(/[%_]/g, '\\$&');
   const pattern = `%${escaped}%`;
 
+  const isAdmin = await isPlatformAdmin(user.id);
+
   try {
     const results: SearchHit[] = [];
 
     if (types.includes('artist')) {
+      const artistWhere = isAdmin
+        ? or(
+            ilike(artists.artisticName, pattern),
+            ilike(artists.location, pattern),
+            ilike(artists.genrePrimary, pattern)
+          )
+        : and(
+            eq(artists.status, 'approved'),
+            or(
+              ilike(artists.artisticName, pattern),
+              ilike(artists.location, pattern),
+              ilike(artists.genrePrimary, pattern)
+            )
+          );
+
       const artistHits = await db
         .select({
           kind: sql<'artist'>`'artist'`,
@@ -56,13 +74,7 @@ export async function searchTalents(
           isVerified: artists.isVerified,
         })
         .from(artists)
-        .where(
-          or(
-            ilike(artists.artisticName, pattern),
-            ilike(artists.location, pattern),
-            ilike(artists.genrePrimary, pattern)
-          )
-        )
+        .where(artistWhere)
         .limit(20);
 
       results.push(...artistHits);

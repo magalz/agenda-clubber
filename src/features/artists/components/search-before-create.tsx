@@ -5,10 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Search } from "lucide-react";
-import { checkDuplicateArtist } from "@/features/artists/actions";
+import { searchRestrictedArtistByName, type RestrictedArtistHit } from "@/features/artists/actions";
+
+type SearchResult =
+    | { step: 'claim'; hit: RestrictedArtistHit }
+    | { step: 'create'; artisticName: string };
 
 interface SearchBeforeCreateProps {
-    onProceed: (artisticName: string) => void;
+    onProceed: (result: SearchResult) => void;
 }
 
 export function SearchBeforeCreate({ onProceed }: SearchBeforeCreateProps) {
@@ -24,12 +28,24 @@ export function SearchBeforeCreate({ onProceed }: SearchBeforeCreateProps) {
         setError(null);
 
         try {
-            const isDuplicate = await checkDuplicateArtist(query.trim());
+            const result = await searchRestrictedArtistByName(query.trim());
 
-            if (isDuplicate) {
+            if (result.error) {
+                setError(result.error.message);
+                return;
+            }
+
+            const { hit, conflict } = result.data!;
+
+            if (conflict) {
                 setError("Já existe um artista com este nome cadastrado na plataforma.");
+                return;
+            }
+
+            if (hit) {
+                onProceed({ step: 'claim', hit });
             } else {
-                onProceed(query.trim());
+                onProceed({ step: 'create', artisticName: query.trim() });
             }
         } catch {
             setError("Erro ao verificar disponibilidade do nome. Tente novamente.");
