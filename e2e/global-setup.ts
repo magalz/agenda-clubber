@@ -1,5 +1,5 @@
-import { chromium } from '@playwright/test';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import fs from 'fs';
 import path from 'path';
 
@@ -90,23 +90,55 @@ async function globalSetup() {
             .ilike('artistic_name', 'Already Claimed DJ');
     }
 
-    // ── 4. Log in via browser, persist session ───────────────────────────────
+    // ── 4. Sign in headless via @supabase/ssr to capture session cookies ────
+    const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    if (!publishableKey) {
+        throw new Error('Missing NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY for E2E global setup');
+    }
+
+    const collectedCookies: Array<{ name: string; value: string; options: CookieOptions }> = [];
+
+    const ssrClient = createServerClient(supabaseUrl, publishableKey, {
+        cookies: {
+            getAll: () => [],
+            setAll: (cookiesToSet) => {
+                collectedCookies.push(...cookiesToSet);
+            },
+        },
+    });
+
+    const { error: signInError } = await ssrClient.auth.signInWithPassword({
+        email: E2E_EMAIL,
+        password: E2E_PASSWORD,
+    });
+
+    if (signInError) {
+        throw new Error(`[global-setup] signInWithPassword failed: ${signInError.message}`);
+    }
+
+    if (collectedCookies.length === 0) {
+        throw new Error('[global-setup] No auth cookies captured from sign-in');
+    }
+
+    const url = new URL(BASE_URL);
+    const storageState = {
+        cookies: collectedCookies.map((c) => ({
+            name: c.name,
+            value: c.value,
+            domain: url.hostname,
+            path: c.options.path ?? '/',
+            expires: c.options.maxAge ? Math.floor(Date.now() / 1000) + c.options.maxAge : -1,
+            httpOnly: c.options.httpOnly ?? true,
+            secure: c.options.secure ?? false,
+            sameSite: ((c.options.sameSite as string | undefined)?.replace(/^./, (s) => s.toUpperCase()) ?? 'Lax') as 'Lax' | 'Strict' | 'None',
+        })),
+        origins: [],
+    };
+
     if (!fs.existsSync(AUTH_DIR)) {
         fs.mkdirSync(AUTH_DIR, { recursive: true });
     }
-
-    const browser = await chromium.launch();
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
-    await page.goto(`${BASE_URL}/auth/login`);
-    await page.locator('#email').fill(E2E_EMAIL);
-    await page.locator('#password').fill(E2E_PASSWORD);
-    await page.getByRole('button', { name: 'Entrar' }).click();
-    await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
-
-    await context.storageState({ path: STORAGE_STATE });
-    await browser.close();
+    fs.writeFileSync(STORAGE_STATE, JSON.stringify(storageState, null, 2));
 }
 
 async function upsertUser(
