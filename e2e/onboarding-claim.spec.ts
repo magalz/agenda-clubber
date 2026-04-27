@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import postgres from 'postgres';
 import { STORAGE_STATE } from './global-setup';
 
 /**
@@ -11,10 +12,48 @@ import { STORAGE_STATE } from './global-setup';
  *   search → claim (if hit) | create (if no hit)
  */
 
+const DEFAULT_PRIVACY = {
+    mode: 'public',
+    fields: { social_links: 'public', presskit: 'public', bio: 'public', genre: 'public' },
+};
+
+// Tests share the e2e-artist user. The artists table has a unique constraint on profile_id,
+// so a successful claim/create in one test prevents subsequent submissions for the same user.
+// Run serially and reset state before each test.
+test.describe.configure({ mode: 'serial' });
+
 test.describe('Onboarding Claim Flow', () => {
     test.use({ storageState: STORAGE_STATE });
 
     test.beforeEach(async ({ page }) => {
+        const databaseUrl = process.env.DATABASE_URL;
+        if (!databaseUrl) throw new Error('DATABASE_URL not set for E2E test reset');
+
+        const sql = postgres(databaseUrl, { max: 1, prepare: false });
+        try {
+            // Drop any artist owned by the e2e-artist profile so the next claim/create can succeed.
+            await sql`
+                DELETE FROM artists
+                WHERE profile_id IN (
+                    SELECT p.id FROM profiles p
+                    JOIN auth.users u ON u.id = p.user_id
+                    WHERE u.email = ${'e2e-artist@agendaclubber.com'}
+                )
+            `;
+            // Remove any artist created on-the-fly during a previous test run.
+            await sql`DELETE FROM artists WHERE artistic_name IN (${'Artista Ghost XYZ'}, ${'Artista Inexistente XYZ'})`;
+            // Reset the orphan seed in case a previous test claimed it.
+            await sql`
+                INSERT INTO artists (artistic_name, location, genre_primary, profile_id, status, is_verified, privacy_settings)
+                VALUES (${'Test DJ'}, ${'São Paulo, SP'}, ${'Techno'}, NULL, ${'approved'}, false, ${sql.json(DEFAULT_PRIVACY)})
+                ON CONFLICT (artistic_name) DO UPDATE
+                  SET profile_id = NULL,
+                      status = 'approved'
+            `;
+        } finally {
+            await sql.end({ timeout: 5 });
+        }
+
         await page.goto('/onboarding/artist');
     });
 
