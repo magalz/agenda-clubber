@@ -1,10 +1,31 @@
 import { z } from "zod";
+import { DEFAULT_PRIVACY_SETTINGS, privacySettingsFromMode } from "./types";
 
 const trimmedStr = (min: number, max: number, minMsg: string) =>
     z.preprocess(
         (v) => (typeof v === "string" ? v.trim() : v),
         z.string().min(min, minMsg).max(max, `Máximo de ${max} caracteres`)
     );
+
+const privacyModeSchema = z.enum(['public', 'collectives_only', 'private', 'ghost']);
+
+const privacySettingsSchema = z.preprocess(
+    (v) => {
+        if (typeof v === 'string') {
+            try { return JSON.parse(v); } catch { return v; }
+        }
+        return v;
+    },
+    z.object({
+        mode: privacyModeSchema,
+        fields: z.object({
+            social_links: z.enum(['public', 'collectives_only', 'private']),
+            presskit: z.enum(['public', 'collectives_only', 'private']),
+            bio: z.enum(['public', 'collectives_only', 'private']),
+            genre: z.enum(['public', 'collectives_only', 'private']),
+        }),
+    }).transform((v) => privacySettingsFromMode(v.mode))
+).default(DEFAULT_PRIVACY_SETTINGS);
 
 export const artistOnboardingSchema = z.object({
     artisticName: trimmedStr(2, 100, "Nome artístico obrigatório"),
@@ -18,7 +39,15 @@ export const artistOnboardingSchema = z.object({
     youtube: z.union([z.literal(""), z.string().url("Must be a valid URL")]).optional(),
     instagram: z.union([z.literal(""), z.string().url("Must be a valid URL")]).optional(),
     presskitUrl: z.union([z.literal(""), z.string().url("Must be a valid URL")]).optional(),
+    bio: z.preprocess(
+        (v) => (typeof v === "string" ? v.trim() : v),
+        z.string().max(2000, "Máximo de 2000 caracteres").optional()
+    ),
+    privacySettings: privacySettingsSchema,
 });
+
+// artistClaimSchema omits artisticName and location (pre-filled from the restricted profile)
+export const artistClaimSchema = artistOnboardingSchema.omit({ artisticName: true, location: true });
 
 export const createOnTheFlyArtistSchema = z.object({
     artisticName: trimmedStr(2, 100, "Nome artístico obrigatório"),
@@ -41,3 +70,5 @@ export const fileSchema = z.object({
         .refine((f) => f.type === "application/pdf", "Apenas arquivos PDF são aceitos")
         .nullable(),
 });
+
+export { trimmedStr };

@@ -26,10 +26,10 @@ describe('ArtistIdentityCard', () => {
 
   it('sem onClaim → botão de claim não existe', () => {
     render(<ArtistIdentityCard variant="restricted" {...baseProps} />);
-    expect(screen.queryByText('Claim this Profile')).toBeNull();
+    expect(screen.queryByText('Reivindicar este perfil')).toBeNull();
   });
 
-  it('com onClaim → botão "Claim this Profile" visível', async () => {
+  it('com onClaim → botão "Reivindicar este perfil" visível', async () => {
     const handleClaim = vi.fn();
     render(
       <ArtistIdentityCard
@@ -38,7 +38,7 @@ describe('ArtistIdentityCard', () => {
         onClaim={handleClaim}
       />
     );
-    const btn = screen.getByText('Claim this Profile');
+    const btn = screen.getByText('Reivindicar este perfil');
     expect(btn).toBeDefined();
     await userEvent.click(btn);
     expect(handleClaim).toHaveBeenCalledTimes(1);

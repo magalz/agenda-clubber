@@ -1,5 +1,5 @@
 # generated: terça-feira, 14 de abril de 2026
-# last_updated: sexta-feira, 24 de abril de 2026 (story 2.3 ready-for-dev)
+# last_updated: sexta-feira, 25 de abril de 2026 (story 2.3 done)
 # project: Agenda Clubber
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: terça-feira, 14 de abril de 2026
-last_updated: sexta-feira, 24 de abril de 2026 (story 2.3 ready-for-dev)
+last_updated: sexta-feira, 25 de abril de 2026 (story 2.3 done)
 project: Agenda Clubber
 project_key: NOKEY
 tracking_system: file-system
@@ -63,7 +63,7 @@ development_status:
   epic-2: in-progress
   2-1-criacao-de-perfil-on-the-fly-e-notificacao: done
   2-2-busca-global-de-talentos-e-cmd-k: review
-  2-3-busca-obrigatoria-claim-e-gestao-de-privacidade: ready-for-dev
+  2-3-busca-obrigatoria-claim-e-gestao-de-privacidade: done
   2-4-perfil-publico-adaptativo-e-seo: backlog
   epic-2-retrospective: optional
 

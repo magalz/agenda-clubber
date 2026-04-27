@@ -28,6 +28,12 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }));
 
+// ─── isPlatformAdmin mock ─────────────────────────────────────────────────────
+const mockIsPlatformAdmin = vi.fn();
+vi.mock('@/features/auth/helpers', () => ({
+  isPlatformAdmin: (...args: unknown[]) => mockIsPlatformAdmin(...args),
+}));
+
 // ─── Chain helper ─────────────────────────────────────────────────────────────
 function setupSelectChain() {
   mockFrom.mockReturnValue({ where: mockWhere });
@@ -49,6 +55,7 @@ describe('searchTalents', () => {
       data: { user: { id: 'user-uuid' } },
       error: null,
     });
+    mockIsPlatformAdmin.mockResolvedValue(false);
   });
 
   it('retorna UNAUTHORIZED quando não autenticado', async () => {
@@ -101,6 +108,40 @@ describe('searchTalents', () => {
     expect(result.data?.some((h) => h.kind === 'collective')).toBe(true);
   });
 
+  it('artista pending_approval NÃO aparece para user não-admin (filtrado pela query)', async () => {
+    // Non-admin: query adds eq(artists.status, 'approved') — DB returns empty
+    mockIsPlatformAdmin.mockResolvedValue(false);
+    mockLimit.mockResolvedValueOnce([]); // no approved artists returned
+    mockLimit.mockResolvedValueOnce([]);
+
+    const result = await searchTalents({ query: 'pending' });
+
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([]);
+    expect(mockIsPlatformAdmin).toHaveBeenCalledWith('user-uuid');
+  });
+
+  it('artista pending_approval visível para admin (sem filtro de status)', async () => {
+    mockIsPlatformAdmin.mockResolvedValue(true);
+    const pendingArtist = {
+      kind: 'artist' as const,
+      id: 'artist-pending',
+      artisticName: 'Pending DJ',
+      location: 'MG',
+      genrePrimary: null,
+      photoUrl: null,
+      isVerified: false,
+    };
+    mockLimit.mockResolvedValueOnce([pendingArtist]);
+    mockLimit.mockResolvedValueOnce([]);
+
+    const result = await searchTalents({ query: 'Pending' });
+
+    expect(result.error).toBeNull();
+    expect(result.data).toHaveLength(1);
+    expect((result.data?.[0] as { id: string }).id).toBe('artist-pending');
+  });
+
   it('artista is_verified=false é retornado (diferenciação é visual, não filtro)', async () => {
     const restrictedArtist = {
       kind: 'artist' as const,
@@ -123,9 +164,6 @@ describe('searchTalents', () => {
   });
 
   it('coletivo pending_approval NÃO deve aparecer (filtrado na query)', async () => {
-    // The action applies eq(collectives.status, 'active') in the where clause.
-    // This test verifies the query is constructed correctly by confirming only
-    // active collectives appear. We return empty array (simulating DB filtering).
     mockLimit.mockResolvedValueOnce([]);
     mockLimit.mockResolvedValueOnce([]);
 

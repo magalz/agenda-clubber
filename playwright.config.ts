@@ -3,6 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
     testDir: './e2e',
     fullyParallel: true,
+    globalSetup: require.resolve('./e2e/global-setup'),
     reporter: 'html',
     webServer: {
         command: 'npm run start',

@@ -96,14 +96,14 @@ export function ArtistIdentityCard({
         )}
       </div>
 
-      {/* Claim CTA — reserved for Story 2.3 */}
+      {/* Claim CTA */}
       {onClaim && (
         <button
           type="button"
           onClick={onClaim}
           className="shrink-0 rounded border border-border px-2 py-1 text-xs text-muted-foreground hover:border-foreground hover:text-foreground"
         >
-          Claim this Profile
+          Reivindicar este perfil
         </button>
       )}
     </div>

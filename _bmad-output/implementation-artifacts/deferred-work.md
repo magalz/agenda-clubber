@@ -33,3 +33,21 @@
 - **Rate limiting ausente em `createOnTheFlyArtistAction`** — Admin com token comprometido pode fazer flood de inserts + chamadas QStash. Endereçar com middleware de rate limiting (Vercel Edge / Upstash Ratelimit) em epic de segurança.
 - **`err.code === "23505"` sem tipagem** [`src/features/artists/actions.ts`] — Pattern frágil preexistente em `saveArtistOnboardingAction` também. Unificar com helper tipado quando Drizzle for atualizado.
 - **Signing keys QStash ausentes em produção** — `QSTASH_CURRENT_SIGNING_KEY` / `QSTASH_NEXT_SIGNING_KEY` ausentes causam rejeição de todos os webhooks. Documentado no `.env.example`; adicionar validação de startup em produção.
+
+## Deferred from: Story 2.3 — Busca Obrigatória, Claim e Gestão de Privacidade (2026-04-24)
+
+- **UI granular por campo de privacy** [`src/features/artists/components/privacy-settings-fieldset.tsx`] — O MVP deriva todos os `fields` automaticamente do `mode` selecionado. Controle individual por campo (social_links, presskit, bio, genre) fica deferido para uma iteração de produto futura.
+- **enum `profiles.role` sem 'admin'** [`src/db/schema/auth.ts`] — O role 'admin' não está no enum Drizzle/Postgres (`['artista', 'produtor']`). O helper `isPlatformAdmin` usa `@ts-expect-error` temporariamente. Adicionar 'admin' ao enum + migration na Story 5.1 quando o dashboard administrativo for implementado.
+- **Notificação QStash ao admin de novo `pending_approval`** [`src/features/notifications/qstash.ts`] — Reutilizar QStash existente para notificar admins quando um artista faz claim/onboarding com status='pending_approval'. Deferido pois exige novo webhook handler. Avaliar na Story 5.1.
+- **`supabase db reset` não validado no worktree** — Migration 005 criada mas Supabase local não estava rodando no worktree. Validar `supabase db reset` no ambiente de dev antes do merge para garantir que a migration aplica sem erros.
+
+## Deferred from: code review de 2-3-busca-obrigatoria-claim-e-gestao-de-privacidade (2026-04-25)
+
+- **ESCAPE ausente em `searchTalents` wildcard pattern** [`src/features/search/actions.ts:41`] — Pattern `%${query}%` não escapa `_` e `%` na query do usuário. Pré-existente da Story 2.2. Endereçar junto com hardening de busca.
+- **`Promise.all` falha parcial em `searchRestrictedArtistByName`** [`src/features/artists/actions.ts:339`] — Se uma das duas queries paralelas falhar, ambas retornam DB_ERROR. Comportamento aceitável para MVP mas pode ser melhorado com tratamento individual de erro.
+- **Mensagem de erro confusa para JSON inválido em privacySettings** [`src/features/artists/schemas.ts:13`] — Se JSON.parse falha no preprocess, Zod retorna "Expected object, received string" em vez de mensagem de validação clara. Melhoria de UX futura.
+- **Ausência de CHECK constraint JSONB em `privacy_settings`** [`supabase/migrations/005_artists_claim_privacy.sql:6`] — Coluna aceita qualquer JSON sem constraint de estrutura mínima. Candidato a migration de hardening junto com o item da Story 2.1.
+- **Mocks de testes com ordenação frágil** [`src/features/artists/actions.test.ts:400`] — `mockResolvedValueOnce` acoplado a ordem de chamadas internas. Refatorar para mocks mais declarativos quando os testes forem tocados novamente.
+- **Perda de estado do onboarding ao recarregar página** [`src/app/(dashboard)/onboarding/artist/page.tsx:12`] — Estado do step (`search`/`claim`/`create`) é em memória; F5 reseta para `search` e dados do form de claim são perdidos. Persistir em `sessionStorage` ou URL params em iteração futura.
+- **`getArtistStatus` no dashboard sem gate de role** [`src/app/(dashboard)/dashboard/artist/page.tsx:7`] — Página não verifica se usuário logado tem role `artista`. Produtor que navegar diretamente para `/dashboard/artist` verá tela vazia mas sem erro. Endereçar quando routing por role for implementado.
+- **`isPlatformAdmin` retorna `false` se role é null no banco** [`src/features/auth/helpers.ts:20`] — Fallback conservador correto, mas admins com registro corrompido perdem visibilidade de pending_approval silenciosamente. Adicionar log de warning.
