@@ -29,7 +29,7 @@ test.describe('Onboarding Claim Flow', () => {
         // Step 2: Claim screen — shows ArtistIdentityCard with restricted badge
         await expect(page.locator('text=Encontramos um perfil com este nome')).toBeVisible();
         await expect(page.locator('text=Restricted')).toBeVisible();
-        await expect(page.locator('text=Reivindicar Perfil')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Reivindicar Perfil' })).toBeVisible();
 
         // Secondary CTA to create new should also be visible
         await expect(page.locator('text=Não sou eu, criar novo perfil')).toBeVisible();
@@ -41,7 +41,7 @@ test.describe('Onboarding Claim Flow', () => {
         await page.getByRole('button', { name: 'Buscar' }).click();
 
         // Wait for claim form to appear
-        await expect(page.locator('text=Reivindicar Perfil')).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Reivindicar Perfil' })).toBeVisible();
 
         // Fill required form fields
         await page.locator('input#genrePrimary').fill('Techno');
