@@ -557,7 +557,7 @@ export async function claimArtistProfileAction(
 
     // 8. Atomic update — WHERE profile_id IS NULL prevents race condition
     try {
-        const result = await db
+        const updated = await db
             .update(artists)
             .set({
                 profileId,
@@ -575,12 +575,11 @@ export async function claimArtistProfileAction(
                 status: 'pending_approval',
                 updatedAt: new Date(),
             })
-            .where(and(eq(artists.id, artistId), isNull(artists.profileId)));
+            .where(and(eq(artists.id, artistId), isNull(artists.profileId)))
+            .returning({ id: artists.id });
 
-        // rowCount === 0 means another claim completed concurrently.
-        // Default to 0 (not 1) so that an undefined rowCount is treated as "no row updated" — conservative.
-        const rowCount = (result as unknown as { rowCount?: number }).rowCount ?? 0;
-        if (rowCount === 0) {
+        // empty result means another claim completed concurrently.
+        if (updated.length === 0) {
             if (uploadedPaths.length > 0) {
                 await supabase.storage.from("artist_media").remove(uploadedPaths);
             }
