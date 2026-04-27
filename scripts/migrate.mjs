@@ -1,6 +1,6 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -16,24 +16,53 @@ const sql = postgres(url, {
     prepare: false,
     onnotice: (n) => console.log('[notice]', n.code, n.message),
 });
-const db = drizzle(sql);
+
+const MIGRATIONS_DIR = path.resolve('supabase/migrations');
 
 try {
     const info = await sql`SELECT current_database() AS db, current_user AS usr, current_setting('server_version') AS version`;
     console.log('[migrate] connected:', info[0]);
 
-    const schemas = await sql`SELECT schema_name FROM information_schema.schemata WHERE schema_name IN ('drizzle','public') ORDER BY schema_name`;
-    console.log('[migrate] schemas present:', schemas.map(r => r.schema_name));
+    await sql`
+        CREATE TABLE IF NOT EXISTS public._manual_migrations (
+            filename text PRIMARY KEY,
+            applied_at timestamptz NOT NULL DEFAULT now()
+        )
+    `;
 
-    const drizzleTables = await sql`SELECT table_name FROM information_schema.tables WHERE table_schema = 'drizzle'`;
-    console.log('[migrate] drizzle.* tables:', drizzleTables.map(r => r.table_name));
+    const applied = await sql`SELECT filename FROM public._manual_migrations`;
+    const appliedSet = new Set(applied.map((r) => r.filename));
+    console.log(`[migrate] already applied: ${appliedSet.size} migrations`);
 
-    const publicTables = await sql`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`;
-    console.log('[migrate] public.* tables:', publicTables.map(r => r.table_name));
+    const entries = await fs.readdir(MIGRATIONS_DIR, { withFileTypes: true });
+    const files = entries
+        .filter((e) => e.isFile() && e.name.endsWith('.sql'))
+        .map((e) => e.name)
+        .sort();
 
-    console.log('[migrate] applying migrations from ./supabase/migrations ...');
-    await migrate(db, { migrationsFolder: './supabase/migrations' });
-    console.log('[migrate] migrations applied successfully');
+    console.log(`[migrate] discovered ${files.length} .sql files`);
+
+    let appliedCount = 0;
+    for (const filename of files) {
+        if (appliedSet.has(filename)) {
+            console.log(`[migrate] skip (already applied): ${filename}`);
+            continue;
+        }
+
+        const fullPath = path.join(MIGRATIONS_DIR, filename);
+        const content = await fs.readFile(fullPath, 'utf8');
+        console.log(`[migrate] applying: ${filename}`);
+
+        await sql.begin(async (trx) => {
+            await trx.unsafe(content);
+            await trx`INSERT INTO public._manual_migrations (filename) VALUES (${filename})`;
+        });
+
+        appliedCount += 1;
+        console.log(`[migrate] applied: ${filename}`);
+    }
+
+    console.log(`[migrate] done — applied ${appliedCount} new migration(s)`);
     await sql.end({ timeout: 5 });
     process.exit(0);
 } catch (err) {
