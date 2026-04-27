@@ -23,7 +23,7 @@ jobs:
           cache: "npm"
       - run: npm ci
       - name: Apply Drizzle migrations to CI database
-        run: npx drizzle-kit migrate
+        run: node scripts/migrate.mjs
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
