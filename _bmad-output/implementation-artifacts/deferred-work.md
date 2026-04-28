@@ -23,6 +23,10 @@
 - **Padrão inconsistente de erro em `src/features/auth/actions.ts:110`** — usa cast sem guards (`err as { code?: string }`), enquanto `artists/actions.ts` foi corrigido para type narrowing. Unificar quando auth for tocado novamente.
 - **Storage cleanup sem tratamento de erro** [`src/features/artists/actions.ts:251`] — `supabase.storage.from("artist_media").remove()` pode falhar silenciosamente, deixando arquivos órfãos no storage.
 
+## Deferred from: code review de 2-2-busca-global-de-talentos-e-cmd-k (2026-04-27)
+
+- **`<img>` direto em vez de `next/image` (CLS, payload excessivo)** [`src/features/artists/components/artist-identity-card.tsx`, `src/features/collectives/components/collective-card.tsx`] — Uso de tag `<img>` nativa (com eslint-disable) burla otimização de imagens do Next.js causando CLS e payloads grandes. Migração para `<Image>` do next/image requer dimensões fixas ou `fill` mode e afeta múltiplos componentes. Deferir para quando o design de cards estiver estabilizado.
+
 ## Deferred from: code review de 2-1-criacao-de-perfil-on-the-fly-e-notificacao (2026-04-23)
 
 - **Missing `created_by`/`collective_id` em artistas on-the-fly** — Registros criados sem vínculo auditável de quem os criou. Endereçar na story de claim (2.3) quando o link ao perfil do artista for estabelecido.

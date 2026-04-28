@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import { MapPin, Music } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -16,8 +19,12 @@ export function CollectiveCard({
   logoUrl,
   compact = false,
 }: CollectiveCardProps) {
+  const [imgError, setImgError] = useState(false);
+
   const initials = name
-    .split(' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
     .map((w) => w[0])
     .slice(0, 2)
     .join('')
@@ -37,12 +44,13 @@ export function CollectiveCard({
           compact ? 'size-8' : 'size-10'
         )}
       >
-        {logoUrl ? (
+        {logoUrl && !imgError ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={logoUrl}
             alt={name}
             className="size-full rounded-md object-cover"
+            onError={() => setImgError(true)}
           />
         ) : (
           initials

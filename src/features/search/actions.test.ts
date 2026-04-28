@@ -65,14 +65,24 @@ describe('searchTalents', () => {
     expect(result.data).toBeNull();
   });
 
-  it('retorna VALIDATION_ERROR para query curta (< 2 chars)', async () => {
+  it('aceita query de 1 char (min server=1; guard min=2 é responsabilidade do cliente)', async () => {
+    // Server now validates min=1 — single char queries are valid server-side.
+    // The client guard (query.length < 2) prevents these from ever being sent in normal flow.
+    mockLimit.mockResolvedValueOnce([]);
+    mockLimit.mockResolvedValueOnce([]);
     const result = await searchTalents({ query: 'a' });
-    expect(result.error?.code).toBe('VALIDATION_ERROR');
-    expect(result.data).toBeNull();
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual([]);
   });
 
   it('retorna VALIDATION_ERROR para query vazia', async () => {
     const result = await searchTalents({ query: '' });
+    expect(result.error?.code).toBe('VALIDATION_ERROR');
+    expect(result.data).toBeNull();
+  });
+
+  it('retorna VALIDATION_ERROR para query só com whitespace', async () => {
+    const result = await searchTalents({ query: '   ' });
     expect(result.error?.code).toBe('VALIDATION_ERROR');
     expect(result.data).toBeNull();
   });

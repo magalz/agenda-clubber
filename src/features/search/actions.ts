@@ -39,7 +39,7 @@ export async function searchTalents(
   }
 
   const { query, types } = parsed.data;
-  const escaped = query.replace(/[%_]/g, '\\$&');
+  const escaped = query.replace(/[\\%_]/g, '\\$&');
   const pattern = `%${escaped}%`;
 
   const isAdmin = await isPlatformAdmin(user.id);
@@ -101,7 +101,7 @@ export async function searchTalents(
             )
           )
         )
-        .limit(20);
+        .limit(40);
 
       results.push(...collectiveHits);
     }
@@ -113,7 +113,7 @@ export async function searchTalents(
       const aStarts = aName.toLowerCase().startsWith(q) ? 0 : 1;
       const bStarts = bName.toLowerCase().startsWith(q) ? 0 : 1;
       if (aStarts !== bStarts) return aStarts - bStarts;
-      return aName.localeCompare(bName);
+      return aName.localeCompare(bName, 'pt-BR');
     });
 
     return { data: sorted.slice(0, 20), error: null };
