@@ -16,6 +16,7 @@ import {
 } from "./schemas";
 import { validateMagicBytes } from "./validators";
 import { DEFAULT_PRIVACY_SETTINGS } from "./types";
+import { uniqueSlug } from "./slug";
 import { enqueueArtistClaimInvitation } from "@/features/notifications/qstash";
 
 export async function checkDuplicateArtist(name: string) {
@@ -166,6 +167,11 @@ export async function saveArtistOnboardingAction(
         };
     }
 
+    const slug = await uniqueSlug(artisticName, async (s) => {
+        const hit = await db.select({ id: artists.id }).from(artists).where(eq(artists.slug, s)).limit(1);
+        return hit.length > 0;
+    });
+
     const uploadedPaths: string[] = [];
     let photoUrl: string | undefined;
     let releasePdfUrl: string | undefined;
@@ -196,6 +202,7 @@ export async function saveArtistOnboardingAction(
         await db.insert(artists).values({
             profileId,
             artisticName,
+            slug,
             location,
             genrePrimary,
             genreSecondary,
@@ -283,11 +290,17 @@ export async function createOnTheFlyArtistAction(
         return { data: null, error: { message: "Já existe um artista com este nome", code: "DUPLICATE_NAME" } };
     }
 
+    const slug = await uniqueSlug(artisticName, async (s) => {
+        const hit = await db.select({ id: artists.id }).from(artists).where(eq(artists.slug, s)).limit(1);
+        return hit.length > 0;
+    });
+
     let artistId: string;
     try {
         const [inserted] = await db.insert(artists).values({
             profileId: null,
             artisticName,
+            slug,
             location,
             genrePrimary: null,
             isVerified: false,
