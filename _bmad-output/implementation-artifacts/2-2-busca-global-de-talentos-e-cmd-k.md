@@ -1,6 +1,6 @@
 # Story 2.2: Busca Global de Talentos e Cmd+K
 
-Status: review
+Status: done
 
 **Epic:** 2 — Hub de Talentos e Soberania do Artista (Claim)
 **FRs:** FR10
@@ -327,8 +327,30 @@ Revisão por três papéis LLM (Blind Hunter, Edge Case Hunter, Acceptance Audit
 - E2E fluxo autenticado — auth state management em CI é infra pendente.
 - `pg_trgm` para performance de `ilike` — explicitamente deferido para volume alto (ver Dev Notes).
 
+#### Review Findings — 2026-04-27 (segunda passada, 3 papéis LLM via Gemini)
+
+- [x] [Review][Decision] Schema `min=2` diverge da spec (`min=1`) — Resolvido: alinhado à spec (min=1, server valida não-vazio; cliente guarda length<2 para UX). `trimmedStr` agora importado de `@/features/artists/schemas`. [auditor]
+- [x] [Review][Patch] Race condition no debounce sem AbortController [src/features/search/components/command-palette.tsx:35-49] — Corrigido: flag `active` previne setState de request obsoleta. [edge+blind]
+- [x] [Review][Patch] Erros da action silenciados no cliente [src/features/search/components/command-palette.tsx:46-48] — Corrigido: `searchError` state + `<CommandEmpty>` com mensagem amigável por código de erro. [blind]
+- [x] [Review][Patch] Cmd+K sequestra teclado em inputs/textareas/contenteditable [src/features/search/components/command-palette.tsx:21-26] — Corrigido: guard verifica `e.target instanceof HTMLInputElement | HTMLTextAreaElement | isContentEditable`. [blind]
+- [x] [Review][Patch] Backslash não escapado em `LIKE` [src/features/search/actions.ts:42] — Corrigido: regex `/[\\%_]/g` escapa barra invertida antes de `%` e `_`. [edge+blind]
+- [x] [Review][Patch] `limit(20)` por categoria oculta resultados relevantes [src/features/search/actions.ts:78,104] — Corrigido: cada query usa `.limit(40)` para garantir representação de ambas as categorias no sort+slice(0,20). [edge+blind]
+- [x] [Review][Patch] `localeCompare` sem locale explícito [src/features/search/actions.ts:116] — Corrigido: `localeCompare(bName, 'pt-BR')`. [edge]
+- [x] [Review][Patch] `trimmedStr` duplicado [src/features/search/schemas.ts:3-7] — Corrigido: removida cópia local, importado de `@/features/artists/schemas`. [auditor]
+- [x] [Review][Patch] `initials` quebra com espaços consecutivos [src/features/artists/components/artist-identity-card.tsx:25-30, src/features/collectives/components/collective-card.tsx:18-23] — Corrigido: `trim().split(/\s+/).filter(Boolean)`. [edge+blind]
+- [x] [Review][Patch] `<img>` sem `onError` fallback [src/features/artists/components/artist-identity-card.tsx:48-55, src/features/collectives/components/collective-card.tsx:32-40] — Corrigido: `imgError` state + `onError={() => setImgError(true)}`; ambos os componentes marcados `'use client'`. [edge]
+- [x] [Review][Defer] `<img>` direto em vez de `next/image` (CLS, payload) [src/features/artists/components/artist-identity-card.tsx, src/features/collectives/components/collective-card.tsx] — deferido, decisão arquitetural multi-componente fora do escopo de patch.
+
+**Falsos positivos rejeitados (segunda passada):**
+- Filtro de status ausente em artists — já resolvido em main pós-2.2 via `isPlatformAdmin` + `eq(artists.status, 'approved')` (Story 2.3).
+- Colisão de keys React entre artists/collectives — IDs são UUIDs, colisão astronomicamente improvável.
+- Sentry capture / breadcrumb — já registrados em "Deferred (documentado)" da primeira passada.
+- E2E incompleto — já registrado em "Deferred (documentado)".
+- `ilike` scan sem índice — já deferido para `pg_trgm` em Dev Notes / deferred-work.
+
 ### Change Log
 
 - 2026-04-24: Story criada via `/bmad-create-story 2.2`. Escopo: Command Palette Shadcn + Cmd+K global + Server Action de busca multi-coluna + Artist Identity Card (UX-DR7). `ArtistIdentityCard` desenhado para reuso na Story 2.3 (prop `onClaim` reservada). Status → ready-for-dev.
 - 2026-04-24: Implementação completa por claude-sonnet-4-6. Command Palette global (Cmd+K), Server Action `searchTalents`, `ArtistIdentityCard` (verified/restricted), `CollectiveCard`, layout autenticado, 77 testes passando. Status → review.
 - 2026-04-24: Code review (3 papéis LLM). 3 bugs reais corrigidos: `shouldFilter={false}` no cmdk, wildcard injection no LIKE pattern, `res.error` ignorado no cliente. Status mantido → review (aguarda aprovação humana).
+- 2026-04-27: Segunda passada de code review (3 papéis Gemini). 9 patches + 1 decision aplicados: escape de backslash em LIKE, race condition com flag `active`, guard de Cmd+K em inputs, UI de erro no CommandPalette, `trimmedStr` importado de artists/schemas (min=1), `initials` com regex `/\s+/`, `onError` nas imagens, `limit(40)` por categoria, `localeCompare('pt-BR')`. 1 item deferido (`next/image`). 94/94 testes passando. Status → done.

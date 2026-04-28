@@ -1,13 +1,9 @@
 import { z } from 'zod';
-
-const trimmedStr = (min: number, max: number, minMsg: string) =>
-  z.preprocess(
-    (v) => (typeof v === 'string' ? v.trim() : v),
-    z.string().min(min, minMsg).max(max, `Máximo de ${max} caracteres`)
-  );
+import { trimmedStr } from '@/features/artists/schemas';
 
 export const searchTalentsSchema = z.object({
-  query: trimmedStr(2, 100, 'Busca deve ter ao menos 2 caracteres'),
+  // min=1: server validates non-empty; client guards length<2 for UX.
+  query: trimmedStr(1, 100, 'Query inválida'),
   types: z
     .array(z.enum(['artist', 'collective']))
     .default(['artist', 'collective']),

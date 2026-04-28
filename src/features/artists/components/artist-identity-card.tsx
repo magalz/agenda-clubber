@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import { CheckCircle, MapPin, Music } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -22,8 +25,12 @@ export function ArtistIdentityCard({
   onClaim,
   compact = false,
 }: ArtistIdentityCardProps) {
+  const [imgError, setImgError] = useState(false);
+
   const initials = artisticName
-    .split(' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
     .map((w) => w[0])
     .slice(0, 2)
     .join('')
@@ -45,12 +52,13 @@ export function ArtistIdentityCard({
           compact ? 'size-8' : 'size-10'
         )}
       >
-        {photoUrl ? (
+        {photoUrl && !imgError ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={photoUrl}
             alt={artisticName}
             className="size-full rounded-full object-cover"
+            onError={() => setImgError(true)}
           />
         ) : (
           initials

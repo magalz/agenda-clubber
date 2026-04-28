@@ -19,11 +19,21 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchHit[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        // Don't hijack Cmd+K when focus is inside an editable element
+        const target = e.target as HTMLElement;
+        if (
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target.isContentEditable
+        ) {
+          return;
+        }
         e.preventDefault();
         setOpen((prev) => !prev);
       }
@@ -35,19 +45,31 @@ export function CommandPalette() {
   useEffect(() => {
     if (query.length < 2) {
       setResults([]);
+      setSearchError(null);
       return;
     }
+    let active = true;
     const timeout = setTimeout(() => {
       startTransition(async () => {
         const res = await searchTalents({ query });
+        if (!active) return;
         if (res.error) {
           setResults([]);
+          setSearchError(
+            res.error.code === 'UNAUTHORIZED'
+              ? 'Sessão expirada. Recarregue a página.'
+              : 'Erro ao buscar. Tente novamente.'
+          );
           return;
         }
+        setSearchError(null);
         setResults(res.data ?? []);
       });
     }, 300);
-    return () => clearTimeout(timeout);
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+    };
   }, [query]);
 
   const artistHits = results.filter(
@@ -84,7 +106,10 @@ export function CommandPalette() {
         {query.length >= 2 && isPending && (
           <CommandEmpty>Buscando...</CommandEmpty>
         )}
-        {query.length >= 2 && !isPending && results.length === 0 && (
+        {query.length >= 2 && !isPending && searchError && (
+          <CommandEmpty>{searchError}</CommandEmpty>
+        )}
+        {query.length >= 2 && !isPending && !searchError && results.length === 0 && (
           <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
         )}
 
