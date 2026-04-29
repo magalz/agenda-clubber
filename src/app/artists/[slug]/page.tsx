@@ -40,30 +40,36 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
 }
 
-async function ArtistContent({ params }: { params: Props["params"] }) {
-    const { slug } = await params;
-    const normalizedSlug = slug.toLowerCase();
-    const [artist, viewer] = await Promise.all([
-        getPublicArtistBySlug(normalizedSlug),
-        getViewerContext(),
-    ]);
-
-    if (!artist) notFound();
-
+// Renders inside <Suspense> — only this component accesses cookies via getViewerContext.
+async function ArtistViewerView({
+    artist,
+}: {
+    artist: NonNullable<Awaited<ReturnType<typeof getPublicArtistBySlug>>>;
+}) {
+    const viewer = await getViewerContext();
     const filtered = filterArtistForViewer(artist, viewer);
-
+    // Defensive: modes reaching here (public/collectives_only/private) rarely return null,
+    // but guard against future changes to filterArtistForViewer.
     if (!filtered) notFound();
-
     return <PublicProfile artist={filtered} />;
 }
 
-// ArtistPublicPage is synchronous — no dynamic data access outside <Suspense>.
-// params and all data fetches are consumed inside ArtistContent (within Suspense),
-// as required by cacheComponents: true which treats await params as dynamic data.
-export default function ArtistPublicPage({ params }: Props) {
+// Page is async and runs pre-checks OUTSIDE <Suspense> so notFound() can set the
+// 404 status before streaming starts. getPublicArtistBySlug has "use cache" so it
+// satisfies cacheComponents. getViewerContext (cookies) stays inside Suspense.
+export default async function ArtistPublicPage({ params }: Props) {
+    const { slug } = await params;
+    const artist = await getPublicArtistBySlug(slug.toLowerCase());
+
+    // Status/visibility pre-checks that do NOT require viewer context.
+    // Owner-preview (pending/ghost) is deferred to Story 5.x; admin to Story 5.1.
+    if (!artist) notFound();
+    if (artist.status !== "approved") notFound();
+    if (artist.privacySettings.mode === "ghost") notFound();
+
     return (
         <Suspense fallback={null}>
-            <ArtistContent params={params} />
+            <ArtistViewerView artist={artist} />
         </Suspense>
     );
 }
