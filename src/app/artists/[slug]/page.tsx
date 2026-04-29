@@ -1,4 +1,4 @@
-import { Suspense, cache } from "react";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublicArtistBySlug } from "@/features/artists/queries";
@@ -6,15 +6,11 @@ import { filterArtistForViewer } from "@/features/artists/visibility";
 import { getViewerContext } from "@/features/auth/helpers";
 import { PublicProfile } from "@/features/artists/components/public-profile";
 
-// Deduplicate DB calls between generateMetadata and ArtistContent per request.
-const cachedGetArtist = cache((slug: string) => getPublicArtistBySlug(slug));
-const cachedGetViewer = cache(() => getViewerContext());
-
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
-    const artist = await cachedGetArtist(slug.toLowerCase());
+    const artist = await getPublicArtistBySlug(slug.toLowerCase());
 
     if (!artist) {
         return { title: "Artista não encontrado — Agenda Clubber", robots: "noindex" };
@@ -44,10 +40,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
 }
 
-async function ArtistContent({ slug }: { slug: string }) {
+async function ArtistContent({ params }: { params: Props["params"] }) {
+    const { slug } = await params;
+    const normalizedSlug = slug.toLowerCase();
     const [artist, viewer] = await Promise.all([
-        cachedGetArtist(slug),
-        cachedGetViewer(),
+        getPublicArtistBySlug(normalizedSlug),
+        getViewerContext(),
     ]);
 
     if (!artist) notFound();
@@ -59,11 +57,13 @@ async function ArtistContent({ slug }: { slug: string }) {
     return <PublicProfile artist={filtered} />;
 }
 
-export default async function ArtistPublicPage({ params }: Props) {
-    const { slug } = await params;
+// ArtistPublicPage is synchronous — no dynamic data access outside <Suspense>.
+// params and all data fetches are consumed inside ArtistContent (within Suspense),
+// as required by cacheComponents: true which treats await params as dynamic data.
+export default function ArtistPublicPage({ params }: Props) {
     return (
         <Suspense fallback={null}>
-            <ArtistContent slug={slug.toLowerCase()} />
+            <ArtistContent params={params} />
         </Suspense>
     );
 }
