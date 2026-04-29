@@ -14,6 +14,7 @@ export const artists = pgTable('artists', {
     presskitUrl: text('presskit_url'),
     releasePdfUrl: text('release_pdf_url'),
     photoUrl: text('photo_url'),
+    slug: text('slug').notNull().unique(),
     isVerified: boolean('is_verified').default(false).notNull(),
     status: text('status', { enum: ['pending_approval', 'approved', 'rejected'] })
         .default('pending_approval').notNull(),

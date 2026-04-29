@@ -4,18 +4,30 @@ import postgres from 'postgres';
 import fs from 'fs';
 import path from 'path';
 
-const BASE_URL = 'http://localhost:3000';
 const AUTH_DIR = path.join(__dirname, '.auth');
 export const STORAGE_STATE = path.join(AUTH_DIR, 'user.json');
+export const PRODUCER_STORAGE_STATE = path.join(AUTH_DIR, 'producer.json');
 
 const E2E_EMAIL = 'e2e-artist@agendaclubber.com';
 const E2E_PASSWORD = 'E2eArtist2026!';
 const E2E_CLAIMER_EMAIL = 'e2e-claimer@agendaclubber.com';
 const E2E_CLAIMER_PASSWORD = 'E2eClaimer2026!';
+const E2E_PRODUCER_EMAIL = 'e2e-producer@agendaclubber.com';
+const E2E_PRODUCER_PASSWORD = 'E2eProducer2026!';
 
 const DEFAULT_PRIVACY = {
     mode: 'public',
     fields: { social_links: 'public', presskit: 'public', bio: 'public', genre: 'public' },
+};
+
+const COLLECTIVES_ONLY_PRIVACY = {
+    mode: 'collectives_only',
+    fields: { social_links: 'collectives_only', presskit: 'collectives_only', bio: 'collectives_only', genre: 'collectives_only' },
+};
+
+const GHOST_PRIVACY = {
+    mode: 'ghost',
+    fields: { social_links: 'private', presskit: 'private', bio: 'private', genre: 'private' },
 };
 
 async function globalSetup() {
@@ -45,13 +57,16 @@ async function globalSetup() {
 
         const mainUserId = await upsertUser(allUsers, E2E_EMAIL, E2E_PASSWORD);
         const claimerUserId = await upsertUser(allUsers, E2E_CLAIMER_EMAIL, E2E_CLAIMER_PASSWORD);
+        const producerUserId = await upsertUser(allUsers, E2E_PRODUCER_EMAIL, E2E_PRODUCER_PASSWORD);
 
         await assertAuthUserVisible(sql, supabaseUrl, databaseUrl, mainUserId);
         await assertAuthUserVisible(sql, supabaseUrl, databaseUrl, claimerUserId);
+        await assertAuthUserVisible(sql, supabaseUrl, databaseUrl, producerUserId);
 
-        // ── 2. Ensure profiles exist (direct SQL — bypasses PostgREST schema cache) ──
+        // ── 2. Ensure profiles exist ────────────────────────────────────────────
         const mainProfileId = await upsertProfile(sql, mainUserId, 'E2E Artist', 'artista');
         const claimerProfileId = await upsertProfile(sql, claimerUserId, 'E2E Claimer', 'artista');
+        await upsertProfile(sql, producerUserId, 'E2E Producer', 'produtor');
 
         // ── 3. Seed test artists ─────────────────────────────────────────────────
         await sql`DELETE FROM artists WHERE artistic_name ILIKE ${'Artista Ghost XYZ'}`;
@@ -59,72 +74,69 @@ async function globalSetup() {
         // Reset main user's artist so they can onboard fresh each run
         await sql`DELETE FROM artists WHERE profile_id = ${mainProfileId}`;
 
-        // 'Test DJ' — orphan artist (profile_id IS NULL), claimable
+        // 'Test DJ' — orphan artist (profile_id IS NULL), claimable, public mode
         await sql`
-            INSERT INTO artists (artistic_name, location, genre_primary, profile_id, status, is_verified, privacy_settings)
-            VALUES (${'Test DJ'}, ${'São Paulo, SP'}, ${'Techno'}, NULL, ${'approved'}, false, ${sql.json(DEFAULT_PRIVACY)})
+            INSERT INTO artists (artistic_name, slug, location, genre_primary, profile_id, status, is_verified, privacy_settings, bio)
+            VALUES (${'Test DJ'}, ${'test-dj'}, ${'São Paulo, SP'}, ${'Techno'}, NULL, ${'approved'}, false, ${sql.json(DEFAULT_PRIVACY)}, ${'Bio do Test DJ'})
             ON CONFLICT (artistic_name) DO UPDATE
-              SET profile_id = NULL,
+              SET slug = 'test-dj',
+                  profile_id = NULL,
+                  status = 'approved',
+                  location = EXCLUDED.location,
+                  genre_primary = EXCLUDED.genre_primary,
+                  bio = EXCLUDED.bio,
+                  privacy_settings = ${sql.json(DEFAULT_PRIVACY)}
+        `;
+
+        // 'Already Claimed DJ' — owned by claimer profile
+        await sql`
+            INSERT INTO artists (artistic_name, slug, location, genre_primary, profile_id, status, is_verified, privacy_settings)
+            VALUES (${'Already Claimed DJ'}, ${'already-claimed-dj'}, ${'Rio de Janeiro, RJ'}, ${'House'}, ${claimerProfileId}, ${'approved'}, true, ${sql.json(DEFAULT_PRIVACY)})
+            ON CONFLICT (artistic_name) DO UPDATE
+              SET slug = 'already-claimed-dj',
+                  profile_id = ${claimerProfileId},
                   status = 'approved',
                   location = EXCLUDED.location,
                   genre_primary = EXCLUDED.genre_primary
         `;
 
-        // 'Already Claimed DJ' — owned by claimer profile (profile_id IS NOT NULL)
+        // 'Ghost DJ' — approved but ghost mode → 404 for public
         await sql`
-            INSERT INTO artists (artistic_name, location, genre_primary, profile_id, status, is_verified, privacy_settings)
-            VALUES (${'Already Claimed DJ'}, ${'Rio de Janeiro, RJ'}, ${'House'}, ${claimerProfileId}, ${'approved'}, true, ${sql.json(DEFAULT_PRIVACY)})
+            INSERT INTO artists (artistic_name, slug, location, genre_primary, profile_id, status, is_verified, privacy_settings)
+            VALUES (${'Ghost DJ'}, ${'ghost-dj'}, ${'Fortaleza, CE'}, ${'Techno'}, NULL, ${'approved'}, false, ${sql.json(GHOST_PRIVACY)})
             ON CONFLICT (artistic_name) DO UPDATE
-              SET profile_id = ${claimerProfileId},
+              SET slug = 'ghost-dj',
                   status = 'approved',
-                  location = EXCLUDED.location,
-                  genre_primary = EXCLUDED.genre_primary
+                  privacy_settings = ${sql.json(GHOST_PRIVACY)}
         `;
 
-        // ── 4. Sign in headless via @supabase/ssr to capture session cookies ────
-        const collectedCookies: Array<{ name: string; value: string; options: CookieOptions }> = [];
+        // 'Pending DJ' — pending_approval → 404 for everyone
+        await sql`
+            INSERT INTO artists (artistic_name, slug, location, genre_primary, profile_id, status, is_verified, privacy_settings)
+            VALUES (${'Pending DJ'}, ${'pending-dj'}, ${'Fortaleza, CE'}, ${'House'}, NULL, ${'pending_approval'}, false, ${sql.json(DEFAULT_PRIVACY)})
+            ON CONFLICT (artistic_name) DO UPDATE
+              SET slug = 'pending-dj',
+                  status = 'pending_approval',
+                  privacy_settings = ${sql.json(DEFAULT_PRIVACY)}
+        `;
 
-        const ssrClient = createServerClient(supabaseUrl, publishableKey, {
-            cookies: {
-                getAll: () => [],
-                setAll: (cookiesToSet) => {
-                    collectedCookies.push(...cookiesToSet);
-                },
-            },
-        });
+        // 'Collectives DJ' — collectives_only mode → produtor sees bio, anon does not
+        await sql`
+            INSERT INTO artists (artistic_name, slug, location, genre_primary, profile_id, status, is_verified, privacy_settings, bio)
+            VALUES (${'Collectives DJ'}, ${'collectives-dj'}, ${'Recife, PE'}, ${'Drum and Bass'}, NULL, ${'approved'}, false, ${sql.json(COLLECTIVES_ONLY_PRIVACY)}, ${'Bio secreta do Collectives DJ'})
+            ON CONFLICT (artistic_name) DO UPDATE
+              SET slug = 'collectives-dj',
+                  status = 'approved',
+                  bio = EXCLUDED.bio,
+                  privacy_settings = ${sql.json(COLLECTIVES_ONLY_PRIVACY)}
+        `;
 
-        const { error: signInError } = await ssrClient.auth.signInWithPassword({
-            email: E2E_EMAIL,
-            password: E2E_PASSWORD,
-        });
+        // ── 4. Sign in artist user ───────────────────────────────────────────────
+        await saveStorageState(supabaseUrl, publishableKey, E2E_EMAIL, E2E_PASSWORD, STORAGE_STATE);
 
-        if (signInError) {
-            throw new Error(`[global-setup] signInWithPassword failed: ${signInError.message}`);
-        }
+        // ── 5. Sign in producer user ─────────────────────────────────────────────
+        await saveStorageState(supabaseUrl, publishableKey, E2E_PRODUCER_EMAIL, E2E_PRODUCER_PASSWORD, PRODUCER_STORAGE_STATE);
 
-        if (collectedCookies.length === 0) {
-            throw new Error('[global-setup] No auth cookies captured from sign-in');
-        }
-
-        const url = new URL(BASE_URL);
-        const storageState = {
-            cookies: collectedCookies.map((c) => ({
-                name: c.name,
-                value: c.value,
-                domain: url.hostname,
-                path: c.options.path ?? '/',
-                expires: c.options.maxAge ? Math.floor(Date.now() / 1000) + c.options.maxAge : -1,
-                httpOnly: c.options.httpOnly ?? true,
-                secure: c.options.secure ?? false,
-                sameSite: ((c.options.sameSite as string | undefined)?.replace(/^./, (s) => s.toUpperCase()) ?? 'Lax') as 'Lax' | 'Strict' | 'None',
-            })),
-            origins: [],
-        };
-
-        if (!fs.existsSync(AUTH_DIR)) {
-            fs.mkdirSync(AUTH_DIR, { recursive: true });
-        }
-        fs.writeFileSync(STORAGE_STATE, JSON.stringify(storageState, null, 2));
     } finally {
         await sql.end({ timeout: 5 });
     }
@@ -184,6 +196,52 @@ async function upsertProfile(
         RETURNING id
     `;
     return rows[0].id;
+}
+
+async function saveStorageState(
+    supabaseUrl: string,
+    publishableKey: string,
+    email: string,
+    password: string,
+    filePath: string
+): Promise<void> {
+    const collectedCookies: Array<{ name: string; value: string; options: CookieOptions }> = [];
+
+    const ssrClient = createServerClient(supabaseUrl, publishableKey, {
+        cookies: {
+            getAll: () => [],
+            setAll: (cookiesToSet) => {
+                collectedCookies.push(...cookiesToSet);
+            },
+        },
+    });
+
+    const { error: signInError } = await ssrClient.auth.signInWithPassword({ email, password });
+    if (signInError) {
+        throw new Error(`[global-setup] signInWithPassword failed for ${email}: ${signInError.message}`);
+    }
+    if (collectedCookies.length === 0) {
+        throw new Error(`[global-setup] No auth cookies captured for ${email}`);
+    }
+
+    const url = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000');
+    const storageState = {
+        cookies: collectedCookies.map((c) => ({
+            name: c.name,
+            value: c.value,
+            domain: url.hostname,
+            path: c.options.path ?? '/',
+            expires: c.options.maxAge ? Math.floor(Date.now() / 1000) + c.options.maxAge : -1,
+            httpOnly: c.options.httpOnly ?? true,
+            secure: c.options.secure ?? false,
+            sameSite: ((c.options.sameSite as string | undefined)?.replace(/^./, (s) => s.toUpperCase()) ?? 'Lax') as 'Lax' | 'Strict' | 'None',
+        })),
+        origins: [],
+    };
+
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(filePath, JSON.stringify(storageState, null, 2));
 }
 
 export default globalSetup;

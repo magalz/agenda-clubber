@@ -45,6 +45,15 @@
 - **Notificação QStash ao admin de novo `pending_approval`** [`src/features/notifications/qstash.ts`] — Reutilizar QStash existente para notificar admins quando um artista faz claim/onboarding com status='pending_approval'. Deferido pois exige novo webhook handler. Avaliar na Story 5.1.
 - **`supabase db reset` não validado no worktree** — Migration 005 criada mas Supabase local não estava rodando no worktree. Validar `supabase db reset` no ambiente de dev antes do merge para garantir que a migration aplica sem erros.
 
+## Deferred from: code review de 2-4-perfil-publico-adaptativo-e-seo (2026-04-28)
+
+- **PLAYWRIGHT_BASE_URL não documentada para CI** [`e2e/global-setup.ts`] — Variável usada para setar cookies de sessão; se omitida em CI com porta randomizada, sessões autenticadas quebram. Adicionar ao README de E2E ou `.env.example`.
+- **Cobertura E2E para status 'rejected'** — Artistas com `status='rejected'` bloqueiam rota mas não têm teste E2E dedicado. Adicionar seed + spec na camada de QA do Epic 5.
+- **Artistas órfãos (profileId=null) em ghost mode ficam 404 até claim** [`src/features/artists/visibility.ts`] — Comportamento intencional: perfis importados sem claim em ghost mode são inacessíveis via UI. Documentado como decisão de produto; revisar após Story 2.5/2.6 (claim flow).
+- **Validação runtime de privacySettings jsonb** [`src/features/artists/visibility.ts`] — `canSeeField` confia que o JSONB possui a estrutura esperada; dados corrompidos retornam `false` silenciosamente. Adicionar Zod parsing no boundary de `getPublicArtistBySlug` num ciclo de hardening.
+- **Race condition de sessão entre generateMetadata e page** [`src/app/artists/[slug]/page.tsx`] — Token pode expirar nos microssegundos entre as duas execuções no servidor. Mitigado pelo React.cache() que garante uma única query por request; residual teórico sem impacto prático.
+- **HTTP 404 status para ghost/pending/unknown — soft-404 com cacheComponents** [`src/app/artists/[slug]/page.tsx`] — Com `cacheComponents:true`, `await params` deve ficar dentro de `<Suspense>` (cacheComponents trata params como dado dinâmico). Isso impede que `notFound()` altere o status HTTP (já commitado como 200 pelo fallback null antes do streaming). A not-found UI é renderizada corretamente e `generateMetadata` retorna `robots:noindex` — proteção de SEO adequada para MVP. Testes E2E verificam a UI (soft-404) em vez do status HTTP. Para resolver o status code real: opções são PPR explícito (`experimental.ppr`), middleware-level validation via Supabase REST, ou aguardar Next.js resolver o conflito cacheComponents+params+Suspense.
+
 ## Deferred from: code review de 2-3-busca-obrigatoria-claim-e-gestao-de-privacidade (2026-04-25)
 
 - **ESCAPE ausente em `searchTalents` wildcard pattern** [`src/features/search/actions.ts:41`] — Pattern `%${query}%` não escapa `_` e `%` na query do usuário. Pré-existente da Story 2.2. Endereçar junto com hardening de busca.
