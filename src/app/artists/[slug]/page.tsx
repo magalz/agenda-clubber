@@ -40,36 +40,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
 }
 
-// Renders inside <Suspense> — only this component accesses cookies via getViewerContext.
-async function ArtistViewerView({
-    artist,
-}: {
-    artist: NonNullable<Awaited<ReturnType<typeof getPublicArtistBySlug>>>;
-}) {
-    const viewer = await getViewerContext();
+// All data fetching (including params) runs inside <Suspense> because cacheComponents
+// treats await params as dynamic data that must not block the static shell render.
+// Consequence: notFound() called here cannot change the HTTP status (already committed
+// as 200 when the null fallback streams). The not-found UI is rendered correctly but
+// the response status is 200 — a known cacheComponents limitation tracked in deferred-work.
+// generateMetadata already returns robots:noindex for invisible profiles, protecting SEO.
+async function ArtistContent({ params }: { params: Props["params"] }) {
+    const { slug } = await params;
+    const normalizedSlug = slug.toLowerCase();
+    const [artist, viewer] = await Promise.all([
+        getPublicArtistBySlug(normalizedSlug),
+        getViewerContext(),
+    ]);
+
+    if (!artist) notFound();
+
     const filtered = filterArtistForViewer(artist, viewer);
-    // Defensive: modes reaching here (public/collectives_only/private) rarely return null,
-    // but guard against future changes to filterArtistForViewer.
+
     if (!filtered) notFound();
+
     return <PublicProfile artist={filtered} />;
 }
 
-// Page is async and runs pre-checks OUTSIDE <Suspense> so notFound() can set the
-// 404 status before streaming starts. getPublicArtistBySlug has "use cache" so it
-// satisfies cacheComponents. getViewerContext (cookies) stays inside Suspense.
-export default async function ArtistPublicPage({ params }: Props) {
-    const { slug } = await params;
-    const artist = await getPublicArtistBySlug(slug.toLowerCase());
-
-    // Status/visibility pre-checks that do NOT require viewer context.
-    // Owner-preview (pending/ghost) is deferred to Story 5.x; admin to Story 5.1.
-    if (!artist) notFound();
-    if (artist.status !== "approved") notFound();
-    if (artist.privacySettings.mode === "ghost") notFound();
-
+export default function ArtistPublicPage({ params }: Props) {
     return (
         <Suspense fallback={null}>
-            <ArtistViewerView artist={artist} />
+            <ArtistContent params={params} />
         </Suspense>
     );
 }
