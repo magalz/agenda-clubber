@@ -9,6 +9,7 @@ ALTER TABLE artists ADD COLUMN IF NOT EXISTS slug text;
 WITH base AS (
   SELECT
     id,
+    created_at,
     COALESCE(
       NULLIF(
         trim(both '-' from lower(

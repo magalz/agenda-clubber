@@ -1,4 +1,4 @@
-import { cache } from "react";
+import { Suspense, cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublicArtistBySlug } from "@/features/artists/queries";
@@ -6,7 +6,7 @@ import { filterArtistForViewer } from "@/features/artists/visibility";
 import { getViewerContext } from "@/features/auth/helpers";
 import { PublicProfile } from "@/features/artists/components/public-profile";
 
-// Deduplicate DB calls between generateMetadata and the page component per request.
+// Deduplicate DB calls between generateMetadata and ArtistContent per request.
 const cachedGetArtist = cache((slug: string) => getPublicArtistBySlug(slug));
 const cachedGetViewer = cache(() => getViewerContext());
 
@@ -46,10 +46,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
 }
 
-export default async function ArtistPublicPage({ params }: Props) {
-    const { slug } = await params;
+async function ArtistContent({ slug }: { slug: string }) {
     const [artist, viewer] = await Promise.all([
-        cachedGetArtist(slug.toLowerCase()),
+        cachedGetArtist(slug),
         cachedGetViewer(),
     ]);
 
@@ -60,4 +59,13 @@ export default async function ArtistPublicPage({ params }: Props) {
     if (!filtered) notFound();
 
     return <PublicProfile artist={filtered} />;
+}
+
+export default async function ArtistPublicPage({ params }: Props) {
+    const { slug } = await params;
+    return (
+        <Suspense fallback={null}>
+            <ArtistContent slug={slug.toLowerCase()} />
+        </Suspense>
+    );
 }
