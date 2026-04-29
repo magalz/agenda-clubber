@@ -1,4 +1,6 @@
 import { Suspense, cache } from "react";
+
+export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublicArtistBySlug } from "@/features/artists/queries";

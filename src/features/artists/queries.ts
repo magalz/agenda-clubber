@@ -10,6 +10,7 @@ import { eq } from "drizzle-orm";
  * is enforced by filterArtistForViewer so that owner/admin previews remain possible.
  */
 export async function getPublicArtistBySlug(slug: string) {
+    "use cache";
     const results = await db
         .select({
             id: artists.id,
