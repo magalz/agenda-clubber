@@ -14,16 +14,14 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
-    const [artist, viewer] = await Promise.all([
-        cachedGetArtist(slug.toLowerCase()),
-        cachedGetViewer(),
-    ]);
+    const artist = await cachedGetArtist(slug.toLowerCase());
 
     if (!artist) {
         return { title: "Artista não encontrado — Agenda Clubber", robots: "noindex" };
     }
 
-    const filtered = filterArtistForViewer(artist, viewer);
+    // Crawlers are always anonymous — derive metadata from the public view.
+    const filtered = filterArtistForViewer(artist, { kind: "anon" });
 
     if (!filtered) {
         return { title: "Artista não encontrado — Agenda Clubber", robots: "noindex" };
