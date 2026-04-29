@@ -76,9 +76,8 @@ export function filterArtistForViewer(
 
   const { fields } = artist.privacySettings;
 
-  const photoUrl = canSeeField(fields.social_links, viewer, isOwner)
-    ? artist.photoUrl
-    : null;
+  // photoUrl is always public — part of the basic artist card alongside name and location
+  const photoUrl = artist.photoUrl;
   const bio = canSeeField(fields.bio, viewer, isOwner) ? artist.bio : null;
   const genrePrimary = canSeeField(fields.genre, viewer, isOwner)
     ? artist.genrePrimary
@@ -86,9 +85,14 @@ export function filterArtistForViewer(
   const genreSecondary = canSeeField(fields.genre, viewer, isOwner)
     ? artist.genreSecondary
     : null;
-  const socialLinks = canSeeField(fields.social_links, viewer, isOwner)
-    ? (artist.socialLinks as Record<string, string> | null)
-    : null;
+  const rawSocialLinks = artist.socialLinks;
+  const socialLinks =
+    canSeeField(fields.social_links, viewer, isOwner) &&
+    typeof rawSocialLinks === "object" &&
+    rawSocialLinks !== null &&
+    !Array.isArray(rawSocialLinks)
+      ? (rawSocialLinks as Record<string, string>)
+      : null;
   const presskitUrl = canSeeField(fields.presskit, viewer, isOwner)
     ? artist.presskitUrl
     : null;

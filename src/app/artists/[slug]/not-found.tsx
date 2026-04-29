@@ -6,7 +6,7 @@ export default function ArtistNotFound() {
             <p className="font-mono text-5xl font-bold text-primary">404</p>
             <h1 className="text-xl font-semibold">Perfil não encontrado</h1>
             <p className="max-w-sm text-sm text-muted-foreground">
-                Este artista não existe ou optou por não aparecer publicamente.
+                Esta página não foi encontrada.
             </p>
             <Link
                 href="/"

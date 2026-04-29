@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { CheckCircle, MapPin, Music, ExternalLink, FileText } from "lucide-react";
 import type { PublicArtist } from "@/features/artists/visibility";
 
@@ -24,10 +25,11 @@ export function PublicProfile({ artist }: Props) {
                 {/* Avatar */}
                 <div className="flex size-20 shrink-0 items-center justify-center rounded-full border border-border bg-muted font-mono text-xl font-semibold text-muted-foreground">
                     {artist.photoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                             src={artist.photoUrl}
                             alt={artist.artisticName}
+                            width={80}
+                            height={80}
                             className="size-full rounded-full object-cover"
                         />
                     ) : (

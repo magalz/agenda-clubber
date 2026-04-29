@@ -6,8 +6,8 @@ import { eq } from "drizzle-orm";
 
 /**
  * Fetches a single artist row by slug for public profile rendering.
- * Returns the raw row (privacy filtering is the caller's responsibility).
- * Only queries approved artists — unapproved profiles are not publicly accessible.
+ * Returns the raw row without status filtering — visibility (approved/ghost/pending)
+ * is enforced by filterArtistForViewer so that owner/admin previews remain possible.
  */
 export async function getPublicArtistBySlug(slug: string) {
     const results = await db

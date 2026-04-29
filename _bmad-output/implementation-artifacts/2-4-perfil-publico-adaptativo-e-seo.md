@@ -1,6 +1,6 @@
 # Story 2.4: Perfil Público Adaptativo e SEO
 
-Status: in-progress
+Status: done
 
 **Epic:** 2 — Hub de Talentos e Soberania do Artista (Claim)
 **FRs:** FR8, FR13
@@ -174,3 +174,25 @@ _(nenhum — implementação direta conforme plano aprovado)_
 ### Change Log
 
 - 2026-04-28: Story criada e implementada por `claude-sonnet-4-6`. Migration 006 (slug), helper slugify/uniqueSlug, filterArtistForViewer, getViewerContext, rota /artists/[slug], PublicProfile, testes unitários (slug + visibility) e E2E scaffold. 138 testes passando. Status → review.
+- 2026-04-28: Patches de code review aplicados por `claude-sonnet-4-6` (branch `fix/story-2-4-review-patches`). 10 patches HIGH/MEDIUM resolvidos. 5 items deferidos. Status → done.
+
+### Review Findings
+
+> Code review executado em 2026-04-28 com 3 camadas adversariais (Blind Hunter, Edge Case Hunter, Acceptance Auditor).
+> **25 findings brutos → 17 únicos após dedup → 10 patches aplicados, 5 deferidos, 4 descartados.**
+
+- [x] [Review][Patch] photoUrl gated incorretamente por fields.social_links — agora sempre público [src/features/artists/visibility.ts:79]
+- [x] [Review][Patch] getViewerContext/isPlatformAdmin engoliam erros silenciosamente — adicionado console.error [src/features/auth/helpers.ts:23,51]
+- [x] [Review][Patch] slugify retorna '' para nomes não-Latinos/símbolos — fallback 'artist' [src/features/artists/slug.ts:13]
+- [x] [Review][Patch] Migration 006 backfill não tratava candidate vazio — NULLIF+COALESCE adicionado [supabase/migrations/006_artists_slug.sql:10]
+- [x] [Review][Patch] Docstring de getPublicArtistBySlug afirmava filtro approved inexistente — corrigida [src/features/artists/queries.ts:8]
+- [x] [Review][Patch] Cast inseguro socialLinks as Record<string,string> sem validação — guard de tipo adicionado [src/features/artists/visibility.ts:89]
+- [x] [Review][Patch] Dupla query por request (generateMetadata + page) sem dedup — React.cache() adicionado [src/app/artists/[slug]/page.tsx:10]
+- [x] [Review][Patch] slug case-sensitivity em URL — slug.toLowerCase() antes da query [src/app/artists/[slug]/page.tsx:20]
+- [x] [Review][Patch] 404 vazava existência de perfis Ghost — mensagem genérica [src/app/artists/[slug]/not-found.tsx:9]
+- [x] [Review][Patch] <img> sem otimização next/image — migrado + remotePatterns configurados [src/features/artists/components/public-profile.tsx:28]
+- [x] [Review][Defer] PLAYWRIGHT_BASE_URL não documentada para CI [e2e/global-setup.ts] — deferred, pre-existing
+- [x] [Review][Defer] Cobertura E2E para status 'rejected' ausente — deferred, escopo Story 5.x
+- [x] [Review][Defer] Artistas órfãos (profileId=null) em ghost ficam 404 até claim — deferred, comportamento intencional (Story 2.5/2.6)
+- [x] [Review][Defer] Validação runtime de privacySettings jsonb — deferred, hardening futuro
+- [x] [Review][Defer] Race condition session entre generateMetadata e page — deferred, mitigado por React.cache()

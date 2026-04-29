@@ -216,4 +216,43 @@ describe("filterArtistForViewer — status checks", () => {
         expect(result).not.toBeNull();
         expect(result!.bio).toBe("Bio text");
     });
+
+    it("photoUrl is always public even when social_links is private", () => {
+        const artist = makeArtist({
+            privacySettings: {
+                mode: "public",
+                fields: {
+                    social_links: "private",
+                    presskit: "private",
+                    bio: "private",
+                    genre: "private",
+                },
+            },
+        });
+        const result = filterArtistForViewer(artist, anon);
+        expect(result).not.toBeNull();
+        expect(result!.photoUrl).toBe("https://example.com/photo.jpg");
+        expect(result!.socialLinks).toBeNull();
+    });
+
+    it("photoUrl is null when artist has no photo regardless of visibility", () => {
+        const artist = { ...makeArtist(), photoUrl: null };
+        const result = filterArtistForViewer(artist, anon);
+        expect(result).not.toBeNull();
+        expect(result!.photoUrl).toBeNull();
+    });
+
+    it("socialLinks returns null for non-object DB value", () => {
+        const artist = { ...makeArtist(), socialLinks: "malformed-string" };
+        const result = filterArtistForViewer(artist as Parameters<typeof filterArtistForViewer>[0], anon);
+        expect(result).not.toBeNull();
+        expect(result!.socialLinks).toBeNull();
+    });
+
+    it("socialLinks returns null for array DB value", () => {
+        const artist = { ...makeArtist(), socialLinks: ["soundcloud", "spotify"] };
+        const result = filterArtistForViewer(artist as Parameters<typeof filterArtistForViewer>[0], anon);
+        expect(result).not.toBeNull();
+        expect(result!.socialLinks).toBeNull();
+    });
 });

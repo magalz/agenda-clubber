@@ -27,8 +27,20 @@ describe("slugify", () => {
         expect(slugify("K-391")).toBe("k-391");
     });
 
-    it("handles all non-alnum input gracefully", () => {
-        expect(slugify("!@#$%")).toBe("");
+    it("falls back to 'artist' for all non-alnum input", () => {
+        expect(slugify("!@#$%")).toBe("artist");
+    });
+
+    it("falls back to 'artist' for empty string", () => {
+        expect(slugify("")).toBe("artist");
+    });
+
+    it("falls back to 'artist' for non-Latin names (CJK)", () => {
+        expect(slugify("日本語")).toBe("artist");
+    });
+
+    it("falls back to 'artist' for Cyrillic names", () => {
+        expect(slugify("Привет")).toBe("artist");
     });
 
     it("preserves digits-only names", () => {

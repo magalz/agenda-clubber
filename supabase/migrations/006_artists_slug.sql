@@ -9,12 +9,18 @@ ALTER TABLE artists ADD COLUMN IF NOT EXISTS slug text;
 WITH base AS (
   SELECT
     id,
-    trim(both '-' from lower(
-      regexp_replace(
-        unaccent(artistic_name),
-        '[^a-z0-9]+', '-', 'g'
-      )
-    )) AS candidate
+    COALESCE(
+      NULLIF(
+        trim(both '-' from lower(
+          regexp_replace(
+            unaccent(artistic_name),
+            '[^a-z0-9]+', '-', 'g'
+          )
+        )),
+        ''
+      ),
+      'artist'
+    ) AS candidate
   FROM artists
 ),
 ranked AS (

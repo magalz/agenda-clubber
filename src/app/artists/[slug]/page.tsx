@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublicArtistBySlug } from "@/features/artists/queries";
@@ -5,13 +6,17 @@ import { filterArtistForViewer } from "@/features/artists/visibility";
 import { getViewerContext } from "@/features/auth/helpers";
 import { PublicProfile } from "@/features/artists/components/public-profile";
 
+// Deduplicate DB calls between generateMetadata and the page component per request.
+const cachedGetArtist = cache((slug: string) => getPublicArtistBySlug(slug));
+const cachedGetViewer = cache(() => getViewerContext());
+
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const { slug } = await params;
     const [artist, viewer] = await Promise.all([
-        getPublicArtistBySlug(slug),
-        getViewerContext(),
+        cachedGetArtist(slug.toLowerCase()),
+        cachedGetViewer(),
     ]);
 
     if (!artist) {
@@ -32,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
         title: `${filtered.artisticName} — Agenda Clubber`,
         description,
-        alternates: { canonical: `/artists/${slug}` },
+        alternates: { canonical: `/artists/${slug.toLowerCase()}` },
         openGraph: {
             title: `${filtered.artisticName} — Agenda Clubber`,
             description,
@@ -44,8 +49,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ArtistPublicPage({ params }: Props) {
     const { slug } = await params;
     const [artist, viewer] = await Promise.all([
-        getPublicArtistBySlug(slug),
-        getViewerContext(),
+        cachedGetArtist(slug.toLowerCase()),
+        cachedGetViewer(),
     ]);
 
     if (!artist) notFound();

@@ -4,12 +4,15 @@
  * Latin diacritics are stripped via string normalization (NFD + remove combining marks).
  */
 export function slugify(name: string): string {
-  return name
+  const result = name
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+  // Non-Latin names (Cyrillic, CJK, emoji-only) produce an empty string after stripping.
+  // Fall back to 'artist' so uniqueSlug can append a numeric suffix for disambiguation.
+  return result || 'artist';
 }
 
 /**

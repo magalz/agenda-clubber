@@ -20,7 +20,8 @@ export async function isPlatformAdmin(userId: string): Promise<boolean> {
             .limit(1);
         // @ts-expect-error role enum doesn't include 'admin' yet (Story 5.1)
         return result.length > 0 && result[0].role === 'admin';
-    } catch {
+    } catch (err) {
+        console.error('[isPlatformAdmin]', err);
         return false;
     }
 }
@@ -48,7 +49,8 @@ export async function getViewerContext(): Promise<Viewer> {
         const isAdmin = await isPlatformAdmin(user.id);
 
         return { kind: "authenticated", role, profileId, isAdmin };
-    } catch {
+    } catch (err) {
+        console.error('[getViewerContext]', err);
         return { kind: "anon" };
     }
 }
