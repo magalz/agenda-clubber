@@ -6,8 +6,6 @@ import { filterArtistForViewer } from "@/features/artists/visibility";
 import { getViewerContext } from "@/features/auth/helpers";
 import { PublicProfile } from "@/features/artists/components/public-profile";
 
-export const dynamic = "force-dynamic";
-
 // Deduplicate DB calls between generateMetadata and ArtistContent per request.
 const cachedGetArtist = cache((slug: string) => getPublicArtistBySlug(slug));
 const cachedGetViewer = cache(() => getViewerContext());
