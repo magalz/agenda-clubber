@@ -7,10 +7,12 @@ export default defineConfig({
     test: {
         environment: 'jsdom',
         exclude: ['node_modules', 'e2e', '.next', '.claude', '**/*.spec.ts'],
+        setupFiles: ['./vitest.setup.ts'],
     },
     resolve: {
         alias: {
-            '@': path.resolve(__dirname, './src')
+            '@': path.resolve(__dirname, './src'),
+            'server-only': path.resolve(__dirname, './src/lib/test-utils/server-only-mock.ts'),
         }
     }
 })
