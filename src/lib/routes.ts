@@ -5,6 +5,7 @@ export const ROUTES = {
     onboardingArtist: "/onboarding/artist",
     onboardingProducer: "/onboarding/producer",
     dashboard: "/dashboard",
+    planningDashboard: "/dashboard/collective",
     admin: "/admin",
     authPrefix: "/auth",
 } as const;

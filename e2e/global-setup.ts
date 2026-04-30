@@ -66,7 +66,7 @@ async function globalSetup() {
         // ── 2. Ensure profiles exist ────────────────────────────────────────────
         const mainProfileId = await upsertProfile(sql, mainUserId, 'E2E Artist', 'artista');
         const claimerProfileId = await upsertProfile(sql, claimerUserId, 'E2E Claimer', 'artista');
-        await upsertProfile(sql, producerUserId, 'E2E Producer', 'produtor');
+        const producerProfileId = await upsertProfile(sql, producerUserId, 'E2E Producer', 'produtor');
 
         // ── 3. Seed test artists ─────────────────────────────────────────────────
         await sql`DELETE FROM artists WHERE artistic_name ILIKE ${'Artista Ghost XYZ'}`;
@@ -136,6 +136,32 @@ async function globalSetup() {
 
         // ── 5. Sign in producer user ─────────────────────────────────────────────
         await saveStorageState(supabaseUrl, publishableKey, E2E_PRODUCER_EMAIL, E2E_PRODUCER_PASSWORD, PRODUCER_STORAGE_STATE);
+
+        // ── 6. Seed producer's active collective for Story 3.1 (Calendar Grid) ───
+        const existingCollective = await sql<{ id: string }[]>`
+            SELECT id FROM collectives WHERE name = 'E2E Producer Collective' LIMIT 1
+        `;
+        let e2eCollectiveId: string;
+        if (existingCollective.length > 0) {
+            e2eCollectiveId = existingCollective[0].id;
+            await sql`
+                UPDATE collectives SET status = 'active', owner_id = ${producerProfileId}
+                WHERE id = ${e2eCollectiveId}
+            `;
+        } else {
+            const rows = await sql<{ id: string }[]>`
+                INSERT INTO collectives (name, location, genre_primary, owner_id, status)
+                VALUES (${'E2E Producer Collective'}, ${'São Paulo, SP'}, ${'Techno'}, ${producerProfileId}, ${'active'})
+                RETURNING id
+            `;
+            e2eCollectiveId = rows[0].id;
+        }
+
+        await sql`
+            INSERT INTO collective_members (collective_id, profile_id, role)
+            VALUES (${e2eCollectiveId}, ${producerProfileId}, ${'collective_admin'})
+            ON CONFLICT (collective_id, profile_id) DO NOTHING
+        `;
 
     } finally {
         await sql.end({ timeout: 5 });
