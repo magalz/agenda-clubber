@@ -18,6 +18,7 @@ import { validateMagicBytes } from "./validators";
 import { DEFAULT_PRIVACY_SETTINGS } from "./types";
 import { uniqueSlug } from "./slug";
 import { enqueueArtistClaimInvitation } from "@/features/notifications/qstash";
+import { escapeLikePattern } from "@/lib/db/like-pattern";
 
 export async function checkDuplicateArtist(name: string) {
     if (!name || name.trim() === "") return false;
@@ -355,8 +356,7 @@ export async function searchRestrictedArtistByName(name: string): Promise<Search
     }
 
     const trimmedName = parsed.data;
-    // Escape Postgres LIKE metacharacters so the name is matched literally.
-    const escapedName = trimmedName.replace(/[%_\\]/g, '\\$&');
+    const escapedName = escapeLikePattern(trimmedName);
 
     try {
         // Single query: get restricted hit (profile_id IS NULL, status='approved')
