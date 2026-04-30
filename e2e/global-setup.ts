@@ -158,9 +158,12 @@ async function globalSetup() {
         }
 
         await sql`
+            DELETE FROM collective_members
+            WHERE collective_id = ${e2eCollectiveId} AND profile_id = ${producerProfileId}
+        `;
+        await sql`
             INSERT INTO collective_members (collective_id, profile_id, role)
             VALUES (${e2eCollectiveId}, ${producerProfileId}, ${'collective_admin'})
-            ON CONFLICT (collective_id, profile_id) DO NOTHING
         `;
 
     } finally {
