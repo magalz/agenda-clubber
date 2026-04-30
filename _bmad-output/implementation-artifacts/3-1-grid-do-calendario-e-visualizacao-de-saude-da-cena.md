@@ -1,6 +1,6 @@
 # Story 3.1: Grid do Calendário e Visualização de Saúde da Cena
 
-Status: review
+Status: done
 
 **Epic:** 3 — Radar de Conflitos e Motor de Planejamento (Backend-First)
 **FRs:** FR14, UX-DR3 (UX-DR1, UX-DR9 também aplicáveis)
@@ -262,3 +262,21 @@ Modificados:
   - E2E global-setup: seed de collective ativo para produtor
 
 ### Review Findings
+
+Review adversarial executado em 30/04/2026 com 3 camadas paralelas (Acceptance Auditor, Blind Hunter, Edge Case Hunter).
+
+**17 achados revisados, 14 descartados (falsos positivos/duplicatas), 7 corrigidos:**
+
+| ID | Gravidade | Descrição | Status |
+|----|-----------|-----------|--------|
+| C1 | CRITICAL | Timezone mismatch: `iso.slice(0,10)` vs `formatDateKey` (America/Sao_Paulo) | Corrigido — `formatDateKey(new Date(iso))` |
+| C2 | CRITICAL | Unsafe `meta!.label` non-null assertion em DayCell | Corrigido — check `level && meta` |
+| H1 | HIGH | `.limit(1)` sem ORDER BY em queries de coletivo | Corrigido — `.orderBy(desc(createdAt))` |
+| M1 | MEDIUM | `new Date()` como default param em getRollingThirtyDays | Corrigido — parâmetro obrigatório |
+| M2 | MEDIUM | TZ hardcoded `America/Sao_Paulo` | Corrigido — `NEXT_PUBLIC_TIMEZONE` com fallback |
+| M3 | MEDIUM | Skeleton length hardcoded (30) | Corrigido — constante `ROLLING_DAYS` compartilhada |
+| L1 | LOW | Callback redundante em DayDetailSheet | Corrigido — simplificado |
+
+**Falsos positivos descartados**: testes unitários ausentes (AA#1 — todos existem), neon classes inválidas (AA#3 — definidas no tailwind.config.ts), E2E LIMIT 1 (BH#11 — filtro por nome único).
+
+179/179 testes passando, type-check e lint limpos pós-correções.
