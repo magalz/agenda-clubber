@@ -8,6 +8,7 @@ import { or, ilike, eq, sql, and } from 'drizzle-orm';
 import { searchTalentsSchema } from './schemas';
 import type { SearchHit, SearchErrorCode } from './types';
 import { isPlatformAdmin } from '@/features/auth/helpers';
+import { escapeLikePattern } from '@/lib/db/like-pattern';
 
 export type SearchTalentsResult = {
   data: SearchHit[] | null;
@@ -39,8 +40,7 @@ export async function searchTalents(
   }
 
   const { query, types } = parsed.data;
-  const escaped = query.replace(/[\\%_]/g, '\\$&');
-  const pattern = `%${escaped}%`;
+  const pattern = `%${escapeLikePattern(query)}%`;
 
   const isAdmin = await isPlatformAdmin(user.id);
 
