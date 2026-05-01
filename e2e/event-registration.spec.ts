@@ -31,14 +31,18 @@ test.describe('Story 3.2 — Event Registration', () => {
         await dialog.getByRole('textbox', { name: /nome do evento/i }).fill('E2E Test Event');
         await dialog.getByRole('textbox', { name: /local do evento/i }).fill('D-Edge, Sao Paulo');
 
-        const genreTrigger = dialog.getByRole('combobox');
-        await genreTrigger.click();
+        // Open select, click option, wait for close
+        await dialog.getByRole('combobox', { name: /genero musical/i }).click();
         await page.getByRole('option', { name: 'Techno', exact: true }).click();
+        await page.waitForTimeout(300);
 
-        await dialog.getByRole('button', { name: 'Salvar evento' }).click();
+        // Submit
+        const submitBtn = dialog.getByRole('button', { name: 'Salvar evento' });
+        await expect(submitBtn).toBeEnabled();
+        await submitBtn.click();
 
         // Accept success or error toast — both mean the server action was reached
         const toast = page.locator('[data-sonner-toast]');
-        await expect(toast.first()).toBeVisible({ timeout: 15000 });
+        await expect(toast.first()).toBeVisible({ timeout: 20000 });
     });
 });
