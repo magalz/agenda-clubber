@@ -24,21 +24,21 @@ interface UpdateData {
 }
 
 function calculateEventDateUtc(eventDate: string, timezone: string): Date {
-    const offsetMatch = timezone ? getTimezoneOffset(timezone) : '-03:00';
-    const dateStr = `${eventDate}T12:00:00${offsetMatch}`;
-    return new Date(dateStr);
-}
+    const [year, month, day] = eventDate.split('-').map(Number);
+    const noonUTC = new Date(`${eventDate}T12:00:00Z`);
 
-function getTimezoneOffset(ianaTimezone: string): string {
-    const now = new Date();
-    const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
-    const tzDate = new Date(now.toLocaleString('en-US', { timeZone: ianaTimezone }));
-    const offsetMinutes = (tzDate.getTime() - utcDate.getTime()) / 60000;
-    const sign = offsetMinutes >= 0 ? '-' : '+';
-    const absOffset = Math.abs(offsetMinutes);
-    const hours = Math.floor(absOffset / 60);
-    const minutes = absOffset % 60;
-    return `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    const utcStr = noonUTC.toLocaleString('en-US', {
+        timeZone: 'UTC', hour12: false,
+    });
+    const tzStr = noonUTC.toLocaleString('en-US', {
+        timeZone: timezone, hour12: false,
+    });
+
+    const offsetMs = new Date(tzStr).getTime() - new Date(utcStr).getTime();
+    const offsetMinutes = offsetMs / 60000;
+    const utcMs = Date.UTC(year, month - 1, day, 12) - offsetMinutes * 60000;
+
+    return new Date(utcMs);
 }
 
 export async function createEvent(input: EventFormInput): Promise<ActionResult<unknown>> {
@@ -109,28 +109,36 @@ export async function updateEvent(
         return { data: null, error: { message: 'Sem permissão para editar', code: 'FORBIDDEN' } };
     }
 
+    const parsed = eventFormSchema.partial().safeParse(input);
+    if (!parsed.success) {
+        return { data: null, error: { message: parsed.error.issues[0]?.message ?? 'Dados inválidos', code: 'VALIDATION_ERROR' } };
+    }
+
     const updateData: UpdateData = {};
+    const { name, eventDate, location, genre, lineup } = parsed.data;
 
-    if (input.name !== undefined) updateData.name = input.name;
-    if (input.eventDate !== undefined) updateData.eventDate = input.eventDate;
-    if (input.genre !== undefined) updateData.genrePrimary = input.genre;
-    if (input.lineup !== undefined) updateData.lineup = input.lineup;
+    if (name !== undefined) updateData.name = name;
+    if (eventDate !== undefined) updateData.eventDate = eventDate;
+    if (genre !== undefined) updateData.genrePrimary = genre;
+    if (lineup !== undefined) updateData.lineup = lineup;
 
-    if (input.location !== undefined && input.location !== existing[0].locationName) {
-        updateData.locationName = input.location;
-        const place = await geocode(input.location);
+    if (location !== undefined && location !== existing[0].locationName) {
+        updateData.locationName = location;
+        const place = await geocode(location);
         if (place) {
             updateData.latitude = String(place.lat);
             updateData.longitude = String(place.lng);
             const tz = await resolveTimezone(place.lat, place.lng);
             updateData.timezone = tz;
-            if (input.eventDate) {
-                updateData.eventDateUtc = calculateEventDateUtc(input.eventDate, tz);
-            }
+            updateData.eventDateUtc = calculateEventDateUtc(eventDate ?? existing[0].eventDate, tz);
         }
-    } else if (input.eventDate !== undefined) {
+    } else if (eventDate !== undefined) {
         const tz = existing[0].timezone || 'America/Sao_Paulo';
-        updateData.eventDateUtc = calculateEventDateUtc(input.eventDate, tz);
+        updateData.eventDateUtc = calculateEventDateUtc(eventDate, tz);
+    }
+
+    if (Object.keys(updateData).length === 0) {
+        return { data: existing[0], error: null };
     }
 
     const [updated] = await db.update(events)

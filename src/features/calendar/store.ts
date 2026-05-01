@@ -17,6 +17,8 @@ export const useCalendarStore = create<CalendarStore>((set) => ({
     events: [],
     setSelectedDate: (date) => set({ selectedDate: date, isSheetOpen: date !== null }),
     setEvents: (events) => set({ events }),
-    addEvent: (event) => set((s) => ({ events: [...s.events, event] })),
+    addEvent: (event) => set((s) => ({
+        events: s.events.some((e) => e.id === event.id) ? s.events : [...s.events, event],
+    })),
     removeEvent: (id) => set((s) => ({ events: s.events.filter((e) => e.id !== id) })),
 }));

@@ -36,6 +36,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS set_events_updated_at ON events;
+
 CREATE TRIGGER set_events_updated_at
     BEFORE UPDATE ON events
     FOR EACH ROW

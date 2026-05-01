@@ -1,21 +1,16 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { createEvent as createEventAction } from './actions';
 import { useCalendarStore } from './store';
 import type { EventFormInput } from './validations';
 
 export function useCreateEvent() {
-    const queryClient = useQueryClient();
-
     return useMutation({
         mutationFn: async (input: EventFormInput) => {
             return createEventAction(input);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['events'] });
         },
     });
 }
