@@ -33,7 +33,7 @@ test.describe('Story 3.2 — Event Registration', () => {
 
         const genreTrigger = dialog.getByRole('combobox');
         await genreTrigger.click();
-        await page.getByRole('option', { name: 'Techno' }).click();
+        await page.getByRole('option', { name: 'Techno', exact: true }).click();
 
         await dialog.getByRole('button', { name: 'Salvar evento' }).click();
 
