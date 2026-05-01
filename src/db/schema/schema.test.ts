@@ -3,6 +3,7 @@ import { profiles } from './auth';
 import { collectives } from './collectives';
 import { collectiveMembers } from './collective-members';
 import { artists } from './artists';
+import { events } from './events';
 
 describe('Database Schema', () => {
     it('profiles table should have correct columns', () => {
@@ -40,5 +41,19 @@ describe('Database Schema', () => {
         expect(artists.genrePrimary).toBeDefined();
         expect(artists.photoUrl).toBeDefined();
         expect(artists.isVerified).toBeDefined();
+    });
+
+    it('events table should have correct columns', () => {
+        expect(events.id).toBeDefined();
+        expect(events.collectiveId).toBeDefined();
+        expect(events.name).toBeDefined();
+        expect(events.eventDate).toBeDefined();
+        expect(events.eventDateUtc).toBeDefined();
+        expect(events.locationName).toBeDefined();
+        expect(events.genrePrimary).toBeDefined();
+        expect(events.status).toBeDefined();
+        expect(events.createdBy).toBeDefined();
+        expect(events.createdAt).toBeDefined();
+        expect(events.updatedAt).toBeDefined();
     });
 });

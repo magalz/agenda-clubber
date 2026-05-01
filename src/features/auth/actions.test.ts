@@ -16,10 +16,10 @@ const signUpSchema = z.object({
         .min(2, "O apelido deve ter no mínimo 2 caracteres")
         .max(50, "O apelido deve ter no máximo 50 caracteres"),
     role: z.enum(["artista", "produtor"], {
-        errorMap: () => ({ message: "Selecione um papel" }),
+        message: "Selecione um papel",
     }),
     terms: z.literal(true, {
-        errorMap: () => ({ message: "Você deve aceitar os termos de uso" }),
+        message: "Você deve aceitar os termos de uso",
     }),
 }).refine((data) => data.email === data.repeatEmail, {
     message: "Os emails não coincidem",

@@ -17,8 +17,9 @@ test.describe('Story 3.1 — Calendar Grid (Health Pulse)', () => {
             await expect(dialog).toBeVisible();
             await expect(dialog).toContainText(/Eventos de \d{1,2} de \w+ de \d{4}/);
 
-            const cta = dialog.getByRole('button', { name: 'Adicionar evento' });
-            await expect(cta).toBeDisabled();
+            await expect(dialog.getByRole('textbox', { name: /nome do evento/i })).toBeVisible();
+            await expect(dialog.getByRole('textbox', { name: /local do evento/i })).toBeVisible();
+            await expect(dialog.getByRole('button', { name: 'Salvar evento' })).toBeEnabled();
         });
 
         test('fecha o Sheet ao pressionar Escape', async ({ page }) => {
