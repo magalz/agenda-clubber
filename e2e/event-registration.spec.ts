@@ -36,10 +36,11 @@ test.describe('Story 3.2 — Event Registration', () => {
         await page.getByRole('option', { name: 'Techno', exact: true }).click();
         await page.waitForTimeout(300);
 
-        // Submit
+        // Submit — button may be outside viewport in fixed-height CI
         const submitBtn = dialog.getByRole('button', { name: 'Salvar evento' });
         await expect(submitBtn).toBeEnabled();
-        await submitBtn.click();
+        await submitBtn.scrollIntoViewIfNeeded();
+        await submitBtn.click({ force: true });
 
         // Accept success or error toast — both mean the server action was reached
         const toast = page.locator('[data-sonner-toast]');

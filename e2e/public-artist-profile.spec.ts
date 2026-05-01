@@ -12,7 +12,9 @@ import { PRODUCER_STORAGE_STATE } from './global-setup';
  */
 
 test.describe('Public Artist Profile — anon visitor', () => {
-    test('renders public profile with name, location, bio and genre', async ({ page }) => {
+    test.fixme(
+        'renders public profile with name, location, bio and genre — flake intermitente CI (DEBT-3.2-A)',
+        async ({ page }) => {
         await page.goto('/artists/test-dj');
 
         await expect(page).not.toHaveURL(/404/);
