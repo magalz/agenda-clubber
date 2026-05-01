@@ -39,8 +39,10 @@ test.describe('Story 3.2 — Event Registration', () => {
         // Submit — button may be outside viewport in fixed-height CI
         const submitBtn = dialog.getByRole('button', { name: 'Salvar evento' });
         await expect(submitBtn).toBeEnabled();
-        await submitBtn.scrollIntoViewIfNeeded();
-        await submitBtn.click({ force: true });
+        // dispatchEvent bypasses viewport/visibility actionability checks —
+        // the Sheet content can exceed CI viewport and Playwright's auto-scroll
+        // does not handle nested fixed-position scroll containers cleanly.
+        await submitBtn.dispatchEvent('click');
 
         // Accept success or error toast — both mean the server action was reached
         const toast = page.locator('[data-sonner-toast]');
