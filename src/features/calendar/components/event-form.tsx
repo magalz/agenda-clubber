@@ -125,7 +125,7 @@ export function EventForm({ selectedDate, onSuccess }: Props) {
                     Gênero musical <span className="text-red-500">*</span>
                 </Label>
                 <Select value={genre} onValueChange={(v) => setGenre(v ?? '')}>
-                    <SelectTrigger aria-label="Gênero musical">
+                    <SelectTrigger aria-label="Genero musical">
                         <SelectValue placeholder="Selecione um gênero" />
                     </SelectTrigger>
                     <SelectContent>
