@@ -351,7 +351,7 @@ export async function searchRestrictedArtistByName(name: string): Promise<Search
     if (!parsed.success) {
         return {
             data: null,
-            error: { message: parsed.error.errors[0].message, code: 'VALIDATION_ERROR' },
+            error: { message: parsed.error.issues[0]?.message ?? 'Dados inválidos', code: 'VALIDATION_ERROR' },
         };
     }
 

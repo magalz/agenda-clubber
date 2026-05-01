@@ -1,4 +1,5 @@
 import { CommandPalette } from '@/features/search/components/command-palette';
+import { ReactQueryProvider } from '@/lib/react-query/provider';
 
 export default function DashboardLayout({
   children,
@@ -8,7 +9,9 @@ export default function DashboardLayout({
   return (
     <>
       <CommandPalette />
-      {children}
+      <ReactQueryProvider>
+        {children}
+      </ReactQueryProvider>
     </>
   );
 }

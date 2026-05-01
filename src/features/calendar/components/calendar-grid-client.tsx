@@ -1,19 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { DayCell } from './day-cell';
 import { DayDetailSheet } from './day-detail-sheet';
 import { WeekdayHeader } from './weekday-header';
 import { formatDateKey } from '../date-range';
-import type { ConflictLevelRecord } from '../types';
+import { useCalendarStore } from '../store';
+import { useEventRealtime } from '../hooks';
+import type { ConflictLevelRecord, CalendarEvent } from '../types';
 
 type Props = {
+    collectiveId: string;
     dates: string[];
     pulseRecord: ConflictLevelRecord;
+    initialEvents: CalendarEvent[];
 };
 
-export function CalendarGridClient({ dates, pulseRecord }: Props) {
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+export function CalendarGridClient({ collectiveId, dates, pulseRecord, initialEvents }: Props) {
+    const { selectedDate, isSheetOpen, setSelectedDate, setEvents } = useCalendarStore();
+
+    useEffect(() => {
+        setEvents(initialEvents);
+    }, [initialEvents, setEvents]);
+
+    useEventRealtime(collectiveId);
 
     return (
         <>
@@ -36,6 +46,7 @@ export function CalendarGridClient({ dates, pulseRecord }: Props) {
             </div>
             <DayDetailSheet
                 date={selectedDate}
+                isOpen={isSheetOpen}
                 onOpenChange={(open) => {
                     if (!open) setSelectedDate(null);
                 }}

@@ -33,16 +33,16 @@ export const artistOnboardingSchema = z.object({
     genrePrimary: trimmedStr(2, 50, "Gênero principal obrigatório"),
     genreSecondary: z.preprocess(
         (v) => (typeof v === "string" ? v.trim() : v),
-        z.string().max(50, "Máximo de 50 caracteres").optional()
-    ),
+        z.string().max(50, "Máximo de 50 caracteres")
+    ).optional(),
     soundcloud: z.union([z.literal(""), z.string().url("Must be a valid URL")]).optional(),
     youtube: z.union([z.literal(""), z.string().url("Must be a valid URL")]).optional(),
     instagram: z.union([z.literal(""), z.string().url("Must be a valid URL")]).optional(),
     presskitUrl: z.union([z.literal(""), z.string().url("Must be a valid URL")]).optional(),
     bio: z.preprocess(
         (v) => (typeof v === "string" ? v.trim() : v),
-        z.string().max(2000, "Máximo de 2000 caracteres").optional()
-    ),
+        z.string().max(2000, "Máximo de 2000 caracteres")
+    ).optional(),
     privacySettings: privacySettingsSchema,
 });
 
