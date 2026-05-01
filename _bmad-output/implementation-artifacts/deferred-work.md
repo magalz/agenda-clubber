@@ -7,8 +7,8 @@ Issues adiadas deliberadamente para ciclos futuros. Cada entrada referencia um t
 ## DEBT-3.2-A — Bio do Test DJ não visível em E2E (CI-only)
 
 - **Detectado em:** Story 3.2, CI run 2026-05-01
-- **Status:** `test.fixme` em `e2e/public-artist-profile.spec.ts:15`
-- **Sintoma:** O texto `"Bio do Test DJ"` não é encontrado pelo Playwright no perfil público `/artists/test-dj`, enquanto `name`, `location` e `genre` da mesma página passam.
+- **Status:** `test.fixme` em `e2e/public-artist-profile.spec.ts:15,27,35` (3 testes afetados: render+SEO title+SEO description)
+- **Sintoma:** O texto `"Bio do Test DJ"` não é encontrado pelo Playwright no perfil público `/artists/test-dj`, enquanto `name`, `location` e `genre` da mesma página passam. No pior caso, a página retorna "Artista não encontrado" (seed ausente no DB do CI).
 - **Hipóteses:**
   1. Seed corrompido por runs CI anteriores (registro "Test DJ" já existia com `privacy_mode=ghost` antes do seed)
   2. Race condition entre `Suspense` + `cacheComponents:true` e o render do campo bio
