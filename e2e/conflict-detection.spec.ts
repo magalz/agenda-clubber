@@ -36,7 +36,7 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
             await dialog.getByRole('textbox', { name: /local do evento/i }).fill('São Paulo, SP');
 
             // Select Techno (same as seed event → genre conflict)
-            await dialog.getByRole('combobox', { name: /gênero musical/i }).click();
+            await dialog.getByRole('combobox', { name: /genero musical/i }).click();
             await page.getByRole('option', { name: 'Techno', exact: true }).click();
             await page.waitForTimeout(300);
 
