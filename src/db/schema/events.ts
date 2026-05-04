@@ -18,6 +18,8 @@ export const events = pgTable('events', {
     isNamePublic: boolean('is_name_public').default(true).notNull(),
     isLocationPublic: boolean('is_location_public').default(false).notNull(),
     isLineupPublic: boolean('is_lineup_public').default(false).notNull(),
+    conflictLevel: text('conflict_level', { enum: ['green', 'yellow', 'red'] }),
+    conflictJustification: text('conflict_justification'),
     createdBy: uuid('created_by').references(() => profiles.id, { onDelete: 'set null' }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull().$onUpdateFn(() => new Date()),

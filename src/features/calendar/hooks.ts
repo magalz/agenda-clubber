@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { createEvent as createEventAction } from './actions';
 import { useCalendarStore } from './store';
 import type { EventFormInput } from './validations';
+import type { CalendarEvent } from './types';
 
 export function useCreateEvent() {
     return useMutation({
@@ -43,6 +44,8 @@ export function useEventRealtime(collectiveId: string) {
                     isNamePublic: newEvent.is_name_public as boolean,
                     isLocationPublic: newEvent.is_location_public as boolean,
                     isLineupPublic: newEvent.is_lineup_public as boolean,
+                    conflictLevel: (newEvent.conflict_level as CalendarEvent['conflictLevel']) ?? null,
+                    conflictJustification: (newEvent.conflict_justification as string) ?? null,
                     createdAt: newEvent.created_at as string,
                 });
             })

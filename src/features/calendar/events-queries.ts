@@ -36,6 +36,8 @@ export async function getEventsForRange(
         isNamePublic: r.isNamePublic,
         isLocationPublic: r.isLocationPublic,
         isLineupPublic: r.isLineupPublic,
+        conflictLevel: r.conflictLevel as CalendarEvent['conflictLevel'],
+        conflictJustification: r.conflictJustification,
         createdAt: r.createdAt.toISOString(),
     }));
 }

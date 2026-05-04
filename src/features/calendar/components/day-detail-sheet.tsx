@@ -7,9 +7,23 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { Check, AlertTriangle, X } from 'lucide-react';
 import { formatDayLabelPtBr } from '../date-range';
 import { EventForm } from './event-form';
 import { useCalendarStore } from '../store';
+import type { ConflictLevel } from '../types';
+
+const CONFLICT_STYLES: Record<ConflictLevel, { dot: string; icon: typeof Check }> = {
+    green: { dot: 'bg-neon-green', icon: Check },
+    yellow: { dot: 'bg-neon-yellow', icon: AlertTriangle },
+    red: { dot: 'bg-neon-red', icon: X },
+};
+
+const CONFLICT_LABELS: Record<ConflictLevel, string> = {
+    green: 'Verde',
+    yellow: 'Amarelo',
+    red: 'Vermelho',
+};
 
 type Props = {
     date: Date | null;
@@ -43,9 +57,28 @@ export function DayDetailSheet({ date, isOpen, onOpenChange }: Props) {
                         <ul className="space-y-2">
                             {dayEvents.map((ev) => (
                                 <li key={ev.id} className="border border-border rounded-md p-3">
-                                    <p className="font-medium">{ev.name}</p>
+                                    <div className="flex items-center gap-2">
+                                        {ev.conflictLevel && CONFLICT_STYLES[ev.conflictLevel] && (
+                                            <>
+                                                <span
+                                                    className={`inline-block w-2 h-2 rounded-full ${CONFLICT_STYLES[ev.conflictLevel].dot}`}
+                                                    aria-label={`Conflito ${CONFLICT_LABELS[ev.conflictLevel]}: ${ev.conflictJustification ?? 'sem detalhes'}`}
+                                                />
+                                                {(() => {
+                                                    const IconComponent = CONFLICT_STYLES[ev.conflictLevel].icon;
+                                                    return <IconComponent className="w-4 h-4 text-muted-foreground" aria-hidden="true" />;
+                                                })()}
+                                            </>
+                                        )}
+                                        <p className="font-medium">{ev.name}</p>
+                                    </div>
                                     <p className="text-sm text-muted-foreground">{ev.locationName}</p>
                                     <p className="text-xs text-muted-foreground">{ev.genrePrimary}</p>
+                                    {ev.conflictJustification && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            {ev.conflictJustification}
+                                        </p>
+                                    )}
                                 </li>
                             ))}
                         </ul>
