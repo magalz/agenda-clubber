@@ -25,6 +25,7 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
 
             const tomorrow = new Date();
             tomorrow.setUTCDate(tomorrow.getUTCDate() + 2);
+            // TODO(3.3): use _tomorrowStr to click the correct day cell when calendar navigation is implemented
             const _tomorrowStr = tomorrow.toISOString().split('T')[0];
 
             // Click on the day cell for tomorrow+1 (1 day from seeded event)
