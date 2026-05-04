@@ -7,6 +7,7 @@ import path from 'path';
 const AUTH_DIR = path.join(__dirname, '.auth');
 export const STORAGE_STATE = path.join(AUTH_DIR, 'user.json');
 export const PRODUCER_STORAGE_STATE = path.join(AUTH_DIR, 'producer.json');
+export const OTHER_COLLECTIVE_STORAGE_STATE = path.join(AUTH_DIR, 'other-collective.json');
 
 const E2E_EMAIL = 'e2e-artist@agendaclubber.com';
 const E2E_PASSWORD = 'E2eArtist2026!';
@@ -14,6 +15,8 @@ const E2E_CLAIMER_EMAIL = 'e2e-claimer@agendaclubber.com';
 const E2E_CLAIMER_PASSWORD = 'E2eClaimer2026!';
 const E2E_PRODUCER_EMAIL = 'e2e-producer@agendaclubber.com';
 const E2E_PRODUCER_PASSWORD = 'E2eProducer2026!';
+const E2E_OTHER_PRODUCER_EMAIL = 'e2e-producer-b@agendaclubber.com';
+const E2E_OTHER_PRODUCER_PASSWORD = 'E2eProducerB2026!';
 
 const DEFAULT_PRIVACY = {
     mode: 'public',
@@ -58,15 +61,18 @@ async function globalSetup() {
         const mainUserId = await upsertUser(allUsers, E2E_EMAIL, E2E_PASSWORD);
         const claimerUserId = await upsertUser(allUsers, E2E_CLAIMER_EMAIL, E2E_CLAIMER_PASSWORD);
         const producerUserId = await upsertUser(allUsers, E2E_PRODUCER_EMAIL, E2E_PRODUCER_PASSWORD);
+        const otherProducerUserId = await upsertUser(allUsers, E2E_OTHER_PRODUCER_EMAIL, E2E_OTHER_PRODUCER_PASSWORD);
 
         await assertAuthUserVisible(sql, supabaseUrl, databaseUrl, mainUserId);
         await assertAuthUserVisible(sql, supabaseUrl, databaseUrl, claimerUserId);
         await assertAuthUserVisible(sql, supabaseUrl, databaseUrl, producerUserId);
+        await assertAuthUserVisible(sql, supabaseUrl, databaseUrl, otherProducerUserId);
 
         // ── 2. Ensure profiles exist ────────────────────────────────────────────
         const mainProfileId = await upsertProfile(sql, mainUserId, 'E2E Artist', 'artista');
         const claimerProfileId = await upsertProfile(sql, claimerUserId, 'E2E Claimer', 'artista');
         const producerProfileId = await upsertProfile(sql, producerUserId, 'E2E Producer', 'produtor');
+        const otherProducerProfileId = await upsertProfile(sql, otherProducerUserId, 'E2E Other Producer', 'produtor');
 
         // ── 3. Seed test artists ─────────────────────────────────────────────────
         await sql`DELETE FROM artists WHERE artistic_name ILIKE ${'Artista Ghost XYZ'}`;
@@ -165,6 +171,63 @@ async function globalSetup() {
             INSERT INTO collective_members (collective_id, profile_id, role)
             VALUES (${e2eCollectiveId}, ${producerProfileId}, ${'collective_admin'})
         `;
+
+        // ── 7. Seed second collective for cross-collective conflict detection (Story 3.3) ──
+        const otherCollectiveName = 'E2E Other Collective';
+        const existingOtherCollective = await sql<{ id: string }[]>`
+            SELECT id FROM collectives WHERE name = ${otherCollectiveName} LIMIT 1
+        `;
+        let otherCollectiveId: string;
+        if (existingOtherCollective.length > 0) {
+            otherCollectiveId = existingOtherCollective[0].id;
+            await sql`
+                UPDATE collectives SET status = 'active', owner_id = ${otherProducerProfileId}
+                WHERE id = ${otherCollectiveId}
+            `;
+        } else {
+            const rows = await sql<{ id: string }[]>`
+                INSERT INTO collectives (name, location, genre_primary, owner_id, status)
+                VALUES (${otherCollectiveName}, ${'Recife, PE'}, ${'Techno'}, ${otherProducerProfileId}, ${'active'})
+                RETURNING id
+            `;
+            otherCollectiveId = rows[0].id;
+        }
+
+        await sql`
+            DELETE FROM collective_members
+            WHERE collective_id = ${otherCollectiveId} AND profile_id = ${otherProducerProfileId}
+        `;
+        await sql`
+            INSERT INTO collective_members (collective_id, profile_id, role)
+            VALUES (${otherCollectiveId}, ${otherProducerProfileId}, ${'collective_admin'})
+        `;
+
+        // Seed conflicting event for cross-collective detection
+        const tomorrow = new Date();
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        const tomorrowUtc = new Date(`${tomorrowStr}T12:00:00Z`);
+
+        await sql`
+            DELETE FROM events WHERE collective_id = ${otherCollectiveId}
+        `;
+        await sql`
+            INSERT INTO events (collective_id, name, event_date, event_date_utc, location_name, genre_primary, lineup, status, created_by)
+            VALUES (
+                ${otherCollectiveId},
+                ${'Festa Concorrente'},
+                ${tomorrowStr},
+                ${tomorrowUtc},
+                ${'Recife, PE'},
+                ${'Techno'},
+                ${sql.json(['DJ Externo'])},
+                ${'planning'},
+                ${otherProducerProfileId}
+            )
+        `;
+
+        // ── 8. Sign in other producer user ──────────────────────────────────────────
+        await saveStorageState(supabaseUrl, publishableKey, E2E_OTHER_PRODUCER_EMAIL, E2E_OTHER_PRODUCER_PASSWORD, OTHER_COLLECTIVE_STORAGE_STATE);
 
     } finally {
         await sql.end({ timeout: 5 });

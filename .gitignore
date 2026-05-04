@@ -43,3 +43,6 @@ next-env.d.ts
 
 # playwright auth state
 e2e/.auth/
+
+# local code review artifacts
+test-results/

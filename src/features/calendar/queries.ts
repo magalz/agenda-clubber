@@ -2,9 +2,10 @@ import 'server-only';
 
 import { db } from '@/db';
 import { events } from '@/db/schema/events';
-import { sql, and, gte, lte, eq } from 'drizzle-orm';
-import type { HealthPulseMap } from './types';
+import { and, gte, lte, eq } from 'drizzle-orm';
+import type { HealthPulseMap, ConflictLevel } from './types';
 import { formatDateKey } from './date-range';
+import { aggregateHighestLevel } from './health-pulse';
 
 export async function getHealthPulseForRange(
     collectiveId: string,
@@ -12,10 +13,11 @@ export async function getHealthPulseForRange(
 ): Promise<HealthPulseMap> {
     const start = dates[0];
     const end = dates[dates.length - 1];
-    await db
+
+    const rows = await db
         .select({
             eventDate: events.eventDate,
-            count: sql<number>`count(*)::int`,
+            conflictLevel: events.conflictLevel,
         })
         .from(events)
         .where(
@@ -24,11 +26,21 @@ export async function getHealthPulseForRange(
                 gte(events.eventDate, formatDateKey(start)),
                 lte(events.eventDate, formatDateKey(end))
             )
-        )
-        .groupBy(events.eventDate);
+        );
+
+    const levelsByDay = new Map<string, ConflictLevel[]>();
+    for (const row of rows) {
+        if (row.conflictLevel) {
+            const existing = levelsByDay.get(row.eventDate) ?? [];
+            existing.push(row.conflictLevel as ConflictLevel);
+            levelsByDay.set(row.eventDate, existing);
+        }
+    }
 
     return new Map(dates.map((d) => {
         const key = formatDateKey(d);
-        return [key, null];
+        const dayLevels = levelsByDay.get(key) ?? [];
+        const level = aggregateHighestLevel(dayLevels);
+        return [key, level];
     }));
 }

@@ -8,6 +8,7 @@ import { getViewerContext } from '@/features/auth/helpers';
 import { getCurrentUserCollectiveId } from '@/features/collectives/queries';
 import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
+import { evaluateAndPersist, getNeighborIds } from './logic/evaluate-conflict';
 
 type ActionResult<T> = { data: T | null; error: { message: string; code: string } | null };
 
@@ -86,6 +87,27 @@ export async function createEvent(input: EventFormInput): Promise<ActionResult<u
         createdBy: viewer.profileId,
     }).returning();
 
+    try {
+        await evaluateAndPersist(event.id, db);
+
+        const neighborIds = await getNeighborIds(event.id, event.eventDate, db);
+        for (const neighborId of neighborIds) {
+            try {
+                await evaluateAndPersist(neighborId, db);
+            } catch (e) {
+                console.error(`[ConflictEngine] Failed to recompute neighbor ${neighborId}:`, e);
+            }
+        }
+    } catch (e) {
+        console.error(`[ConflictEngine] Failed to evaluate event ${event.id}:`, e);
+        await db.update(events)
+            .set({
+                conflictLevel: null,
+                conflictJustification: 'Falha ao avaliar — verificar logs',
+            })
+            .where(eq(events.id, event.id));
+    }
+
     revalidatePath('/dashboard/collective');
 
     return { data: event, error: null };
@@ -145,6 +167,39 @@ export async function updateEvent(
         .set(updateData)
         .where(eq(events.id, eventId))
         .returning();
+
+    try {
+        if (eventDate !== undefined && eventDate !== existing[0].eventDate) {
+            const oldNeighborIds = await getNeighborIds(eventId, existing[0].eventDate, db);
+            for (const neighborId of oldNeighborIds) {
+                try {
+                    await evaluateAndPersist(neighborId, db);
+                } catch (e) {
+                    console.error(`[ConflictEngine] Failed to recompute old-neighbor ${neighborId}:`, e);
+                }
+            }
+        }
+
+        await evaluateAndPersist(eventId, db);
+
+        const newDate = eventDate ?? existing[0].eventDate;
+        const newNeighborIds = await getNeighborIds(eventId, newDate, db);
+        for (const neighborId of newNeighborIds) {
+            try {
+                await evaluateAndPersist(neighborId, db);
+            } catch (e) {
+                console.error(`[ConflictEngine] Failed to recompute new-neighbor ${neighborId}:`, e);
+            }
+        }
+    } catch (e) {
+        console.error(`[ConflictEngine] Failed to evaluate event ${eventId}:`, e);
+        await db.update(events)
+            .set({
+                conflictLevel: null,
+                conflictJustification: 'Falha ao avaliar — verificar logs',
+            })
+            .where(eq(events.id, eventId));
+    }
 
     revalidatePath('/dashboard/collective');
 

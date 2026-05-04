@@ -1,6 +1,6 @@
 # Story 3.2: Cadastro de Evento e Geolocalização
 
-Status: review
+Status: done
 
 **Epic:** 3 — Radar de Conflitos e Motor de Planejamento (Backend-First)
 **FRs:** FR15, FR24
@@ -437,3 +437,5 @@ Claude Code (deepseek-v4-flash via opencode)
 - Dependências instaladas: zustand, @tanstack/react-query, leaflet, @types/leaflet, zod
 
 ### Review Findings
+
+Story merged via PR #19 (commit `035d0b0`). Post-merge fixes aplicados diretamente em `main`: `a7e97e9` (code review fixes), `1c890e2` `d6e644f` `7824527` (E2E hardening para CI), `02d835c` (a11y: aria-label sem acento), `a8c9d81` (Toaster montado no root layout), `49cfd67` `b959d00` `6122c6d` (E2E CI stability + DEBT-3.2-A). Esteira CI verde (typecheck + lint + 208 unit + E2E). Adversarial review em 3 camadas (per Retro Épico 2 lição #3) não arquivado formalmente neste artefato — os fix commits documentam pragmaticamente o ciclo de revisão.

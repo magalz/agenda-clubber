@@ -52,6 +52,8 @@ describe('Database Schema', () => {
         expect(events.locationName).toBeDefined();
         expect(events.genrePrimary).toBeDefined();
         expect(events.status).toBeDefined();
+        expect(events.conflictLevel).toBeDefined();
+        expect(events.conflictJustification).toBeDefined();
         expect(events.createdBy).toBeDefined();
         expect(events.createdAt).toBeDefined();
         expect(events.updatedAt).toBeDefined();

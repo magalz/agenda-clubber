@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockSelect = vi.fn();
 const mockFrom = vi.fn();
 const mockWhere = vi.fn();
-const mockGroupBy = vi.fn();
 
 vi.mock('@/db', () => ({
     db: {
@@ -29,14 +28,12 @@ import { getRollingThirtyDays, formatDateKey } from './date-range';
 describe('getHealthPulseForRange', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockWhere.mockResolvedValue([]);
         mockFrom.mockReturnValue({ where: mockWhere });
-        mockWhere.mockReturnValue({ groupBy: mockGroupBy });
         mockSelect.mockReturnValue({ from: mockFrom });
     });
 
-    it('returns a Map of size 30 with all null values for 30 dates', async () => {
-        mockGroupBy.mockResolvedValue([]);
-
+    it('returns a Map of size 30 with all null values for empty DB', async () => {
         const dates = getRollingThirtyDays(new Date('2026-06-01T12:00:00-03:00'));
         const pulseMap = await getHealthPulseForRange('test-collective-id', dates);
 
@@ -48,8 +45,6 @@ describe('getHealthPulseForRange', () => {
     });
 
     it('returns keys matching the date-range YYYY-MM-DD format keys', async () => {
-        mockGroupBy.mockResolvedValue([]);
-
         const dates = getRollingThirtyDays(new Date('2026-01-15T12:00:00-03:00'));
         const pulseMap = await getHealthPulseForRange('any-id', dates);
 
@@ -59,12 +54,62 @@ describe('getHealthPulseForRange', () => {
     });
 
     it('queries the events table', async () => {
-        mockGroupBy.mockResolvedValue([]);
-
         const dates = getRollingThirtyDays(new Date('2026-06-01T12:00:00-03:00'));
         await getHealthPulseForRange('test-collective-id', dates);
 
         expect(mockSelect).toHaveBeenCalled();
         expect(mockFrom).toHaveBeenCalled();
+    });
+
+    it('aggregates RED over GREEN on same day', async () => {
+        mockWhere.mockResolvedValue([
+            { eventDate: '2026-06-01', conflictLevel: 'green' },
+            { eventDate: '2026-06-01', conflictLevel: 'red' },
+        ]);
+
+        const dates = getRollingThirtyDays(new Date('2026-06-01T12:00:00-03:00'));
+        const pulseMap = await getHealthPulseForRange('test-collective-id', dates);
+
+        const dayKey = formatDateKey(dates[0]);
+        expect(pulseMap.get(dayKey)).toBe('red');
+    });
+
+    it('aggregates YELLOW over GREEN on same day', async () => {
+        mockWhere.mockResolvedValue([
+            { eventDate: '2026-06-01', conflictLevel: 'green' },
+            { eventDate: '2026-06-01', conflictLevel: 'yellow' },
+        ]);
+
+        const dates = getRollingThirtyDays(new Date('2026-06-01T12:00:00-03:00'));
+        const pulseMap = await getHealthPulseForRange('test-collective-id', dates);
+
+        const dayKey = formatDateKey(dates[0]);
+        expect(pulseMap.get(dayKey)).toBe('yellow');
+    });
+
+    it('returns null for days with only null conflict levels', async () => {
+        mockWhere.mockResolvedValue([
+            { eventDate: '2026-06-01', conflictLevel: null },
+        ]);
+
+        const dates = getRollingThirtyDays(new Date('2026-06-01T12:00:00-03:00'));
+        const pulseMap = await getHealthPulseForRange('test-collective-id', dates);
+
+        const dayKey = formatDateKey(dates[0]);
+        expect(pulseMap.get(dayKey)).toBeNull();
+    });
+
+    it('handles mixed null and non-null levels', async () => {
+        mockWhere.mockResolvedValue([
+            { eventDate: '2026-06-01', conflictLevel: null },
+            { eventDate: '2026-06-01', conflictLevel: 'yellow' },
+            { eventDate: '2026-06-01', conflictLevel: null },
+        ]);
+
+        const dates = getRollingThirtyDays(new Date('2026-06-01T12:00:00-03:00'));
+        const pulseMap = await getHealthPulseForRange('test-collective-id', dates);
+
+        const dayKey = formatDateKey(dates[0]);
+        expect(pulseMap.get(dayKey)).toBe('yellow');
     });
 });
