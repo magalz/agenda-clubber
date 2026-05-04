@@ -70,7 +70,7 @@ development_status:
   epic-3: in-progress
   3-1-grid-do-calendario-e-visualizacao-de-saude-da-cena: done
   3-2-cadastro-de-evento-e-geolocalizacao: done
-  3-3-motor-de-regras-algoritmo-v1-2: review
+  3-3-motor-de-regras-algoritmo-v1-2: done
   3-4-privacidade-granular-e-status-do-evento: backlog
   3-5-componente-de-delay-etico-para-conflitos-criticos: backlog
   epic-3-retrospective: optional
