@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { PRODUCER_STORAGE_STATE, OTHER_COLLECTIVE_STORAGE_STATE } from './global-setup';
+import { PRODUCER_STORAGE_STATE } from './global-setup';
+// OTHER_COLLECTIVE_STORAGE_STATE will be used when cross-collective recompute scenario is implemented
 
 /**
  * Story 3.3 — Cross-Collective Conflict Detection
@@ -24,7 +25,7 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
 
             const tomorrow = new Date();
             tomorrow.setUTCDate(tomorrow.getUTCDate() + 2);
-            const tomorrowStr = tomorrow.toISOString().split('T')[0];
+            const _tomorrowStr = tomorrow.toISOString().split('T')[0];
 
             // Click on the day cell for tomorrow+1 (1 day from seeded event)
             const cells = page.getByTestId('day-cell');
