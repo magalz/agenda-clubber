@@ -16,6 +16,7 @@ import { Check, AlertTriangle, X, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDayLabelPtBr } from '../date-range';
 import { EventForm } from './event-form';
+import { EthicalDelayButton } from './ethical-delay-button';
 import { useCalendarStore } from '../store';
 import { filterEventForViewer } from '../logic/visibility';
 import { updateEvent, updateEventStatus } from '../actions';
@@ -166,15 +167,23 @@ export function DayDetailSheet({ collectiveId, date, isOpen, onOpenChange }: Pro
 
                 {own && ev.status === 'planning' && (
                     <>
-                        <Button
-                            variant="default"
-                            size="sm"
-                            className="mt-2 w-full"
-                            disabled={statusMutation.isPending}
-                            onClick={() => statusMutation.mutate({ eventId: ev.id, status: 'confirmed' })}
-                        >
-                            Confirmar evento
-                        </Button>
+                        {ev.conflictLevel === 'red' ? (
+                            <EthicalDelayButton
+                                onConfirm={() => statusMutation.mutate({ eventId: ev.id, status: 'confirmed' })}
+                                onCancel={() => {}}
+                                disabled={statusMutation.isPending}
+                            />
+                        ) : (
+                            <Button
+                                variant="default"
+                                size="sm"
+                                className="mt-2 w-full"
+                                disabled={statusMutation.isPending}
+                                onClick={() => statusMutation.mutate({ eventId: ev.id, status: 'confirmed' })}
+                            >
+                                Confirmar evento
+                            </Button>
+                        )}
 
                         <div className="mt-3 space-y-2 border-t border-border pt-3">
                             <p className="text-xs font-medium text-muted-foreground">Visibilidade para outros coletivos</p>

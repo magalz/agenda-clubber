@@ -272,7 +272,56 @@ async function globalSetup() {
             )
         `;
 
-        // ── 8. Sign in other producer user ──────────────────────────────────────────
+        // ── 8. Seed events for Ethical Delay test (Story 3.5) ──────────────────────
+        const ethicalDelayDate = new Date();
+        ethicalDelayDate.setUTCDate(ethicalDelayDate.getUTCDate() + 4);
+        const ethicalDelayDateStr = ethicalDelayDate.toISOString().split('T')[0];
+        const ethicalDelayUtc = new Date(`${ethicalDelayDateStr}T12:00:00Z`);
+
+        const greenEventDate = new Date();
+        greenEventDate.setUTCDate(greenEventDate.getUTCDate() + 6);
+        const greenEventDateStr = greenEventDate.toISOString().split('T')[0];
+        const greenEventUtc = new Date(`${greenEventDateStr}T12:00:00Z`);
+
+        await sql`DELETE FROM events WHERE collective_id = ${e2eCollectiveId}`;
+
+        // RED event: triggers EthicalDelayButton
+        await sql`
+            INSERT INTO events (collective_id, name, event_date, event_date_utc, location_name, genre_primary, lineup, status, conflict_level, conflict_justification, created_by)
+            VALUES (
+                ${e2eCollectiveId},
+                ${'Evento Delay Ético'},
+                ${ethicalDelayDateStr},
+                ${ethicalDelayUtc},
+                ${'São Paulo, SP'},
+                ${'Techno'},
+                ${sql.json(['DJ Test'])},
+                ${'planning'},
+                ${'red'},
+                ${'Conflito crítico simulado para teste de delay ético'},
+                ${producerProfileId}
+            )
+        `;
+
+        // GREEN event: instant confirm, no delay
+        await sql`
+            INSERT INTO events (collective_id, name, event_date, event_date_utc, location_name, genre_primary, lineup, status, conflict_level, conflict_justification, created_by)
+            VALUES (
+                ${e2eCollectiveId},
+                ${'Evento Sem Conflito'},
+                ${greenEventDateStr},
+                ${greenEventUtc},
+                ${'São Paulo, SP'},
+                ${'Samba'},
+                ${sql.json(['DJ Samba'])},
+                ${'planning'},
+                ${'green'},
+                ${null},
+                ${producerProfileId}
+            )
+        `;
+
+        // ── 9. Sign in other producer user ──────────────────────────────────────────
         await saveStorageState(supabaseUrl, publishableKey, E2E_OTHER_PRODUCER_EMAIL, E2E_OTHER_PRODUCER_PASSWORD, OTHER_COLLECTIVE_STORAGE_STATE);
 
     } finally {

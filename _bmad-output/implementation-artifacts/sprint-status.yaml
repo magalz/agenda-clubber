@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: terça-feira, 14 de abril de 2026
-last_updated: terça-feira, 5 de maio de 2026 (story 3.5 created → ready-for-dev)
+last_updated: terça-feira, 5 de maio de 2026 (story 3.5 implemented → review)
 project: Agenda Clubber
 project_key: NOKEY
 tracking_system: file-system
@@ -72,7 +72,7 @@ development_status:
   3-2-cadastro-de-evento-e-geolocalizacao: done
   3-3-motor-de-regras-algoritmo-v1-2: done
   3-4-privacidade-granular-e-status-do-evento: done
-  3-5-componente-de-delay-etico-para-conflitos-criticos: ready-for-dev
+  3-5-componente-de-delay-etico-para-conflitos-criticos: review
   epic-3-retrospective: optional
 
   epic-4: backlog
