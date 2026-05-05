@@ -3,6 +3,19 @@ import { render, screen } from '@testing-library/react';
 import { DayDetailSheet } from './day-detail-sheet';
 import type { CalendarEvent } from '../types';
 
+vi.mock('@tanstack/react-query', () => ({
+    useMutation: vi.fn().mockReturnValue({
+        mutate: vi.fn(),
+        mutateAsync: vi.fn(),
+        isPending: false,
+    }),
+    QueryClientProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+vi.mock('sonner', () => ({
+    toast: { success: vi.fn(), error: vi.fn() },
+}));
+
 vi.mock('@/components/ui/sheet', () => ({
     Sheet: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet">{children}</div>,
     SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -11,19 +24,36 @@ vi.mock('@/components/ui/sheet', () => ({
     SheetTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+vi.mock('./ethical-delay-button', () => ({
+    EthicalDelayButton: ({ onConfirm }: { onConfirm: () => void }) => (
+        <button data-testid="ethical-delay-button" onClick={onConfirm}>EthicalDelayButton</button>
+    ),
+}));
+
 vi.mock('./event-form', () => ({
     EventForm: () => <div data-testid="event-form">EventForm</div>,
 }));
 
+vi.mock('../actions', () => ({
+    updateEvent: vi.fn(),
+    updateEventStatus: vi.fn(),
+}));
+
+vi.mock('../logic/visibility', () => ({
+    filterEventForViewer: vi.fn((event) => event),
+}));
+
 let mockStoreEvents: CalendarEvent[] = [];
+let mockStoreCrossEvents: CalendarEvent[] = [];
 
 vi.mock('../store', () => ({
-    useCalendarStore: (selector: (s: { events: CalendarEvent[] }) => unknown) =>
-        selector({ events: mockStoreEvents }),
+    useCalendarStore: (selector: (s: { events: CalendarEvent[]; crossEvents: CalendarEvent[] }) => unknown) =>
+        selector({ events: mockStoreEvents, crossEvents: mockStoreCrossEvents }),
 }));
 
 const baseEvent: CalendarEvent = {
     id: 'ev-1',
+    collectiveId: 'coll-a',
     name: 'Festa Techno',
     eventDate: '2026-05-04',
     locationName: 'D-Edge, São Paulo',
@@ -41,6 +71,7 @@ const baseEvent: CalendarEvent = {
 describe('DayDetailSheet', () => {
     beforeEach(() => {
         mockStoreEvents = [];
+        mockStoreCrossEvents = [];
     });
 
     it('renders nothing when date is null', () => {
@@ -144,5 +175,64 @@ describe('DayDetailSheet', () => {
         expect(screen.getByText('Green Event')).toBeDefined();
         expect(screen.getByText('Null Event')).toBeDefined();
         expect(screen.getByText('Red justification')).toBeDefined();
+    });
+
+    it('renders EthicalDelayButton when conflictLevel is RED and status is planning', () => {
+        mockStoreEvents = [{
+            ...baseEvent,
+            status: 'planning' as const,
+            conflictLevel: 'red' as const,
+        }];
+
+        render(
+            <DayDetailSheet collectiveId="coll-a" date={new Date('2026-05-04T12:00:00Z')} isOpen={true} onOpenChange={vi.fn()} />
+        );
+
+        expect(screen.getByTestId('ethical-delay-button')).toBeDefined();
+    });
+
+    it('renders simple confirm button when conflictLevel is GREEN and status is planning', () => {
+        mockStoreEvents = [{
+            ...baseEvent,
+            status: 'planning' as const,
+            conflictLevel: 'green' as const,
+        }];
+
+        render(
+            <DayDetailSheet collectiveId="coll-a" date={new Date('2026-05-04T12:00:00Z')} isOpen={true} onOpenChange={vi.fn()} />
+        );
+
+        expect(screen.queryByTestId('ethical-delay-button')).toBeNull();
+        expect(screen.getByText('Confirmar evento')).toBeDefined();
+    });
+
+    it('renders simple confirm button when conflictLevel is YELLOW and status is planning', () => {
+        mockStoreEvents = [{
+            ...baseEvent,
+            status: 'planning' as const,
+            conflictLevel: 'yellow' as const,
+        }];
+
+        render(
+            <DayDetailSheet collectiveId="coll-a" date={new Date('2026-05-04T12:00:00Z')} isOpen={true} onOpenChange={vi.fn()} />
+        );
+
+        expect(screen.queryByTestId('ethical-delay-button')).toBeNull();
+        expect(screen.getByText('Confirmar evento')).toBeDefined();
+    });
+
+    it('does not render EthicalDelayButton when status is confirmed even with RED conflict', () => {
+        mockStoreEvents = [{
+            ...baseEvent,
+            status: 'confirmed' as const,
+            conflictLevel: 'red' as const,
+        }];
+
+        render(
+            <DayDetailSheet collectiveId="coll-a" date={new Date('2026-05-04T12:00:00Z')} isOpen={true} onOpenChange={vi.fn()} />
+        );
+
+        expect(screen.queryByTestId('ethical-delay-button')).toBeNull();
+        expect(screen.getByText('Reabrir planejamento')).toBeDefined();
     });
 });

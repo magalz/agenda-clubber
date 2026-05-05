@@ -8,6 +8,10 @@ vi.mock('@tanstack/react-query', () => ({
         mutate: vi.fn(),
         isPending: false,
     }),
+    useQuery: vi.fn().mockReturnValue({
+        data: [],
+        isLoading: false,
+    }),
     useQueryClient: vi.fn().mockReturnValue({
         invalidateQueries: vi.fn(),
     }),
@@ -20,6 +24,10 @@ vi.mock('sonner', () => ({
 
 vi.mock('../../calendar/actions', () => ({
     createEvent: vi.fn(),
+}));
+
+vi.mock('../events-queries', () => ({
+    getCrossCollectiveEventsForRange: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@/lib/supabase/client', () => ({

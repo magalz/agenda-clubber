@@ -79,7 +79,7 @@ function setupUpdateChain() {
 // Default update chain so fallback UPDATE in catch block works everywhere
 setupUpdateChain();
 
-import { createEvent, updateEvent } from '../actions';
+import { createEvent, updateEvent, updateEventStatus } from '../actions';
 
 describe('createEvent', () => {
     const validInput = {
@@ -88,6 +88,9 @@ describe('createEvent', () => {
         location: 'D-Edge, São Paulo',
         genre: 'Techno' as const,
         lineup: [],
+        isNamePublic: true,
+        isLocationPublic: false,
+        isLineupPublic: false,
     };
 
     const mockedReturnedEvent = {
@@ -457,6 +460,36 @@ describe('updateEvent', () => {
         expect(mockEvaluateAndPersist).toHaveBeenCalledWith('n-1', expect.any(Object));
     });
 
+    it('updates privacy toggle isNamePublic', async () => {
+        const { getViewerContext } = await import('@/features/auth/helpers');
+        (getViewerContext as ReturnType<typeof vi.fn>).mockResolvedValue({
+            kind: 'authenticated',
+            role: 'produtor',
+            profileId: 'profile-uuid',
+            isAdmin: false,
+        });
+
+        const result = await updateEvent('event-uuid-123', { isNamePublic: false });
+
+        expect(result.error).toBeNull();
+        expect(mockUpdate).toHaveBeenCalled();
+    });
+
+    it('updates privacy toggle isLocationPublic', async () => {
+        const { getViewerContext } = await import('@/features/auth/helpers');
+        (getViewerContext as ReturnType<typeof vi.fn>).mockResolvedValue({
+            kind: 'authenticated',
+            role: 'produtor',
+            profileId: 'profile-uuid',
+            isAdmin: false,
+        });
+
+        const result = await updateEvent('event-uuid-123', { isLocationPublic: true });
+
+        expect(result.error).toBeNull();
+        expect(mockUpdate).toHaveBeenCalled();
+    });
+
     it('handles engine failure gracefully on update', async () => {
         const { getViewerContext } = await import('@/features/auth/helpers');
         (getViewerContext as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -473,5 +506,122 @@ describe('updateEvent', () => {
         expect(result.error).toBeNull(); // event still updated
         // fallback UPDATE with error message
         expect(mockUpdate).toHaveBeenCalled();
+    });
+});
+
+describe('updateEventStatus', () => {
+    const mockedEvent = {
+        id: 'event-uuid-123',
+        collectiveId: 'collective-uuid',
+        name: 'Festival das Flores',
+        eventDate: '2026-06-15',
+        eventDateUtc: new Date('2026-06-15T15:00:00Z'),
+        locationName: 'D-Edge, São Paulo',
+        latitude: '-23.5505',
+        longitude: '-46.6333',
+        timezone: 'America/Sao_Paulo',
+        genrePrimary: 'Techno',
+        lineup: null,
+        status: 'planning',
+        isNamePublic: false,
+        isLocationPublic: false,
+        isLineupPublic: false,
+        createdBy: 'profile-uuid',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        setupSelectChain();
+        setupUpdateChain();
+        mockLimit.mockResolvedValue([mockedEvent]);
+        mockEvaluateAndPersist.mockResolvedValue({ level: 'green', justification: null, rules: [] });
+        mockGetNeighborIds.mockResolvedValue([]);
+    });
+
+    it('returns UNAUTHORIZED when not authenticated', async () => {
+        const { getViewerContext } = await import('@/features/auth/helpers');
+        (getViewerContext as ReturnType<typeof vi.fn>).mockResolvedValue({ kind: 'anon' });
+
+        const result = await updateEventStatus('event-uuid-123', 'confirmed');
+
+        expect(result.error?.code).toBe('UNAUTHORIZED');
+        expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
+    it('returns FORBIDDEN when user is not the creator', async () => {
+        const { getViewerContext } = await import('@/features/auth/helpers');
+        (getViewerContext as ReturnType<typeof vi.fn>).mockResolvedValue({
+            kind: 'authenticated',
+            role: 'produtor',
+            profileId: 'other-profile-uuid',
+            isAdmin: false,
+        });
+
+        const result = await updateEventStatus('event-uuid-123', 'confirmed');
+
+        expect(result.error?.code).toBe('FORBIDDEN');
+        expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
+    it('forces all privacy flags to true when confirming (planning → confirmed)', async () => {
+        const { getViewerContext } = await import('@/features/auth/helpers');
+        (getViewerContext as ReturnType<typeof vi.fn>).mockResolvedValue({
+            kind: 'authenticated',
+            role: 'produtor',
+            profileId: 'profile-uuid',
+            isAdmin: false,
+        });
+
+        const result = await updateEventStatus('event-uuid-123', 'confirmed');
+
+        expect(result.error).toBeNull();
+        expect(mockSet).toHaveBeenCalledWith(
+            expect.objectContaining({
+                status: 'confirmed',
+                isNamePublic: true,
+                isLocationPublic: true,
+                isLineupPublic: true,
+            })
+        );
+    });
+
+    it('does not change privacy flags when reverting to planning', async () => {
+        const { getViewerContext } = await import('@/features/auth/helpers');
+        (getViewerContext as ReturnType<typeof vi.fn>).mockResolvedValue({
+            kind: 'authenticated',
+            role: 'produtor',
+            profileId: 'profile-uuid',
+            isAdmin: false,
+        });
+
+        mockLimit.mockResolvedValue([{ ...mockedEvent, status: 'confirmed' }]);
+
+        const result = await updateEventStatus('event-uuid-123', 'planning');
+
+        expect(result.error).toBeNull();
+        expect(mockSet).toHaveBeenCalledWith(
+            expect.objectContaining({
+                status: 'planning',
+            })
+        );
+        expect(mockSet).not.toHaveBeenCalledWith(
+            expect.objectContaining({ isNamePublic: true })
+        );
+    });
+
+    it('recomputes conflicts after status change', async () => {
+        const { getViewerContext } = await import('@/features/auth/helpers');
+        (getViewerContext as ReturnType<typeof vi.fn>).mockResolvedValue({
+            kind: 'authenticated',
+            role: 'produtor',
+            profileId: 'profile-uuid',
+            isAdmin: false,
+        });
+
+        await updateEventStatus('event-uuid-123', 'confirmed');
+
+        expect(mockEvaluateAndPersist).toHaveBeenCalledWith('event-uuid-123', expect.any(Object));
     });
 });

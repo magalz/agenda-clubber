@@ -208,11 +208,23 @@ async function globalSetup() {
         const tomorrowStr = tomorrow.toISOString().split('T')[0];
         const tomorrowUtc = new Date(`${tomorrowStr}T12:00:00Z`);
 
+        const day2 = new Date(tomorrow);
+        day2.setUTCDate(day2.getUTCDate() + 1);
+        const day2Str = day2.toISOString().split('T')[0];
+        const day2Utc = new Date(`${day2Str}T12:00:00Z`);
+
+        const day3 = new Date(tomorrow);
+        day3.setUTCDate(day3.getUTCDate() + 2);
+        const day3Str = day3.toISOString().split('T')[0];
+        const day3Utc = new Date(`${day3Str}T12:00:00Z`);
+
         await sql`
             DELETE FROM events WHERE collective_id = ${otherCollectiveId}
         `;
+
+        // Event 1: planning, all privacy flags off → name/location/lineup hidden cross-collective
         await sql`
-            INSERT INTO events (collective_id, name, event_date, event_date_utc, location_name, genre_primary, lineup, status, created_by)
+            INSERT INTO events (collective_id, name, event_date, event_date_utc, location_name, genre_primary, lineup, status, is_name_public, is_location_public, is_lineup_public, created_by)
             VALUES (
                 ${otherCollectiveId},
                 ${'Festa Concorrente'},
@@ -222,11 +234,94 @@ async function globalSetup() {
                 ${'Techno'},
                 ${sql.json(['DJ Externo'])},
                 ${'planning'},
+                false, false, false,
                 ${otherProducerProfileId}
             )
         `;
 
-        // ── 8. Sign in other producer user ──────────────────────────────────────────
+        // Event 2: planning, isNamePublic=true → only name visible cross-collective
+        await sql`
+            INSERT INTO events (collective_id, name, event_date, event_date_utc, location_name, genre_primary, lineup, status, is_name_public, is_location_public, is_lineup_public, created_by)
+            VALUES (
+                ${otherCollectiveId},
+                ${'Evento Nome Visivel'},
+                ${day2Str},
+                ${day2Utc},
+                ${'Olinda, PE'},
+                ${'House'},
+                ${sql.json(['DJ A'])},
+                ${'planning'},
+                true, false, false,
+                ${otherProducerProfileId}
+            )
+        `;
+
+        // Event 3: confirmed → everything visible cross-collective
+        await sql`
+            INSERT INTO events (collective_id, name, event_date, event_date_utc, location_name, genre_primary, lineup, status, created_by)
+            VALUES (
+                ${otherCollectiveId},
+                ${'Festa Confirmada'},
+                ${day3Str},
+                ${day3Utc},
+                ${'Recife Antigo, PE'},
+                ${'Drum and Bass'},
+                ${sql.json(['DJ B', 'MC C'])},
+                ${'confirmed'},
+                ${otherProducerProfileId}
+            )
+        `;
+
+        // ── 8. Seed events for Ethical Delay test (Story 3.5) ──────────────────────
+        const ethicalDelayDate = new Date();
+        ethicalDelayDate.setUTCDate(ethicalDelayDate.getUTCDate() + 4);
+        const ethicalDelayDateStr = ethicalDelayDate.toISOString().split('T')[0];
+        const ethicalDelayUtc = new Date(`${ethicalDelayDateStr}T12:00:00Z`);
+
+        const greenEventDate = new Date();
+        greenEventDate.setUTCDate(greenEventDate.getUTCDate() + 6);
+        const greenEventDateStr = greenEventDate.toISOString().split('T')[0];
+        const greenEventUtc = new Date(`${greenEventDateStr}T12:00:00Z`);
+
+        await sql`DELETE FROM events WHERE collective_id = ${e2eCollectiveId}`;
+
+        // RED event: triggers EthicalDelayButton
+        await sql`
+            INSERT INTO events (collective_id, name, event_date, event_date_utc, location_name, genre_primary, lineup, status, conflict_level, conflict_justification, created_by)
+            VALUES (
+                ${e2eCollectiveId},
+                ${'Evento Delay Ético'},
+                ${ethicalDelayDateStr},
+                ${ethicalDelayUtc},
+                ${'São Paulo, SP'},
+                ${'Techno'},
+                ${sql.json(['DJ Test'])},
+                ${'planning'},
+                ${'red'},
+                ${'Conflito crítico simulado para teste de delay ético'},
+                ${producerProfileId}
+            )
+        `;
+
+        // GREEN event: instant confirm, no delay
+        await sql`
+            INSERT INTO events (collective_id, name, event_date, event_date_utc, location_name, genre_primary, lineup, status, conflict_level, conflict_justification, created_by)
+            VALUES (
+                ${e2eCollectiveId},
+                ${'Evento Sem Conflito'},
+                ${greenEventDateStr},
+                ${greenEventUtc},
+                ${'São Paulo, SP'},
+                ${'Samba'},
+                ${sql.json(['DJ Samba'])},
+                ${'planning'},
+                ${'green'},
+                ${null},
+                ${producerProfileId}
+            )
+        `;
+
+        // ── 9. Sign in other producer user ──────────────────────────────────────────
         await saveStorageState(supabaseUrl, publishableKey, E2E_OTHER_PRODUCER_EMAIL, E2E_OTHER_PRODUCER_PASSWORD, OTHER_COLLECTIVE_STORAGE_STATE);
 
     } finally {
