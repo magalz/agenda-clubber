@@ -3,6 +3,19 @@ import { render, screen } from '@testing-library/react';
 import { DayDetailSheet } from './day-detail-sheet';
 import type { CalendarEvent } from '../types';
 
+vi.mock('@tanstack/react-query', () => ({
+    useMutation: vi.fn().mockReturnValue({
+        mutate: vi.fn(),
+        mutateAsync: vi.fn(),
+        isPending: false,
+    }),
+    QueryClientProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+vi.mock('sonner', () => ({
+    toast: { success: vi.fn(), error: vi.fn() },
+}));
+
 vi.mock('@/components/ui/sheet', () => ({
     Sheet: ({ children }: { children: React.ReactNode }) => <div data-testid="sheet">{children}</div>,
     SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -15,15 +28,26 @@ vi.mock('./event-form', () => ({
     EventForm: () => <div data-testid="event-form">EventForm</div>,
 }));
 
+vi.mock('../actions', () => ({
+    updateEvent: vi.fn(),
+    updateEventStatus: vi.fn(),
+}));
+
+vi.mock('../logic/visibility', () => ({
+    filterEventForViewer: vi.fn((event) => event),
+}));
+
 let mockStoreEvents: CalendarEvent[] = [];
+let mockStoreCrossEvents: CalendarEvent[] = [];
 
 vi.mock('../store', () => ({
-    useCalendarStore: (selector: (s: { events: CalendarEvent[] }) => unknown) =>
-        selector({ events: mockStoreEvents }),
+    useCalendarStore: (selector: (s: { events: CalendarEvent[]; crossEvents: CalendarEvent[] }) => unknown) =>
+        selector({ events: mockStoreEvents, crossEvents: mockStoreCrossEvents }),
 }));
 
 const baseEvent: CalendarEvent = {
     id: 'ev-1',
+    collectiveId: 'coll-a',
     name: 'Festa Techno',
     eventDate: '2026-05-04',
     locationName: 'D-Edge, São Paulo',
@@ -41,6 +65,7 @@ const baseEvent: CalendarEvent = {
 describe('DayDetailSheet', () => {
     beforeEach(() => {
         mockStoreEvents = [];
+        mockStoreCrossEvents = [];
     });
 
     it('renders nothing when date is null', () => {

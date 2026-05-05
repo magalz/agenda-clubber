@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { createEvent as createEventAction } from './actions';
+import { getCrossCollectiveEventsForRange } from './events-queries';
 import { useCalendarStore } from './store';
 import type { EventFormInput } from './validations';
 import type { CalendarEvent } from './types';
@@ -35,6 +36,7 @@ export function useEventRealtime(collectiveId: string) {
                 const newEvent = payload.new as Record<string, unknown>;
                 addEvent({
                     id: newEvent.id as string,
+                    collectiveId: newEvent.collective_id as string,
                     name: newEvent.name as string,
                     eventDate: newEvent.event_date as string,
                     locationName: newEvent.location_name as string,
@@ -61,4 +63,19 @@ export function useEventRealtime(collectiveId: string) {
 
         return () => { supabase.removeChannel(channel); };
     }, [collectiveId, addEvent, removeEvent]);
+}
+
+export function useCrossCollectiveEvents(dates: Date[]) {
+    const setCrossEvents = useCalendarStore((s) => s.setCrossEvents);
+
+    return useQuery({
+        queryKey: ['cross-collective-events', dates.map((d) => d.toISOString())],
+        queryFn: async () => {
+            const result = await getCrossCollectiveEventsForRange(dates);
+            setCrossEvents(result);
+            return result;
+        },
+        staleTime: 30_000,
+        enabled: dates.length > 0,
+    });
 }

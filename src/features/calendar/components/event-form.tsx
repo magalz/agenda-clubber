@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Select,
     SelectContent,
@@ -28,6 +29,9 @@ export function EventForm({ selectedDate, onSuccess }: Props) {
     const [location, setLocation] = useState('');
     const [genre, setGenre] = useState('');
     const [lineupText, setLineupText] = useState('');
+    const [isNamePublic, setIsNamePublic] = useState(true);
+    const [isLocationPublic, setIsLocationPublic] = useState(false);
+    const [isLineupPublic, setIsLineupPublic] = useState(false);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
     const mutation = useMutation({
@@ -64,6 +68,9 @@ export function EventForm({ selectedDate, onSuccess }: Props) {
             location,
             genre: genre as EventFormInput['genre'],
             lineup,
+            isNamePublic,
+            isLocationPublic,
+            isLineupPublic,
         });
 
         if (!parsed.success) {
@@ -150,6 +157,49 @@ export function EventForm({ selectedDate, onSuccess }: Props) {
                     rows={4}
                 />
             </div>
+
+            <fieldset className="space-y-3 border-t border-border pt-4">
+                <legend className="text-sm font-medium mb-2">Visibilidade durante planejamento</legend>
+                <p className="text-xs text-muted-foreground mb-3">
+                    Visível para outros coletivos durante o planejamento
+                </p>
+
+                <div className="flex items-center gap-2">
+                    <Checkbox
+                        id="is-name-public"
+                        aria-label="Tornar nome público"
+                        checked={isNamePublic}
+                        onCheckedChange={(v) => setIsNamePublic(v === true)}
+                    />
+                    <Label htmlFor="is-name-public" className="text-sm cursor-pointer">
+                        Tornar nome público
+                    </Label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <Checkbox
+                        id="is-location-public"
+                        aria-label="Tornar local público"
+                        checked={isLocationPublic}
+                        onCheckedChange={(v) => setIsLocationPublic(v === true)}
+                    />
+                    <Label htmlFor="is-location-public" className="text-sm cursor-pointer">
+                        Tornar local público
+                    </Label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <Checkbox
+                        id="is-lineup-public"
+                        aria-label="Tornar line-up pública"
+                        checked={isLineupPublic}
+                        onCheckedChange={(v) => setIsLineupPublic(v === true)}
+                    />
+                    <Label htmlFor="is-lineup-public" className="text-sm cursor-pointer">
+                        Tornar line-up pública
+                    </Label>
+                </div>
+            </fieldset>
 
             <Button
                 type="submit"

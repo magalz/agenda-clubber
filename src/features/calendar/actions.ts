@@ -2,7 +2,7 @@
 
 import { db } from '@/db';
 import { events } from '@/db/schema/events';
-import { eventFormSchema, type EventFormInput } from './validations';
+import { eventFormSchema, updateEventSchema, type EventFormInput, type UpdateEventInput } from './validations';
 import { geocode, resolveTimezone } from './map';
 import { getViewerContext } from '@/features/auth/helpers';
 import { getCurrentUserCollectiveId } from '@/features/collectives/queries';
@@ -22,6 +22,10 @@ interface UpdateData {
     longitude?: string | null;
     timezone?: string;
     eventDateUtc?: Date;
+    isNamePublic?: boolean;
+    isLocationPublic?: boolean;
+    isLineupPublic?: boolean;
+    status?: 'planning' | 'confirmed';
 }
 
 function calculateEventDateUtc(eventDate: string, timezone: string): Date {
@@ -58,7 +62,7 @@ export async function createEvent(input: EventFormInput): Promise<ActionResult<u
         return { data: null, error: { message: parsed.error.issues[0]?.message ?? 'Dados inválidos', code: 'VALIDATION_ERROR' } };
     }
 
-    const { name, eventDate, location, genre, lineup } = parsed.data;
+    const { name, eventDate, location, genre, lineup, isNamePublic, isLocationPublic, isLineupPublic } = parsed.data;
 
     const place = await geocode(location);
     let latitude: string | null = null;
@@ -84,6 +88,9 @@ export async function createEvent(input: EventFormInput): Promise<ActionResult<u
         timezone,
         genrePrimary: genre,
         lineup,
+        isNamePublic,
+        isLocationPublic,
+        isLineupPublic,
         createdBy: viewer.profileId,
     }).returning();
 
@@ -115,7 +122,7 @@ export async function createEvent(input: EventFormInput): Promise<ActionResult<u
 
 export async function updateEvent(
     eventId: string,
-    input: Partial<EventFormInput>
+    input: UpdateEventInput
 ): Promise<ActionResult<unknown>> {
     const viewer = await getViewerContext();
     if (viewer.kind !== 'authenticated') {
@@ -131,18 +138,22 @@ export async function updateEvent(
         return { data: null, error: { message: 'Sem permissão para editar', code: 'FORBIDDEN' } };
     }
 
-    const parsed = eventFormSchema.partial().safeParse(input);
+    const parsed = updateEventSchema.safeParse(input);
     if (!parsed.success) {
         return { data: null, error: { message: parsed.error.issues[0]?.message ?? 'Dados inválidos', code: 'VALIDATION_ERROR' } };
     }
 
     const updateData: UpdateData = {};
-    const { name, eventDate, location, genre, lineup } = parsed.data;
+    const { name, eventDate, location, genre, lineup, isNamePublic, isLocationPublic, isLineupPublic, status } = parsed.data;
 
     if (name !== undefined) updateData.name = name;
     if (eventDate !== undefined) updateData.eventDate = eventDate;
     if (genre !== undefined) updateData.genrePrimary = genre;
     if (lineup !== undefined) updateData.lineup = lineup;
+    if (isNamePublic !== undefined) updateData.isNamePublic = isNamePublic;
+    if (isLocationPublic !== undefined) updateData.isLocationPublic = isLocationPublic;
+    if (isLineupPublic !== undefined) updateData.isLineupPublic = isLineupPublic;
+    if (status !== undefined) updateData.status = status;
 
     if (location !== undefined && location !== existing[0].locationName) {
         updateData.locationName = location;
@@ -189,6 +200,69 @@ export async function updateEvent(
                 await evaluateAndPersist(neighborId, db);
             } catch (e) {
                 console.error(`[ConflictEngine] Failed to recompute new-neighbor ${neighborId}:`, e);
+            }
+        }
+    } catch (e) {
+        console.error(`[ConflictEngine] Failed to evaluate event ${eventId}:`, e);
+        await db.update(events)
+            .set({
+                conflictLevel: null,
+                conflictJustification: 'Falha ao avaliar — verificar logs',
+            })
+            .where(eq(events.id, eventId));
+    }
+
+    revalidatePath('/dashboard/collective');
+
+    return { data: updated, error: null };
+}
+
+export async function updateEventStatus(
+    eventId: string,
+    status: 'planning' | 'confirmed'
+): Promise<ActionResult<unknown>> {
+    const viewer = await getViewerContext();
+    if (viewer.kind !== 'authenticated') {
+        return { data: null, error: { message: 'Não autorizado', code: 'UNAUTHORIZED' } };
+    }
+
+    const existing = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!existing.length) {
+        return { data: null, error: { message: 'Evento não encontrado', code: 'NOT_FOUND' } };
+    }
+
+    if (existing[0].createdBy !== viewer.profileId) {
+        return { data: null, error: { message: 'Sem permissão para editar', code: 'FORBIDDEN' } };
+    }
+
+    if (existing[0].status === status) {
+        return { data: existing[0], error: null };
+    }
+
+    const updateData: UpdateData = {
+        status,
+    };
+
+    if (status === 'confirmed') {
+        updateData.isNamePublic = true;
+        updateData.isLocationPublic = true;
+        updateData.isLineupPublic = true;
+    }
+
+    const [updated] = await db.update(events)
+        .set(updateData)
+        .where(eq(events.id, eventId))
+        .returning();
+
+    try {
+        await evaluateAndPersist(eventId, db);
+
+        const neighborIds = await getNeighborIds(eventId, existing[0].eventDate, db);
+        for (const neighborId of neighborIds) {
+            try {
+                await evaluateAndPersist(neighborId, db);
+            } catch (e) {
+                console.error(`[ConflictEngine] Failed to recompute neighbor ${neighborId}:`, e);
             }
         }
     } catch (e) {

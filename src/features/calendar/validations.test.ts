@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { eventFormSchema } from './validations';
+import { eventFormSchema, updateEventSchema } from './validations';
 
 describe('eventFormSchema', () => {
     const validInput = {
@@ -67,6 +67,80 @@ describe('eventFormSchema', () => {
             ...validInput,
             lineup: Array.from({ length: 51 }, (_, i) => `DJ ${i}`),
         });
+        expect(result.success).toBe(false);
+    });
+
+    describe('privacy defaults', () => {
+        it('defaults isNamePublic to true', () => {
+            const result = eventFormSchema.safeParse(validInput);
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(result.data.isNamePublic).toBe(true);
+            }
+        });
+
+        it('defaults isLocationPublic to false', () => {
+            const result = eventFormSchema.safeParse(validInput);
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(result.data.isLocationPublic).toBe(false);
+            }
+        });
+
+        it('defaults isLineupPublic to false', () => {
+            const result = eventFormSchema.safeParse(validInput);
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(result.data.isLineupPublic).toBe(false);
+            }
+        });
+
+        it('accepts explicit privacy values', () => {
+            const result = eventFormSchema.safeParse({
+                ...validInput,
+                isNamePublic: false,
+                isLocationPublic: true,
+                isLineupPublic: true,
+            });
+            expect(result.success).toBe(true);
+            if (result.success) {
+                expect(result.data.isNamePublic).toBe(false);
+                expect(result.data.isLocationPublic).toBe(true);
+                expect(result.data.isLineupPublic).toBe(true);
+            }
+        });
+    });
+});
+
+describe('updateEventSchema', () => {
+    it('accepts partial name update', () => {
+        const result = updateEventSchema.safeParse({ name: 'Updated' });
+        expect(result.success).toBe(true);
+    });
+
+    it('accepts empty input', () => {
+        const result = updateEventSchema.safeParse({});
+        expect(result.success).toBe(true);
+    });
+
+    it('accepts privacy toggle update', () => {
+        const result = updateEventSchema.safeParse({ isNamePublic: false });
+        expect(result.success).toBe(true);
+        if (result.success) {
+            expect(result.data.isNamePublic).toBe(false);
+        }
+    });
+
+    it('accepts status transition', () => {
+        const result = updateEventSchema.safeParse({ status: 'confirmed' });
+        expect(result.success).toBe(true);
+        if (result.success) {
+            expect(result.data.status).toBe('confirmed');
+        }
+    });
+
+    it('rejects invalid status', () => {
+        const result = updateEventSchema.safeParse({ status: 'invalid' });
         expect(result.success).toBe(false);
     });
 });
