@@ -12,6 +12,23 @@ export const eventFormSchema = z.object({
     location: z.string().min(2, 'Local é obrigatório').max(500),
     genre: z.enum(GENRE_OPTIONS, { message: 'Selecione um gênero' }),
     lineup: z.array(z.string().max(200)).max(50).default([]),
+    isNamePublic: z.boolean().default(true),
+    isLocationPublic: z.boolean().default(false),
+    isLineupPublic: z.boolean().default(false),
 });
 
 export type EventFormInput = z.infer<typeof eventFormSchema>;
+
+export const updateEventSchema = z.object({
+    name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres').max(200).optional(),
+    eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida').optional(),
+    location: z.string().min(2, 'Local é obrigatório').max(500).optional(),
+    genre: z.enum(GENRE_OPTIONS, { message: 'Selecione um gênero' }).optional(),
+    lineup: z.array(z.string().max(200)).max(50).optional(),
+    isNamePublic: z.boolean().optional(),
+    isLocationPublic: z.boolean().optional(),
+    isLineupPublic: z.boolean().optional(),
+    status: z.enum(['planning', 'confirmed']).optional(),
+});
+
+export type UpdateEventInput = z.infer<typeof updateEventSchema>;

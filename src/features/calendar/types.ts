@@ -28,6 +28,7 @@ export interface ResolvedLineupEntry {
 
 export interface CalendarEvent {
     id: string;
+    collectiveId: string;
     name: string;
     eventDate: string;
     locationName: string;

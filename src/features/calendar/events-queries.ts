@@ -27,6 +27,44 @@ export async function getEventsForRange(
 
     return rows.map((r) => ({
         id: r.id,
+        collectiveId: r.collectiveId,
+        name: r.name,
+        eventDate: r.eventDate,
+        locationName: r.locationName,
+        genrePrimary: r.genrePrimary,
+        lineup: (r.lineup as string[]) ?? [],
+        status: r.status as 'planning' | 'confirmed',
+        isNamePublic: r.isNamePublic,
+        isLocationPublic: r.isLocationPublic,
+        isLineupPublic: r.isLineupPublic,
+        conflictLevel: r.conflictLevel as CalendarEvent['conflictLevel'],
+        conflictJustification: r.conflictJustification,
+        createdAt: r.createdAt.toISOString(),
+    }));
+}
+
+export async function getCrossCollectiveEventsForRange(
+    dates: Date[]
+): Promise<CalendarEvent[]> {
+    if (dates.length === 0) return [];
+
+    const start = formatDateKey(dates[0]);
+    const end = formatDateKey(dates[dates.length - 1]);
+
+    const rows = await db
+        .select()
+        .from(events)
+        .where(
+            and(
+                gte(events.eventDate, start),
+                lte(events.eventDate, end)
+            )
+        )
+        .orderBy(events.eventDate);
+
+    return rows.map((r) => ({
+        id: r.id,
+        collectiveId: r.collectiveId,
         name: r.name,
         eventDate: r.eventDate,
         locationName: r.locationName,
