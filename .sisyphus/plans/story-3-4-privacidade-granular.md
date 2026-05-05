@@ -1,6 +1,99 @@
+# Plan: Story 3.4 — Privacidade Granular e Status do Evento
+
+> **Target output:** `_bmad-output/implementation-artifacts/3-4-privacidade-granular-e-status-do-evento.md`
+> **BMAD Story Key:** `3-4-privacidade-granular-e-status-do-evento`
+> **This plan contains the COMPLETE story file content for Sisyphus to materialize.**
+
+## TL;DR
+
+> **Quick Summary**: Implementar privacidade granular em eventos (FR16/FR17): filtro de visibilidade cross-collective, toggles de campos públicos, transição planning→confirmed com reveal automático, e RLS policies.
+> 
+> **Deliverables**: `visibility.ts`, `eventFormSchema` estendido, toggles no `EventForm`, `updateEventStatus` action, `DayDetailSheet` com masking, migration 010 (RLS), query cross-collective, testes unitários/integração/E2E.
+> 
+> **Estimated Effort**: Medium
+> **Parallel Execution**: YES — 2 waves
+> **Critical Path**: T1 (visibility logic) → T4 (actions) → T7 (RLS migration)
+
+---
+
+## Context
+
+### Original Request
+Criar story file 3.4 do BMAD workflow para o Epic 3 do projeto Agenda Clubber.
+
+### Interview Summary
+Pesquisa exaustiva via 5 agentes paralelos em todos os artefatos: epics.md, prd.md, architecture.md, ux-design-specification.md, story 3.3 completa (556 linhas), código-fonte (schema, types, queries, actions, components), migrations, git history.
+
+**Descobertas principais**:
+- Schema já tem colunas de privacidade (`isNamePublic`, `isLocationPublic`, `isLineupPublic`, `status`) — criadas na migration 008, nunca usadas
+- Calendário atualmente mostra apenas eventos do próprio coletivo (`WHERE collective_id = ?`)
+- Conflict Engine (story 3.3) já lê cross-collective mas o display não
+- Padrão de visibilidade existente: `src/features/artists/visibility.ts` com `filterArtistForViewer()`
+- NÃO há RLS policies na tabela `events`
+
+---
+
+## Work Objectives
+
+### Core Objective
+Criar o **story file BMAD completo** para Story 3.4 no caminho `_bmad-output/implementation-artifacts/3-4-privacidade-granular-e-status-do-evento.md`, contendo todas as tasks, ACs, dev notes, e contexto necessário para implementação flawless por um dev agent.
+
+### Concrete Deliverables
+- Story file em `_bmad-output/implementation-artifacts/3-4-privacidade-granular-e-status-do-evento.md`
+- Atualizar sprint-status.yaml: `3-4-privacidade-granular-e-status-do-evento: backlog` → `ready-for-dev`
+
+### Definition of Done
+- [x] Story file criado com `Status: ready-for-dev`
+- [x] Sprint status atualizado
+
+---
+
+## TODOs
+
+### Wave 1: Create Story File
+
+- [x] 1. Write the complete BMAD story file
+
+  **What to do**:
+  - Write `_bmad-output/implementation-artifacts/3-4-privacidade-granular-e-status-do-evento.md` with ALL content specified below in the "Story File Content" section
+  - The content is already fully drafted — copy it verbatim
+  - Ensure all file paths are correct relative to project root
+
+  **Must NOT do**:
+  - Do NOT modify any source files
+  - Do NOT change the story structure from what's specified
+  - Do NOT omit any task or dev note from the content below
+
+  **Recommended Agent Profile**:
+  - **Category**: `quick`
+  - **Skills**: `[]`
+
+  **Parallelization**: Sequential (single task)
+
+  **Commit**: YES
+  - Message: `docs(story): cria story 3.4 — privacidade granular e status do evento`
+  - Files: `_bmad-output/implementation-artifacts/3-4-privacidade-granular-e-status-do-evento.md`
+
+- [x] 2. Update sprint-status.yaml
+
+  **What to do**:
+  - Read `_bmad-output/implementation-artifacts/sprint-status.yaml`
+  - Change `3-4-privacidade-granular-e-status-do-evento: backlog` to `ready-for-dev`
+  - Update `last_updated` field
+  - Save preserving all comments and structure
+
+  **Commit**: YES (same commit as T1)
+
+---
+
+## Story File Content
+
+The COMPLETE content for the story file follows. Sisyphus should write this EXACT content to `_bmad-output/implementation-artifacts/3-4-privacidade-granular-e-status-do-evento.md`:
+
+```markdown
 # Story 3.4: Privacidade Granular e Status do Evento
 
-Status: done
+Status: ready-for-dev
 
 **Epic:** 3 — Radar de Conflitos e Motor de Planejamento (Backend-First)
 **FRs:** FR16, FR17
@@ -58,22 +151,13 @@ Verbatim de [`_bmad-output/planning-artifacts/epics.md:426-434`](../planning-art
 
 ## Tasks / Subtasks
 
-<<<<<<< HEAD
 - [ ] **T1 · Visibility logic + tipos (AC 1-3, 5)**
   - [ ] Criar `src/features/calendar/logic/visibility.ts` — função pura (sem I/O):
-=======
-- [x] **T1 · Visibility logic + tipos (AC 1-3, 5)**
-  - [x] Criar `src/features/calendar/logic/visibility.ts` — função pura (sem I/O):
->>>>>>> aec3c384250eca87e667a7ca631a256e9a3157a0
     - `type Viewer = { kind: 'anon' } | { kind: 'authenticated'; role: string; profileId: string }` (importar de `@/features/auth/helpers` se já existir, senão definir inline consistente com `artists/visibility.ts`)
     - `filterEventForViewer(event: CalendarEvent, viewer: Viewer, isOwner: boolean): CalendarEvent | null` — retorna `null` se evento não deve ser visível; senão retorna cópia do evento com campos mascarados
     - Regras: se `isOwner` → retorna evento completo (sem masking). Se `!isOwner && event.status === 'confirmed'` → retorna evento completo. Se `!isOwner && event.status === 'planning'` → retorna evento com `name = event.isNamePublic ? event.name : 'Em Planejamento'`, `locationName = event.isLocationPublic ? event.locationName : 'Em Planejamento'`, `lineup = event.isLineupPublic ? event.lineup : []`. `genrePrimary` e `conflictLevel`/`conflictJustification` SEMPRE visíveis (AC #3).
     - `maskEventField(value: string, isPublic: boolean, placeholder: string): string` — helper exportado
-<<<<<<< HEAD
   - [ ] Criar `src/features/calendar/logic/visibility.test.ts` — matriz completa:
-=======
-  - [x] Criar `src/features/calendar/logic/visibility.test.ts` — matriz completa:
->>>>>>> aec3c384250eca87e667a7ca631a256e9a3157a0
     - Owner vê tudo (planning + confirmed)
     - Non-owner vê só genre + status em planning (flags default)
     - Non-owner vê nome quando `isNamePublic=true` em planning
@@ -81,7 +165,6 @@ Verbatim de [`_bmad-output/planning-artifacts/epics.md:426-434`](../planning-art
     - Non-owner vê line-up quando `isLineupPublic=true` em planning
     - Non-owner vê tudo em confirmed (todas as combinações de flags)
     - Anon viewer tratado como non-owner
-<<<<<<< HEAD
   - [ ] Estender `src/features/calendar/types.ts` — exportar `Viewer` type se não existir
 
 - [ ] **T2 · Extender validação Zod + tipos de input (AC 4)**
@@ -93,36 +176,16 @@ Verbatim de [`_bmad-output/planning-artifacts/epics.md:426-434`](../planning-art
 
 - [ ] **T3 · Privacy toggles no EventForm (AC 4)**
   - [ ] Atualizar `src/features/calendar/components/event-form.tsx`:
-=======
-  - [x] Estender `src/features/calendar/types.ts` — adicionar `collectiveId` a `CalendarEvent`
-
-- [x] **T2 · Extender validação Zod + tipos de input (AC 4)**
-  - [x] Atualizar `src/features/calendar/validations.ts`:
-    - Adicionar ao `eventFormSchema`: `isNamePublic: z.boolean().default(true)`, `isLocationPublic: z.boolean().default(false)`, `isLineupPublic: z.boolean().default(false)`
-    - Criar `updateEventSchema = eventFormSchema.partial().extend({ status: z.enum(['planning', 'confirmed']).optional() })` para edições
-    - Exportar `UpdateEventInput = z.infer<typeof updateEventSchema>`
-  - [x] Atualizar `src/features/calendar/validations.test.ts` — testar defaults e validação dos novos campos
-
-- [x] **T3 · Privacy toggles no EventForm (AC 4)**
-  - [x] Atualizar `src/features/calendar/components/event-form.tsx`:
->>>>>>> aec3c384250eca87e667a7ca631a256e9a3157a0
     - Adicionar 3 checkboxes (`shadcn Checkbox` + `Label`) abaixo do campo line-up:
       - "Tornar nome público" (default: checked — `isNamePublic: true`)
       - "Tornar local público" (default: unchecked — `isLocationPublic: false`)
       - "Tornar line-up pública" (default: unchecked — `isLineupPublic: false`)
     - Incluir os valores booleanos no payload de `mutation.mutate()`
     - Labels com tooltip explicativo: "Visível para outros coletivos durante o planejamento"
-<<<<<<< HEAD
   - [ ] NÃO modificar a estrutura existente do form — adicionar apenas a seção de privacidade ao final
 
 - [ ] **T4 · Server Actions: updateEvent com toggles + updateEventStatus (AC 4, 5)**
   - [ ] Atualizar `src/features/calendar/actions.ts`:
-=======
-  - [x] NÃO modificar a estrutura existente do form — adicionar apenas a seção de privacidade ao final
-
-- [x] **T4 · Server Actions: updateEvent com toggles + updateEventStatus (AC 4, 5)**
-  - [x] Atualizar `src/features/calendar/actions.ts`:
->>>>>>> aec3c384250eca87e667a7ca631a256e9a3157a0
     - `updateEvent(eventId, input)` — estender `input` para aceitar `isNamePublic`, `isLocationPublic`, `isLineupPublic` via `updateEventSchema`
     - Adicionar `updateEventStatus(eventId: string, status: 'planning' | 'confirmed')` — Server Action que:
       - Verifica ownership (`createdBy === viewer.profileId`)
@@ -132,22 +195,13 @@ Verbatim de [`_bmad-output/planning-artifacts/epics.md:426-434`](../planning-art
       - Dispara `recomputeNeighbors` via `evaluateAndPersist` (mudança de status não altera conflitos, mas consistência)
       - `revalidatePath('/dashboard/collective')`
     - Manter padrão `ActionResult<T>` para ambas as actions
-<<<<<<< HEAD
   - [ ] Atualizar `src/features/calendar/__tests__/actions.test.ts`:
-=======
-  - [x] Atualizar `src/features/calendar/__tests__/actions.test.ts`:
->>>>>>> aec3c384250eca87e667a7ca631a256e9a3157a0
     - Testar `updateEvent` com toggles de privacidade
     - Testar `updateEventStatus`: planning→confirmed (flags viram true), confirmed→planning (flags não alteram)
     - Testar `updateEventStatus` por non-owner → FORBIDDEN
 
-<<<<<<< HEAD
 - [ ] **T5 · Privacy masking no DayDetailSheet (AC 1-3, 5)**
   - [ ] Atualizar `src/features/calendar/components/day-detail-sheet.tsx`:
-=======
-- [x] **T5 · Privacy masking no DayDetailSheet (AC 1-3, 5)**
-  - [x] Atualizar `src/features/calendar/components/day-detail-sheet.tsx`:
->>>>>>> aec3c384250eca87e667a7ca631a256e9a3157a0
     - Obter `viewer` context (via prop `currentCollectiveId` + comparar com `event.collectiveId` — `isOwner = collectiveId === eventCollectiveId`)
     - Para CADA evento exibido: `const displayEvent = filterEventForViewer(event, viewer, isOwner)`
     - Se `displayEvent === null` → não renderizar o evento
@@ -156,7 +210,6 @@ Verbatim de [`_bmad-output/planning-artifacts/epics.md:426-434`](../planning-art
     - Se `displayEvent.lineup.length === 0 && event.lineup.length > 0` → mostrar "Line-up não revelada" com ícone de cadeado
     - Adicionar badge de status: `event.status === 'planning' ? 'Em Planejamento' : 'Confirmado'` com cores distintas (amber para planning, green para confirmed)
     - Toggles de privacidade inline (checkboxes) visíveis APENAS se `isOwner && event.status === 'planning'` — com Server Action `updateEvent` ao toggle
-<<<<<<< HEAD
   - [ ] Atualizar `src/features/calendar/components/day-detail-sheet.test.tsx` — mock `filterEventForViewer`, testar renderização condicional
 
 - [ ] **T6 · Query cross-collective para calendário (AC 2)**
@@ -175,26 +228,6 @@ Verbatim de [`_bmad-output/planning-artifacts/epics.md:426-434`](../planning-art
 
 - [ ] **T7 · RLS Migration 010 (AC 2-3)**
   - [ ] Criar `supabase/migrations/010_events_rls.sql` (manual, sem `drizzle-kit generate`):
-=======
-  - [x] Atualizar `src/features/calendar/components/day-detail-sheet.test.tsx` — mock `filterEventForViewer`, testar renderização condicional
-
-- [x] **T6 · Query cross-collective para calendário (AC 2)**
-  - [x] Atualizar `src/features/calendar/events-queries.ts`:
-    - Criar `getCrossCollectiveEventsForRange(dates: Date[]): Promise<CalendarEvent[]>` — `import 'server-only'`
-    - Query: `db.select().from(events).where(and(gte(events.eventDate, start), lte(events.eventDate, end))).orderBy(events.eventDate)` — SEM filtro de `collective_id`
-    - Retornar eventos de TODOS os coletivos no range de datas
-  - [x] Atualizar `src/features/calendar/queries.ts`:
-    - `getHealthPulseForRange` continua filtrando por `collective_id` (health pulse do próprio coletivo — cross-collective health pulse é deferred)
-  - [x] Atualizar `src/features/calendar/store.ts`:
-    - Adicionar `setCrossEvents(events: CalendarEvent[])` para eventos cross-collective
-    - Adicionar `crossEvents: CalendarEvent[]` ao state
-  - [x] Atualizar `src/features/calendar/hooks.ts`:
-    - Criar `useCrossCollectiveEvents(dates: Date[])` — TanStack Query fetch com `getCrossCollectiveEventsForRange`
-    - Separar: eventos do próprio coletivo via Realtime subscription (existente), cross-collective via fetch on demand
-
-- [x] **T7 · RLS Migration 010 (AC 2-3)**
-  - [x] Criar `supabase/migrations/010_events_rls.sql` (manual, sem `drizzle-kit generate`):
->>>>>>> aec3c384250eca87e667a7ca631a256e9a3157a0
     ```sql
     -- Enable RLS on events table
     ALTER TABLE events ENABLE ROW LEVEL SECURITY;
@@ -225,7 +258,6 @@ Verbatim de [`_bmad-output/planning-artifacts/epics.md:426-434`](../planning-art
         USING (created_by = auth.uid());
     ```
     > **Nota:** A policy `events_select_policy` permite que qualquer evento `'confirmed'` seja visível para todos. Eventos `'planning'` só são visíveis cross-collective se ao menos UMA flag de privacidade for `true`. Na prática, `genrePrimary` é SEMPRE visível (não tem flag) — isso é tratado no app-layer via `filterEventForViewer()`. O RLS é a última linha de defesa, não a única.
-<<<<<<< HEAD
   - [ ] NÃO modificar migrations 001-009
 
 - [ ] **T8 · Testes de integração + E2E cross-collective**
@@ -233,21 +265,11 @@ Verbatim de [`_bmad-output/planning-artifacts/epics.md:426-434`](../planning-art
     - Seed de evento em `OTHER_COLLECTIVE` com `status='planning'`, `isNamePublic=false`, `isLocationPublic=false`, `isLineupPublic=false`
     - Seed de evento em `OTHER_COLLECTIVE` com `status='confirmed'` (tudo visível)
   - [ ] Criar/estender `e2e/privacy-granular.spec.ts`:
-=======
-  - [x] NÃO modificar migrations 001-009
-
-- [x] **T8 · Testes de integração + E2E cross-collective**
-  - [x] Atualizar `e2e/global-setup.ts`:
-    - Seed de evento em `OTHER_COLLECTIVE` com `status='planning'`, `isNamePublic=false`, `isLocationPublic=false`, `isLineupPublic=false`
-    - Seed de evento em `OTHER_COLLECTIVE` com `status='confirmed'` (tudo visível)
-  - [x] Criar/estender `e2e/privacy-granular.spec.ts`:
->>>>>>> aec3c384250eca87e667a7ca631a256e9a3157a0
     - **Test 1:** Logar como coletivo A, ver calendário → evento de coletivo B (planning) aparece apenas com gênero + "Em Planejamento" no DayDetailSheet
     - **Test 2:** Coletivo B torna `isNamePublic=true` → coletivo A vê nome do evento mas não local/line-up
     - **Test 3:** Coletivo B confirma evento (`planning→confirmed`) → coletivo A vê TODOS os campos
     - **Test 4:** Coletivo A NÃO vê toggles de privacidade em evento de coletivo B (apenas owner)
     - **Test 5:** Coletivo B vê seus próprios eventos com todos os campos + toggles de privacidade visíveis
-<<<<<<< HEAD
   - [ ] Rodar `npx playwright test e2e/privacy-granular.spec.ts` — todos passam
 
 - [ ] **T9 · Regressões e polish**
@@ -258,17 +280,6 @@ Verbatim de [`_bmad-output/planning-artifacts/epics.md:426-434`](../planning-art
   - [ ] Verificar `DayDetailSheet` não quebrou exibição de eventos do próprio coletivo
   - [ ] Verificar `EventForm` continua funcional (criação de evento com e sem toggles)
   - [ ] Verificar Conflict Engine não foi impactado (eventos cross-collective continuam sendo avaliados)
-=======
-  - [x] E2E tests criados (execução requer servidor local e Supabase)
-
-- [x] **T9 · Regressões e polish**
-  - [x] Rodar `npm run type-check` — zero erros (tsc --noEmit)
-  - [x] Rodar `npm run lint` — zero warnings (eslint .)
-  - [x] Rodar `npm test` — 356/358 passam (2 pre-existing ResizeObserver em jsdom)
-  - [x] Verificar `DayDetailSheet` não quebrou exibição de eventos do próprio coletivo (testes passam)
-  - [x] Verificar `EventForm` continua funcional (testes passam)
-  - [x] Verificar Conflict Engine não foi impactado (não modificado)
->>>>>>> aec3c384250eca87e667a7ca631a256e9a3157a0
 
 ---
 
@@ -375,7 +386,6 @@ Verbatim de [`_bmad-output/planning-artifacts/epics.md:426-434`](../planning-art
 
 ### Agent Model Used
 
-<<<<<<< HEAD
 {{agent_model_name_version}}
 
 ### Debug Log References
@@ -385,66 +395,45 @@ Verbatim de [`_bmad-output/planning-artifacts/epics.md:426-434`](../planning-art
 ### File List
 
 ### Change Log
-=======
-deepseek-v4-flash via Claude Code
+```
 
-### Debug Log References
+---
 
-Sessão de 04/05/2026. Implementação completa com 9 tasks.
+## Verification Strategy
 
-### Completion Notes List
+### QA Scenarios
 
-- ✅ T1: `filterEventForViewer()` + `maskEventField()` em `visibility.ts`. Viewer type importado de `@/features/artists/visibility`. Matriz de testes com 11 casos (owner × non-owner × planning/confirmed × flags × anon).
-- ✅ T2: `eventFormSchema` estendido com `isNamePublic(default true)`, `isLocationPublic(default false)`, `isLineupPublic(default false)`. Criado `updateEventSchema` para edições parciais com `status` opcional. 19 testes.
-- ✅ T3: 3 checkboxes shadcn no `EventForm` com labels explicativas. Passam no payload do `createEvent`.
-- ✅ T4: `updateEvent` agora aceita toggles de privacidade via `updateEventSchema`. Nova Server Action `updateEventStatus` com ownership check e FR16 reveal. 23 testes.
-- ✅ T5: `DayDetailSheet` refatorado: badge de status (planejamento/confirmado), masking de campos cross-collective via `filterEventForViewer`, toggles inline para owner, botão de confirmar/reabrir. 8 testes.
-- ✅ T6: `getCrossCollectiveEventsForRange()` em `events-queries.ts`. `crossEvents` no Zustand store. `useCrossCollectiveEvents` hook com TanStack Query (30s staleTime). Atualizado `calendar-grid-client.tsx`.
-- ✅ T7: Migration `010_events_rls.sql` com policies SELECT/INSERT/UPDATE/DELETE.
-- ✅ T8: E2E `privacy-granular.spec.ts` com 4 testes cross-collective. Global-setup seedado com 3 eventos de outros coletivos.
-- ✅ T9: type-check 0 erros, lint 0 warnings, 356/358 testes passam.
+**Scenario: Story file created correctly**
+  Tool: Bash
+  Steps:
+    1. Verify file exists: `ls _bmad-output/implementation-artifacts/3-4-privacidade-granular-e-status-do-evento.md`
+    2. Verify Status line: `head -3 _bmad-output/implementation-artifacts/3-4-privacidade-granular-e-status-do-evento.md` → contains "Status: ready-for-dev"
+    3. Verify ACs present: `grep "Given" _bmad-output/implementation-artifacts/3-4-privacidade-granular-e-status-do-evento.md` → matches
+  Expected Result: File exists with Status: ready-for-dev and all sections present
+  Evidence: .sisyphus/evidence/task-1-story-file.png
 
-### File List
+**Scenario: Sprint status updated**
+  Tool: Bash
+  Steps:
+    1. `grep "3-4-privacidade" _bmad-output/implementation-artifacts/sprint-status.yaml`
+  Expected Result: Shows `ready-for-dev` status (not `backlog`)
+  Evidence: .sisyphus/evidence/task-2-sprint-status.png
 
-| Arquivo | Ação |
-|---------|------|
-| `src/features/calendar/types.ts` | UPDATE — adicionado `collectiveId` a `CalendarEvent` |
-| `src/features/calendar/logic/visibility.ts` | NEW |
-| `src/features/calendar/logic/visibility.test.ts` | NEW |
-| `src/features/calendar/validations.ts` | UPDATE — + campos booleanos, `updateEventSchema`, `UpdateEventInput` |
-| `src/features/calendar/validations.test.ts` | UPDATE — testes de privacidade |
-| `src/features/calendar/components/event-form.tsx` | UPDATE — + checkboxes de privacidade |
-| `src/features/calendar/actions.ts` | UPDATE — `updateEvent` estendido, nova `updateEventStatus` |
-| `src/features/calendar/__tests__/actions.test.ts` | UPDATE — testes de toggles + status transition |
-| `src/features/calendar/components/day-detail-sheet.tsx` | UPDATE — masking, badge, toggles, confirm button |
-| `src/features/calendar/components/day-detail-sheet.test.tsx` | UPDATE — mocks + testes condicionais |
-| `src/features/calendar/events-queries.ts` | UPDATE — + `getCrossCollectiveEventsForRange` |
-| `src/features/calendar/store.ts` | UPDATE — + `crossEvents`, `setCrossEvents` |
-| `src/features/calendar/hooks.ts` | UPDATE — + `useCrossCollectiveEvents` |
-| `src/features/calendar/components/calendar-grid-client.tsx` | UPDATE — + `collectiveId` prop, + `useCrossCollectiveEvents` |
-| `src/features/calendar/components/calendar-grid-client.test.tsx` | UPDATE — mock de `useQuery` |
-| `supabase/migrations/010_events_rls.sql` | NEW |
-| `e2e/global-setup.ts` | UPDATE — seed de 3 eventos cross-collective |
-| `e2e/privacy-granular.spec.ts` | NEW |
-| `_bmad-output/implementation-artifacts/sprint-status.yaml` | UPDATE — 3-4 in-progress |
+---
 
-### Review Findings
+## Commit Strategy
 
-#### Code Review (04/05/2026) — 3 camadas (Blind Hunter + Edge Case Hunter + Acceptance Auditor)
+- **Single commit**: `docs(story): cria story 3.4 — privacidade granular e status do evento`
+- Files: story file + sprint-status.yaml
 
-- [x] [Review][Patch] P1: O(N²) array dedup corrigido com `useMemo` + `Map` [day-detail-sheet.tsx:83] — fixed
-- [x] [Review][Patch] P2: Type safety restaurada em `updateEvent` (`UpdateEventInput`) [actions.ts:127] — fixed
-- [x] [Review][Patch] P3: Guarda de array vazio em `getCrossCollectiveEventsForRange` [events-queries.ts:49] — fixed
-- [x] [Review][Patch] P4: Guarda de no-op em `updateEventStatus` (`existing[0].status === status`) [actions.ts:238] — fixed
-- [x] [Review][Patch] P5: `CREATE POLICY IF NOT EXISTS` em `010_events_rls.sql` [010_events_rls.sql:12] — fixed
-- [x] [Review][Defer] D1: Divergência RLS × app-layer: `events_select_policy` bloqueia rows com todas flags `false`, mas app-layer quer mostrar `genrePrimary`. — deferido para retrospectiva (mudança estrutural). [010_events_rls.sql:14]
-- [x] [Review][Defer] W1: Race condition `queryFn` → `setCrossEvents` no Zustand — pre-existing pattern [hooks.ts:71]
-- [x] [Review][Defer] W2: `as` casts inseguros nos mutations — pre-existing pattern [day-detail-sheet.tsx:46]
-- [x] [Review][Defer] W3: Erros engolidos em recompute de neighbors — pre-existing, consistente com `createEvent` [actions.ts:257]
-- [x] [Review][Defer] W4: `collectiveId` opcional pode causar masking se não passado — coberto pelo call-site [day-detail-sheet.tsx:36]
+---
 
-### Change Log
+## Success Criteria
 
-- 04/05/2026: Implementação completa da Story 3.4 — Privacidade Granular e Status do Evento. 17 arquivos modificados/criados. Função pura `filterEventForViewer`, toggles de privacidade no form e sheet, Server Action `updateEventStatus`, query cross-collective com TanStack Query, RLS migration 010. 356 testes passam.
-- 04/05/2026: Code review adversarial (3 camadas). 5 patches aplicados: useMemo O(1) dedup, type safety no updateEvent, guarda de array vazio, no-op guard no status, IF NOT EXISTS na RLS. 4 defferals (pre-existing). 1 decisão estrutural deferida (RLS vs app-layer divergence). Acceptance Auditor: ✅ all ACs pass.
->>>>>>> aec3c384250eca87e667a7ca631a256e9a3157a0
+### Final Checklist
+- [x] Story file created at correct path with Status: ready-for-dev
+- [x] Sprint status updated to ready-for-dev
+- [x] All 9 tasks clearly defined with subtasks
+- [x] Dev Notes comprehensive (architecture, test standards, security, realtime, dependencies)
+- [x] References exhaustive with file paths and line numbers
+- [x] Out-of-scope boundaries explicit

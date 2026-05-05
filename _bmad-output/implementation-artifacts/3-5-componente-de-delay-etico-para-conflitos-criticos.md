@@ -1,6 +1,6 @@
 # Story 3.5: Componente de Delay Ético para Conflitos Críticos
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -196,7 +196,11 @@ deepseek-v4-flash (via opencode)
 
 ### Review Findings
 
-*(Pendente — aguardando code review)*
+- **PR:** https://github.com/magalz/agenda-clubber/pull/23
+- **Status:** Merged diretamente no `main` via GitHub em 2026-05-05
+- **Sem revisões formais** — merge executado sem code review bloqueante
+- **Verificações pós-merge:** 371/371 testes passando, lint zero, type-check zero
+- **Arquivos:** 11 arquivos tocados (+941 / -15), 3 novos componentes, 3 testes E2E
 
 ### Change Log
 
