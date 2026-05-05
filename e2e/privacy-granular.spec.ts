@@ -13,6 +13,8 @@ test.describe('Cross-collective privacy granular', () => {
         const count = await cells.count();
 
         for (let i = 0; i < count; i++) {
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(300);
             await cells.nth(i).click();
 
             const sheet = page.locator('[role="dialog"]');
@@ -40,6 +42,8 @@ test.describe('Cross-collective privacy granular', () => {
         const count = await cells.count();
 
         for (let i = 0; i < count; i++) {
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(300);
             await cells.nth(i).click();
 
             const sheet = page.locator('[role="dialog"]');
@@ -67,6 +71,8 @@ test.describe('Cross-collective privacy granular', () => {
         const count = await cells.count();
 
         for (let i = 0; i < count; i++) {
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(300);
             await cells.nth(i).click();
 
             const sheet = page.locator('[role="dialog"]');
@@ -94,6 +100,8 @@ test.describe('Cross-collective privacy granular', () => {
         const count = await cells.count();
 
         for (let i = 0; i < count; i++) {
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(300);
             await cells.nth(i).click();
 
             const sheet = page.locator('[role="dialog"]');
