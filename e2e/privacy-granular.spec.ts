@@ -110,7 +110,7 @@ test.describe('Cross-collective privacy granular', () => {
                 const content = await sheet.textContent();
 
                 if (content?.includes('Festa Concorrente') || content?.includes('Evento Nome Visivel') || content?.includes('Festa Confirmada')) {
-                    const hasToggle = await sheet.locator('text=Nome público').isVisible().catch(() => false);
+                    const hasToggle = await sheet.locator('li').locator('text=Nome público').isVisible().catch(() => false);
                     expect(hasToggle).toBe(false);
                     break;
                 }
