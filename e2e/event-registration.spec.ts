@@ -32,7 +32,7 @@ test.describe('Story 3.2 — Event Registration', () => {
         await dialog.getByRole('textbox', { name: /local do evento/i }).fill('D-Edge, Sao Paulo');
 
         // Open select, click option, wait for close
-        await dialog.getByRole('combobox', { name: /genero musical/i }).click({ force: true });
+        await dialog.getByRole('combobox', { name: /genero musical/i }).dispatchEvent('click');
         await page.getByRole('option', { name: 'Techno', exact: true }).click();
         await page.waitForTimeout(300);
 
