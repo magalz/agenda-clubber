@@ -21,6 +21,7 @@ test.describe('Story 3.2 — Event Registration', () => {
     });
 
     test('submits event and receives server response', async ({ page }) => {
+        test.skip(!process.env.SUPABASE_SERVICE_ROLE_KEY, 'CI: Supabase service role key not available');
         await page.goto('/dashboard/collective');
 
         await page.getByTestId('day-cell').first().click();
