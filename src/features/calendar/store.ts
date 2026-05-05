@@ -11,6 +11,7 @@ interface CalendarStore {
     setCrossEvents: (events: CalendarEvent[]) => void;
     addEvent: (event: CalendarEvent) => void;
     removeEvent: (id: string) => void;
+    updateEvent: (id: string, patch: Partial<CalendarEvent>) => void;
 }
 
 export const useCalendarStore = create<CalendarStore>((set) => ({
@@ -25,4 +26,7 @@ export const useCalendarStore = create<CalendarStore>((set) => ({
         events: s.events.some((e) => e.id === event.id) ? s.events : [...s.events, event],
     })),
     removeEvent: (id) => set((s) => ({ events: s.events.filter((e) => e.id !== id) })),
+    updateEvent: (id, patch) => set((s) => ({
+        events: s.events.map((e) => e.id === id ? { ...e, ...patch } : e),
+    })),
 }));
