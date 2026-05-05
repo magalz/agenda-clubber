@@ -44,7 +44,7 @@ type Props = {
 export function DayDetailSheet({ collectiveId, date, isOpen, onOpenChange }: Props) {
     const events = useCalendarStore((s) => s.events);
     const crossEvents = useCalendarStore((s) => s.crossEvents);
-    const updateEvent = useCalendarStore((s) => s.updateEvent);
+    const patchEvent = useCalendarStore((s) => s.updateEvent);
 
     const statusMutation = useMutation({
         mutationFn: async ({ eventId, status }: { eventId: string; status: 'planning' | 'confirmed' }) => {
@@ -61,7 +61,7 @@ export function DayDetailSheet({ collectiveId, date, isOpen, onOpenChange }: Pro
                 patch.isLocationPublic = true;
                 patch.isLineupPublic = true;
             }
-            updateEvent(variables.eventId, patch);
+            patchEvent(variables.eventId, patch);
             toast.success('Status atualizado');
         },
         onError: () => {
