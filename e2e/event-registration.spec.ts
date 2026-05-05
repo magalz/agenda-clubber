@@ -21,7 +21,6 @@ test.describe('Story 3.2 — Event Registration', () => {
     });
 
     test('submits event and receives server response', async ({ page }) => {
-        test.fixme(true, 'CI: combobox/genre select out of viewport — re-evaluate in retro');
         await page.goto('/dashboard/collective');
 
         await page.getByTestId('day-cell').first().click();
@@ -33,7 +32,7 @@ test.describe('Story 3.2 — Event Registration', () => {
         await dialog.getByRole('textbox', { name: /local do evento/i }).fill('D-Edge, Sao Paulo');
 
         // Open select, click option, wait for close
-        await dialog.getByRole('combobox', { name: /genero musical/i }).click();
+        await dialog.getByRole('combobox', { name: /genero musical/i }).click({ force: true });
         await page.getByRole('option', { name: 'Techno', exact: true }).click();
         await page.waitForTimeout(300);
 
