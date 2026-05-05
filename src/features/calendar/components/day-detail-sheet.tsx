@@ -50,11 +50,8 @@ export function DayDetailSheet({ collectiveId, date, isOpen, onOpenChange }: Pro
         mutationFn: async ({ eventId, status }: { eventId: string; status: 'planning' | 'confirmed' }) => {
             return updateEventStatus(eventId, status) as Promise<{ data: unknown; error: { message: string; code: string } | null }>;
         },
-        onSuccess: (result, variables) => {
-            if (result.error) {
-                toast.error(result.error.message);
-                return;
-            }
+        onMutate: (variables) => {
+            const prev = events.find((e) => e.id === variables.eventId);
             const patch: Partial<CalendarEvent> = { status: variables.status };
             if (variables.status === 'confirmed') {
                 patch.isNamePublic = true;
@@ -62,9 +59,18 @@ export function DayDetailSheet({ collectiveId, date, isOpen, onOpenChange }: Pro
                 patch.isLineupPublic = true;
             }
             patchEvent(variables.eventId, patch);
+            return { prev };
+        },
+        onSuccess: (result, variables, context) => {
+            if (result.error) {
+                if (context?.prev) patchEvent(variables.eventId, context.prev);
+                toast.error(result.error.message);
+                return;
+            }
             toast.success('Status atualizado');
         },
-        onError: () => {
+        onError: (_err, variables, context) => {
+            if (context?.prev) patchEvent(variables.eventId, context.prev);
             toast.error('Erro ao atualizar status');
         },
     });
