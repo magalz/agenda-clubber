@@ -9,6 +9,8 @@ import { getCurrentUserCollectiveId } from '@/features/collectives/queries';
 import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
 import { evaluateAndPersist, getNeighborIds } from './logic/evaluate-conflict';
+import { getCrossCollectiveEventsForRange } from './events-queries';
+import type { CalendarEvent } from './types';
 
 type ActionResult<T> = { data: T | null; error: { message: string; code: string } | null };
 
@@ -118,6 +120,13 @@ export async function createEvent(input: EventFormInput): Promise<ActionResult<u
     revalidatePath('/dashboard/collective');
 
     return { data: event, error: null };
+}
+
+export async function fetchCrossCollectiveEvents(
+    dateIsoStrings: string[]
+): Promise<CalendarEvent[]> {
+    const dates = dateIsoStrings.map((s) => new Date(s));
+    return getCrossCollectiveEventsForRange(dates);
 }
 
 export async function updateEvent(

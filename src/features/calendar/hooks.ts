@@ -3,8 +3,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
-import { createEvent as createEventAction } from './actions';
-import { getCrossCollectiveEventsForRange } from './events-queries';
+import { createEvent as createEventAction, fetchCrossCollectiveEvents } from './actions';
 import { useCalendarStore } from './store';
 import type { EventFormInput } from './validations';
 import type { CalendarEvent } from './types';
@@ -68,10 +67,12 @@ export function useEventRealtime(collectiveId: string) {
 export function useCrossCollectiveEvents(dates: Date[]) {
     const setCrossEvents = useCalendarStore((s) => s.setCrossEvents);
 
+    const dateIsoStrings = dates.map((d) => d.toISOString());
+
     return useQuery({
-        queryKey: ['cross-collective-events', dates.map((d) => d.toISOString())],
+        queryKey: ['cross-collective-events', dateIsoStrings],
         queryFn: async () => {
-            const result = await getCrossCollectiveEventsForRange(dates);
+            const result = await fetchCrossCollectiveEvents(dateIsoStrings);
             setCrossEvents(result);
             return result;
         },
