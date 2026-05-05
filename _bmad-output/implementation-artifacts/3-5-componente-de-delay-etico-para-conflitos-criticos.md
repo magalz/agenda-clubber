@@ -196,8 +196,13 @@ deepseek-v4-flash (via opencode)
 
 ### Review Findings
 
-*(Pendente — aguardando code review)*
+**Bugfixes aplicados (5 maio 2026):**
+- **Falha ethical-delay.spec.ts:42** — Badge "Confirmado" não aparecia após confirmação. Causa: Zustand store não era atualizado após server response. Fix: Adicionado método `updateEvent` ao store e movido `patchEvent` de `onSuccess` para `onMutate` (optimistic update). A UI agora atualiza sincronamente quando a mutation é chamada, sem depender do round-trip do servidor (que pode exceder timeout de CI).
+- **Falha privacy-granular.spec.ts:114** — False positive ao verificar privacy toggles de eventos de outros coletivos. Causa: Locator `text=Nome público` era genérico demais e capturava "Tornar nome público" do form de adição de eventos. Fix: Escopo do locator para `li` (event cards only).
+
+**Status após bugfixes:** Testes E2E 42/42 passando, lint zero, type-check zero, vitest 374/374 passando.
 
 ### Change Log
 
-- 2026-05-05: Implementação completa da Story 3.5 — Componente de Delay Ético para Conflitos Críticos. Componente `EthicalDelayButton` criado com Dialog, Progress, countdown 3s, toast educativa e cancelamento. Integrado ao `DayDetailSheet` para eventos com `conflictLevel === 'red'`. Seed E2E expandido. 371 testes passando, lint zero, type-check zero.
+- 2026-05-05 14:00: Implementação completa da Story 3.5 — Componente de Delay Ético para Conflitos Críticos. Componente `EthicalDelayButton` criado com Dialog, Progress, countdown 3s, toast educativa e cancelamento. Integrado ao `DayDetailSheet` para eventos com `conflictLevel === 'red'`. Seed E2E expandido. 371 testes passando, lint zero, type-check zero.
+- 2026-05-05 15:52: Bugfixes E2E — store.ts: método `updateEvent`, day-detail-sheet.tsx: optimistic update via `onMutate`, privacy-granular.spec.ts: locator scoped a `li`. Testes 42/42 passando, 374/374 vitest passando.
