@@ -147,6 +147,9 @@ def main():
     result = resolve(args.skill, args.key)
 
     # Output as JSON for programmatic consumption
+    # Force UTF-8 stdout on Windows to handle emoji and non-ASCII characters
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     json.dump(result, sys.stdout, indent=2, ensure_ascii=False)
     print()  # trailing newline
 

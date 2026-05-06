@@ -184,9 +184,60 @@ Each section shows: the BMAD workflow, the target agent (with the command to inv
 | Resume session | Any BMAD agent | `get_changes_since` | "Run `get_changes_since` on the repo to see what changed since the last session." | Quick context |
 | Understand branch | Any BMAD agent | `get_codebase_briefing` | "Run `get_codebase_briefing` on the current branch to understand what was built on it." | Branch scope |
 
+### 2.10 Story & Epic Creation
+
+| BMAD Workflow | Agent (command) | Memtrace Tool | Short Prompt | Why |
+|---------------|-----------------|---------------|-------------|-----|
+| `bmad-create-epics-and-stories` | John — PM (`/bmad-agent-pm`) | `get_codebase_briefing` | "Before creating epics, run `get_codebase_briefing(detail_level='full')` and confirm the epics map to the actual code modules." | Confirms epics map to real modules |
+| `bmad-create-epics-and-stories` | John (`/bmad-agent-pm`) | `list_communities` | "Run `list_communities` and validate that epic boundaries align with detected logical modules. Epics spanning many communities = candidates to split." | Architectural alignment |
+| `bmad-create-epics-and-stories` | John (`/bmad-agent-pm`) | `find_most_complex_functions` | "Run `find_most_complex_functions(top_n=10)`. Surface high-risk areas any story should account for in its risk section." | Proactive risk awareness |
+| `bmad-create-story` | John (`/bmad-agent-pm`) or Amelia (`/bmad-agent-dev`) | `get_symbol_context` | "For each dependency listed in the epic, run `get_symbol_context` and populate 'Previous Story Intelligence' with real callers/callees." | Populates dependencies with real graph data |
+| `bmad-create-story` | John or Amelia | `get_impact` | "Run `get_impact` on each story's primary target. If HIGH/CRITICAL, mark as risk in the story file (not just verbal warning)." | Risk-aware story creation |
+
+### 2.11 Architecture & Readiness
+
+| BMAD Workflow | Agent (command) | Memtrace Tool | Short Prompt | Why |
+|---------------|-----------------|---------------|-------------|-----|
+| `bmad-create-architecture` | Winston — Architect (`/bmad-agent-architect`) | `list_communities` | "Run `list_communities`. Compare the proposed architecture with detected logical modules. If the new design splits an existing community, surface that explicitly." | Architectural alignment |
+| `bmad-create-architecture` | Winston (`/bmad-agent-architect`) | `get_api_topology` | "Run `get_api_topology` to map cross-service dependencies. New architecture must account for existing service boundaries." | Cross-service awareness |
+| `bmad-create-architecture` | Winston (`/bmad-agent-architect`) | `find_bridge_symbols` | "Run `find_bridge_symbols`. Identify architectural chokepoints before designing around them." | Chokepoint awareness |
+| `bmad-check-implementation-readiness` | Winston (`/bmad-agent-architect`) | `get_impact` | "Run `get_impact` on each story's target. If HIGH/CRITICAL, mark as blocker — story must include mitigation or be re-scoped." | Detects if story touches high-risk code |
+| `bmad-check-implementation-readiness` | Winston (`/bmad-agent-architect`) | `get_api_topology` | "Run `get_api_topology` for any story that modifies an endpoint. Unverified consumers = readiness blocker." | Consumer impact verification |
+| `bmad-check-implementation-readiness` | Winston (`/bmad-agent-architect`) | `list_communities` | "Run `list_communities` and validate stories don't fragment a community without explicit refactoring plan." | Community integrity check |
+
+### 2.12 Documentation & Project Context
+
+| BMAD Workflow | Agent (command) | Memtrace Tool | Short Prompt | Why |
+|---------------|-----------------|---------------|-------------|-----|
+| `bmad-document-project` | Paige — Tech Writer (`/bmad-agent-tech-writer`) | `get_codebase_briefing` | "Run `get_codebase_briefing(detail_level='full')` to understand the architecture before documenting. Don't guess the structure — use the graph." | Architecture in 30s replaces hours of manual exploration |
+| `bmad-document-project` | Paige (`/bmad-agent-tech-writer`) | `list_communities` | "Run `list_communities` and use detected logical modules as the document outline. Each community = one documentation section." | Structure from data, not intuition |
+| `bmad-document-project` | Paige (`/bmad-agent-tech-writer`) | `list_processes` | "Run `list_processes` to enumerate execution flows. Each flow deserves documentation of its sequence and entry points." | Flow-based documentation |
+| `bmad-document-project` | Paige (`/bmad-agent-tech-writer`) | `find_central_symbols` | "Run `find_central_symbols(limit=15)` and give extra documentation weight to load-bearing code." | Focus docs on what matters most |
+| `bmad-generate-project-context` | Amelia — Dev (`/bmad-agent-dev`) | `get_codebase_briefing` | "Run `get_codebase_briefing(detail_level='full')` — use the graph data as the primary source for the context file, NOT file-system walking." | Project-context.md driven by real architecture |
+| `bmad-generate-project-context` | Amelia (`/bmad-agent-dev`) | `list_communities` | "Run `list_communities` to populate the module breakdown section of project-context.md." | Modules from graph, not folder guesses |
+
+### 2.13 E2E Test Generation
+
+| BMAD Workflow | Agent (command) | Memtrace Tool | Short Prompt | Why |
+|---------------|-----------------|---------------|-------------|-----|
+| `bmad-qa-generate-e2e-tests` | Murat — QA (`/bmad-tea`) | `list_processes` | "Run `list_processes` to enumerate all execution flows. Each flow = a candidate for E2E test generation." | Which flows need tests? |
+| `bmad-qa-generate-e2e-tests` | Murat (`/bmad-tea`) | `get_process_flow` | "For each process, run `get_process_flow(name)`. Each step in the flow should generate at least one E2E test case (happy path + relevant negatives)." | Each step = one test case |
+| `bmad-qa-generate-e2e-tests` | Murat (`/bmad-tea`) | `find_api_endpoints` | "Run `find_api_endpoints` to list all endpoints. Cross-reference with existing test files — uncovered endpoints = generation priority." | Full API surface coverage |
+
+### 2.14 Technical Research (Conditional)
+
+> **⚠️ CONDITIONAL USE:** Memtrace is only relevant here when the research topic involves the **current codebase itself** (e.g., "what ORM would replace our current Prisma setup?", "should we refactor this module to use EventEmitter?"). If the research is purely external (e.g., "React vs Vue for a new project"), skip ALL Memtrace tools — they add no value.
+
+| BMAD Workflow | Agent (command) | Memtrace Tool | Condition | Short Prompt | Why |
+|---------------|-----------------|---------------|-----------|-------------|-----|
+| `bmad-technical-research` | Any agent | `find_code` | ONLY if topic is about current code | "Use `find_code` with the research topic keywords to locate relevant existing code that would be affected by or replaced by the technology being researched." | Finds affected code |
+| `bmad-technical-research` | Any agent | `get_symbol_context` | ONLY if specific symbols identified | "Run `get_symbol_context` on symbols that would be impacted by the proposed technology change." | Impact analysis |
+| `bmad-technical-research` | Any agent | `find_most_complex_functions` | ONLY if evaluating refactoring options | "Run `find_most_complex_functions(top_n=10)` to identify candidate areas where the new technology would provide the most benefit." | Prioritize by complexity |
+| `bmad-technical-research` | Any agent | `get_impact` | ONLY if evaluating migration effort | "Run `get_impact` on symbols that would need migration. Large blast radius = higher cost estimate." | Effort estimation |
+
 ---
 
-### 2.10 Complete Prompts by Workflow
+### 2.15 Complete Prompts by Workflow
 
 > **Copy and paste** the prompt below to the indicated agent. Each prompt already includes all recommended Memtrace tools for that workflow, in the correct order, with safety triggers.
 
@@ -356,6 +407,205 @@ Prepare session context with Memtrace:
 2. get_changes_since — what changed since last session? (if resuming)
 3. list_communities — view of logical modules
 4. find_central_symbols(limit=10) — know which symbols are load-bearing before touching anything
+```
+
+---
+
+#### 📋 Epic Creation
+
+**Agent:** John — PM (`/bmad-agent-pm`)
+
+```
+Before creating epics, run these Memtrace checks:
+
+1. get_codebase_briefing(detail_level="full") — understand current architecture before proposing epics
+2. list_communities — validate that proposed epic boundaries map to detected logical modules (Louvain communities)
+3. find_most_complex_functions(top_n=10) — surface high-risk code areas; any epic touching them inherits risk
+
+Then for each epic created:
+4. For each story dependency listed: get_symbol_context(symbol) — populate "Previous Story Intelligence" with real graph callers/callees, not aspirational descriptions
+5. get_impact on each story's primary target — if HIGH/CRITICAL, mark the story file with an explicit risk flag and require architect sign-off
+
+Validation:
+6. find_dependency_path between targets of consecutive stories — validate story ordering before locking the sprint plan
+7. confirm no epic spans more than 3 communities without explicit justification
+```
+
+---
+
+#### 📝 Story Creation (Individual)
+
+**Agent:** John — PM (`/bmad-agent-pm`) or Amelia — Dev (`/bmad-agent-dev`)
+
+```
+Create this story with graph-backed intelligence:
+
+1. get_codebase_briefing(detail_level="summary") — refresh architecture context
+2. get_symbol_context on each dependency listed in the story — populate "Previous Story Intelligence" with real callers, callees, and community membership from the graph
+3. get_impact on the story's primary target — if HIGH or CRITICAL:
+   - Mark the story file with "[Risk: HIGH]" or "[Risk: CRITICAL]"
+   - Add affected files list
+   - Require architect sign-off before dev-story
+4. find_dependency_path from this story's target to known load-bearing symbols (from find_central_symbols) — indirect connections = hidden risk to document
+5. After story file is written: validate that ALL acceptance criteria trace to at least one process step from get_process_flow if applicable
+```
+
+---
+
+#### 🏗️ Architecture Design
+
+**Agent:** Winston — Architect (`/bmad-agent-architect`)
+
+```
+Design architecture backed by real code structure:
+
+1. list_communities — baseline of current logical modules
+2. get_api_topology — current cross-service dependency map
+3. find_bridge_symbols — identify current architectural chokepoints (betweenness centrality)
+
+When proposing architecture changes:
+4. Compare proposed module boundaries against list_communities output — if the new design splits an existing community, surface the refactoring cost explicitly
+5. Run get_impact on any symbol that would move between modules — blast radius = migration cost
+6. Identify find_bridge_symbols that would be created or removed by the new architecture — bridges are high-maintenance, design to minimize them
+
+Validation:
+7. Every new module boundary must have a justification against community data
+8. Cross-service dependencies from get_api_topology must not increase without explicit benefit
+```
+
+---
+
+#### ✅ Implementation Readiness Check
+
+**Agent:** Winston — Architect (`/bmad-agent-architect`)
+
+```
+Validate readiness with Memtrace data:
+
+1. list_communities — confirm current architecture matches the planned one
+2. get_api_topology — map all cross-service dependencies
+
+For each story in the sprint:
+3. get_impact on the story's primary target — HIGH or CRITICAL risk = BLOCKER:
+   - Story must include mitigation plan or be re-scoped
+   - Document the risk in the readiness report
+4. If the story modifies an endpoint: get_api_topology filtered to that endpoint → verify ALL consumers were accounted for. Unverified consumers = BLOCKER.
+5. find_bridge_symbols — if any story refactors a bridge symbol, flag for architect-led design review
+
+Output: readiness report with (a) go/no-go per story, (b) blocker list with graph evidence, (c) risk matrix based on get_impact scores.
+```
+
+---
+
+#### 📄 Document Project
+
+**Agent:** Paige — Tech Writer (`/bmad-agent-tech-writer`)
+
+```
+Document this project using graph data as the primary source:
+
+1. get_codebase_briefing(detail_level="full") — architecture overview: scale, modules, risks, dead code
+2. list_communities — use detected logical modules as the documentation outline. Each community = one section
+3. list_processes — enumerate all execution flows. Each flow deserves documentation of its sequence and entry points
+4. find_central_symbols(limit=15) — give extra documentation weight and detail to load-bearing code (high PageRank)
+5. find_most_complex_functions(top_n=10) — document these with extra care; complex functions need clear contracts and examples
+
+Documentation structure rule:
+- Each community from list_communities → one top-level doc section
+- Each process from list_processes → one flow-documentation subsection
+- find_central_symbols results → expanded API/contract documentation with callers and callees from get_symbol_context
+- find_dead_code results → explicitly NOT documented (reduce noise — dead code is not user-facing)
+```
+
+---
+
+#### 📋 Generate Project Context
+
+**Agent:** Amelia — Dev (`/bmad-agent-dev`)
+
+```
+Generate project-context.md driven entirely by Memtrace graph data:
+
+DO NOT walk the filesystem with tree/ls/glob. Use Memtrace as the single source of truth.
+
+1. get_codebase_briefing(detail_level="full") — this IS your outline:
+   - Symbol counts → project scale section
+   - Community list → module breakdown section
+   - Top risks → risk section
+
+2. list_communities — populate the "Modules" section with each community name + its top symbols from find_central_symbols
+
+3. list_processes — populate the "Key Flows" section with each process name + entry point
+
+4. find_central_symbols(limit=10) — add a "Load-Bearing Code" section listing these symbols with their PageRank context
+
+5. find_most_complex_functions(top_n=10) — add a "Complexity Hotspots" section
+
+Structure of project-context.md:
+- Scale & Architecture (from get_codebase_briefing)
+- Modules (from list_communities)
+- Key Flows (from list_processes)
+- Load-Bearing Code (from find_central_symbols)
+- Complexity Hotspots (from find_most_complex_functions)
+- Risk Areas (from get_codebase_briefing risk summary)
+```
+
+---
+
+#### 🧪 Generate E2E Tests
+
+**Agent:** Murat — QA (`/bmad-tea`)
+
+```
+Generate E2E tests driven by detected execution flows:
+
+1. list_processes — enumerate ALL detected execution flows in the codebase
+2. Cross-reference with existing e2e/*.spec.ts files — list flows WITHOUT E2E coverage as PRIORITY targets
+
+For each uncovered flow:
+3. get_process_flow("[process name]") — trace the full execution path step by step
+
+Test generation rules:
+4. Each step in get_process_flow output = at least one E2E test case (happy path + relevant negative paths)
+5. Each test must reference the exact function name and file:line from the flow step
+6. find_api_endpoints — cross-reference: every endpoint involved in the flow must have its HTTP method and path verified in the test
+
+Quality checks after generation:
+7. find_dead_code — verify no generated test references a function that no longer exists (orphan test)
+8. find_most_complex_functions — ensure complexity hotspots from the flow have extra assertion depth
+
+Output: a test file per process with (a) flow diagram comment, (b) per-step test cases, (c) coverage of positive + negative + edge cases.
+```
+
+---
+
+#### 🔬 Technical Research (Conditional)
+
+**Agent:** Any relevant agent
+
+```
+⚠️ BEFORE USING MEMTRACE: Determine if the research topic involves the CURRENT codebase.
+
+IF the research is about:
+  - External technology comparison ("React vs Vue") → SKIP all Memtrace tools entirely
+  - Evaluating a library/framework for a NEW project → SKIP all Memtrace tools
+  - General technology trends, ecosystem analysis → SKIP all Memtrace tools
+
+IF the research is about:
+  - Replacing/upgrading technology IN the current codebase → USE Memtrace
+  - Refactoring approach evaluation on current code → USE Memtrace
+  - Migration effort estimation for current codebase → USE Memtrace
+
+When applicable, use these Memtrace tools:
+
+1. find_code with research topic keywords — locate existing code affected by or replaceable by the technology being researched
+2. get_symbol_context on identified symbols — understand their role before proposing changes
+3. find_most_complex_functions(top_n=10) — if evaluating refactoring approaches, prioritize by complexity
+4. get_impact on symbols that would need migration — large blast radius = higher cost, longer timeline
+5. find_dependency_path between current implementation and proposed replacement — hidden dependency chains = extra migration work
+6. get_cochange_context on affected files — files that historically change together may need coordinated migration
+
+Output must include: (a) affected symbols count, (b) blast radius from get_impact, (c) estimated effort tier (Small/Medium/Large/Critical) based on graph data.
 ```
 
 ---
@@ -642,13 +892,48 @@ Install in 3 levels:
 
 ---
 
+#### Preflight: Resolver Script
+
+Before creating any override file, verify the customization resolver script exists. BMAD skills call this script on activation to merge base + team + user overrides. If the script is missing, overrides are silently ignored.
+
+```bash
+# Check if the script exists
+test -f {project-root}/_bmad/scripts/resolve_customization.py || echo "MISSING"
+```
+
+**If MISSING**, create `{project-root}/_bmad/scripts/resolve_customization.py` with the resolver implementation. The script must:
+- Accept `--skill <skill-root>` and `--key <key>` arguments
+- Read `{skill-root}/customize.toml` (base), `{project-root}/_bmad/custom/{skill-name}.toml` (team), `{project-root}/_bmad/custom/{skill-name}.user.toml` (user)
+- Deep-merge: scalars override, tables deep-merge, arrays append (except arrays-of-tables keyed by `code`/`id` which merge by key)
+- Output the resolved section as JSON to stdout
+
+---
+
 #### Level 1: `activation_steps_prepend` — Tools that run AUTOMATICALLY on workflow start
 
 Each agent receives a `.toml` file with `activation_steps_prepend`. These steps execute **without the user having to ask** — when they call `/bmad-code-review`, the agent automatically starts by running `get_evolution` and `find_most_complex_functions` before any manual analysis.
 
-**File format:**
+**CRITICAL — Section naming:** The TOML section header must match what the skill's `--key` argument queries. Check the skill's source to confirm:
+- **Agent persona skills** (`bmad-agent-dev`, `bmad-agent-pm`, `bmad-agent-architect`, `bmad-agent-tech-writer`, `bmad-agent-analyst`, `bmad-agent-ux-designer`, `bmad-tea`) → use `[agent]` (these skills call `--key agent`)
+- **Workflow skills** (`bmad-dev-story`, `bmad-code-review`, `bmad-create-story`, `bmad-sprint-planning`, `bmad-retrospective`, `bmad-correct-course`, `bmad-quick-dev`, `bmad-create-epics-and-stories`, `bmad-create-architecture`, `bmad-check-implementation-readiness`, `bmad-document-project`, `bmad-generate-project-context`, `bmad-qa-generate-e2e-tests`) → use `[workflow]` (these skills call `--key workflow`)
+
+**File format — Agent persona skills (`[agent]`):**
 ```toml
-# {install_scope_path}/bmad-{skill-name}.toml
+# {install_scope_path}/bmad-{agent-name}.toml
+[agent]
+activation_steps_prepend = [
+    "Memtrace: execute get_codebase_briefing...",
+    "Memtrace: execute find_code...",
+    "Memtrace: execute get_changes_since...",
+]
+persistent_facts = [
+    "BEFORE editing any function, run get_impact...",
+]
+```
+
+**File format — Workflow skills (`[workflow]`):**
+```toml
+# {install_scope_path}/bmad-{workflow-name}.toml
 [workflow]
 activation_steps_prepend = [
     "Memtrace: execute get_evolution on the current branch...",
@@ -661,19 +946,29 @@ persistent_facts = [
 
 **Agents and their automatic activations:**
 
-| File | Agent | Runs automatically on start |
-|------|-------|---------------------------|
-| `bmad-dev-story.toml` | Amelia — Dev (`/bmad-agent-dev`) | `get_codebase_briefing` + `find_code` on the feature |
-| `bmad-code-review.toml` | Amelia — Dev (`/bmad-code-review`) | `get_evolution` on branch + `find_most_complex_functions` vs main |
-| `bmad-retrospective.toml` | Amelia — Dev (`/bmad-retrospective`) | `get_evolution` + `find_most_complex_functions` + `find_dead_code` + `find_central_symbols` |
-| `bmad-tea.toml` | Murat — QA (`/bmad-tea`) | `list_processes` + `find_symbol` on exported functions |
-| `bmad-sprint-planning.toml` | Amelia — Dev (`/bmad-sprint-planning`) | `get_codebase_briefing` + `find_most_complex_functions` |
-| `bmad-correct-course.toml` | Amelia — Dev (`/bmad-correct-course`) | `get_evolution` since sprint start + `get_impact` on new targets |
-| `bmad-agent-pm.toml` | John — PM (`/bmad-agent-pm`) | `get_codebase_briefing` + `find_most_complex_functions` |
-| `bmad-agent-architect.toml` | Winston — Architect (`/bmad-agent-architect`) | `list_communities` + `get_api_topology` |
-| `bmad-quick-dev.toml` | Amelia — Dev (`/bmad-quick-dev`) | `find_code` with the error message |
+| File | Section | Agent | Runs automatically on start |
+|------|---------|-------|---------------------------|
+| `bmad-dev-story.toml` | `[workflow]` | Amelia — Dev (`/bmad-agent-dev`) | `get_codebase_briefing` + `find_code` on the feature |
+| `bmad-agent-dev.toml` | `[agent]` | Amelia — Dev (`/bmad-agent-dev`) | `get_codebase_briefing` + `find_code` on the feature + `get_changes_since` |
+| `bmad-code-review.toml` | `[workflow]` | Amelia — Dev (`/bmad-code-review`) | `get_evolution` on branch + `find_most_complex_functions` vs main |
+| `bmad-retrospective.toml` | `[workflow]` | Amelia — Dev (`/bmad-retrospective`) | `get_evolution` + `find_most_complex_functions` + `find_dead_code` + `find_central_symbols` |
+| `bmad-tea.toml` | `[agent]` | Murat — QA (`/bmad-tea`) | `list_processes` + `find_symbol` on exported functions |
+| `bmad-sprint-planning.toml` | `[workflow]` | Amelia — Dev (`/bmad-sprint-planning`) | `get_codebase_briefing` + `find_most_complex_functions` |
+| `bmad-correct-course.toml` | `[workflow]` | Amelia — Dev (`/bmad-correct-course`) | `get_evolution` since sprint start + `get_impact` on new targets |
+| `bmad-agent-pm.toml` | `[agent]` | John — PM (`/bmad-agent-pm`) | `get_codebase_briefing` + `find_most_complex_functions` |
+| `bmad-agent-architect.toml` | `[agent]` | Winston — Architect (`/bmad-agent-architect`) | `list_communities` + `get_api_topology` |
+| `bmad-quick-dev.toml` | `[workflow]` | Amelia — Dev (`/bmad-quick-dev`) | `find_code` with the error message |
+| `bmad-create-epics-and-stories.toml` | `[workflow]` | John — PM (`/bmad-agent-pm`) | `get_codebase_briefing` + `list_communities` + `find_most_complex_functions` |
+| `bmad-create-story.toml` | `[workflow]` | John — PM or Amelia — Dev | `get_codebase_briefing` + `get_symbol_context` on dependencies |
+| `bmad-create-architecture.toml` | `[workflow]` | Winston — Architect (`/bmad-agent-architect`) | `list_communities` + `get_api_topology` + `find_bridge_symbols` |
+| `bmad-check-implementation-readiness.toml` | `[workflow]` | Winston — Architect (`/bmad-agent-architect`) | `get_impact` on each story target + `get_api_topology` + `list_communities` |
+| `bmad-document-project.toml` | `[workflow]` | Paige — Tech Writer (`/bmad-agent-tech-writer`) | `get_codebase_briefing(detail_level='full')` + `list_communities` + `list_processes` + `find_central_symbols` |
+| `bmad-generate-project-context.toml` | `[workflow]` | Amelia — Dev (`/bmad-agent-dev`) | `get_codebase_briefing(detail_level='full')` + `list_communities` |
+| `bmad-qa-generate-e2e-tests.toml` | `[workflow]` | Murat — QA (`/bmad-tea`) | `list_processes` + `get_process_flow` on each uncovered process |
 
-**For each accepted agent:** create the corresponding `.toml` file with `activation_steps_prepend` + `persistent_facts`.
+> ⚠️ **`bmad-technical-research` is conditional** — do NOT create a default `.toml` for it. The agent must evaluate the research topic first (see Section 2.14). Only if the topic involves the CURRENT codebase should Memtrace tools be used. This is implemented as a `persistent_fact` rule rather than `activation_steps_prepend`.
+
+**For each file listed above:** create the corresponding `.toml` file with `activation_steps_prepend` + `persistent_facts`. Use the Section column to determine whether the file uses `[agent]` or `[workflow]` as the root TOML key.
 
 ---
 
@@ -703,12 +998,27 @@ Files created at {install_scope_path}:
 | File | Agent | Level |
 |------|-------|-------|
 | bmad-dev-story.toml | Amelia — /bmad-agent-dev | 1 + 2 |
+| bmad-agent-dev.toml | Amelia — /bmad-agent-dev | 1 + 2 |
 | bmad-code-review.toml | Amelia — /bmad-code-review | 1 + 2 |
-| ... | ... | ... |
+| bmad-retrospective.toml | Amelia — /bmad-retrospective | 1 + 2 |
+| bmad-tea.toml | Murat — /bmad-tea | 1 + 2 |
+| bmad-sprint-planning.toml | Amelia — /bmad-sprint-planning | 1 + 2 |
+| bmad-correct-course.toml | Amelia — /bmad-correct-course | 1 + 2 |
+| bmad-agent-pm.toml | John — /bmad-agent-pm | 1 + 2 |
+| bmad-agent-architect.toml | Winston — /bmad-agent-architect | 1 + 2 |
+| bmad-quick-dev.toml | Amelia — /bmad-quick-dev | 1 + 2 |
+| bmad-create-epics-and-stories.toml | John — /bmad-agent-pm | 1 + 2 |
+| bmad-create-story.toml | John or Amelia — /bmad-agent-pm or /bmad-agent-dev | 1 + 2 |
+| bmad-create-architecture.toml | Winston — /bmad-agent-architect | 1 + 2 |
+| bmad-check-implementation-readiness.toml | Winston — /bmad-agent-architect | 1 + 2 |
+| bmad-document-project.toml | Paige — /bmad-agent-tech-writer | 1 + 2 |
+| bmad-generate-project-context.toml | Amelia — /bmad-agent-dev | 1 + 2 |
+| bmad-qa-generate-e2e-tests.toml | Murat — /bmad-tea | 1 + 2 |
 
 📋 Level 1 (activation_steps_prepend): Tools that run AUTOMATICALLY on workflow start
 📋 Level 2 (persistent_facts): Instructions the agent considers throughout the session
 ⚠️  Level 3 (CI gates): Generated but NOT applied — review .github/workflows/ci.yml
+🔬 bmad-technical-research: Conditional rule added — Memtrace used only when topic involves current codebase
 
 🔄 Integrations survive `bmad update` (override files, not SKILL.md).
 🗑️  To remove, delete the corresponding .toml file.
