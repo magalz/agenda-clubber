@@ -129,6 +129,10 @@ Foco na base de dados de artistas com fricção zero para produtores. Produtores
 O núcleo de inteligência coletiva e o calendário reativo. Produtores planejam eventos com visibilidade de riscos (Verde/Amarelo/Vermelho) via motor de regras centralizado no backend. Linguagem de "Proteção, não Censura".
 **FRs covered:** FR14, FR15, FR16, FR17, FR18, FR21, FR22, FR23, FR24.
 
+### Epic Housekeeping: Estabilização Estrutural e Qualidade (Pré-Épico 4)
+Dívida técnica, fragilidade de CI, complexidade de código e tracking de débitos identificados na Retrospectiva do Épico 3. **Bloqueador para:** Épico 4 — não deve iniciar antes da conclusão deste épico.
+**Stories:** HK.1 (refatorar DayDetailSheet + updateEvent), HK.2 (corrigir divergência RLS + race condition), HK.3 (limpeza de dead code), HK.4 (pipeline CI 2.0 + unificação DB), HK.5 (gate de QA automatizado), HK.6 (migrar tracking → GitHub Issues), HK.7 (resolver test.fixme).
+
 ### Epic 4: Mensageria e Notificações Assíncronas (WhatsApp/Email)
 Comunicação cirúrgica e resolução bilateral de conflitos. Notificações de choque crítico enviadas via Bot em background. Painel lateral de resolução com contatos diretos (WhatsApp/Instagram) para negociação.
 **FRs covered:** FR19, FR25, FR26.
@@ -446,6 +450,117 @@ So that I can reflect on the impact on the collective scene.
 **Then** the system must show the message: **"Confirmar evento mesmo com conflitos críticos?"**
 **And** the button must enter a "Counting" state for 3 seconds with a visual progress bar (UX-DR6)
 **And** the user must be able to cancel during the countdown.
+
+## Epic Housekeeping: Estabilização Estrutural e Qualidade (Pré-Épico 4)
+
+Resolver dívida técnica, fragilidade de CI, complexidade de código e tracking de débitos identificados na Retrospectiva do Épico 3 (05/05/2026). **Épico 4 não deve iniciar antes da conclusão deste épico.**
+
+### Story HK.1: Refatorar DayDetailSheet e updateEvent
+
+As a developer,
+I want to reduce the cognitive complexity of `DayDetailSheet` and `updateEvent`,
+So that the codebase is maintainable and safe before adding new features in Epic 4.
+
+**Acceptance Criteria:**
+
+**Given** the current codebase after Epic 3
+**When** this story is executed
+**Then** `DayDetailSheet` (~230 linhas, cognitive 17) must be split into subcomponents with single responsibilities
+**And** `updateEvent` (cognitive 28, HIGH RISK) must be reduced to cognitive complexity < 15
+**And** all 371 existing tests must continue passing
+**And** no regressions in calendar grid, event registration, or conflict detection flows.
+
+### Story HK.2: Corrigir Divergência RLS e Race Condition Zustand
+
+As a developer,
+I want to align the RLS policy with the app-layer visibility logic and fix race conditions,
+So that privacy enforcement is consistent and data integrity is guaranteed.
+
+**Acceptance Criteria:**
+
+**Given** the `events_select_policy` RLS and app-layer `filterEventForViewer`
+**When** this story is executed
+**Then** RLS must not block rows where `genrePrimary` should be visible per app-layer
+**And** the race condition in Zustand `queryFn` → `setCrossEvents` must be resolved with proper state synchronization
+**And** existing privacy tests must pass without modification
+**And** cross-collective visibility must work correctly end-to-end.
+
+### Story HK.3: Limpeza de Dead Code
+
+As a developer,
+I want to remove unused code and dependencies,
+So that the codebase is lean, faster to parse, and easier to navigate.
+
+**Acceptance Criteria:**
+
+**Given** the Memtrace report identifying ~80 dead-code candidates
+**When** this story is executed
+**Then** all unused Shadcn UI components must be removed
+**And** unused utility functions, types, and imports must be cleaned
+**And** the build must succeed with no new TypeScript errors
+**And** all 371 existing tests must continue passing.
+
+### Story HK.4: Pipeline CI 2.0 e Unificação de Migração DB
+
+As a developer,
+I want a robust CI pipeline with deterministic E2E tests and unified database migration,
+So that CI is fast, reliable, and production-synced.
+
+**Acceptance Criteria:**
+
+**Given** the current GitHub Actions workflow and dual migration paths (CI vs Vercel)
+**When** this story is executed
+**Then** CI and production must use the same migration mechanism (`drizzle-kit migrate`)
+**And** Node.js 22 must be used consistently across all environments
+**And** E2E seed must be deterministic (replace `ON CONFLICT DO UPDATE` with `DELETE` + `INSERT`)
+**And** CI jobs must be parallelized with optimized caching
+**And** the full pipeline must complete in under 10 minutes.
+
+### Story HK.5: Gate de QA Automatizado no Ciclo de Story
+
+As a developer,
+I want an automated QA gate integrated into the story lifecycle,
+So that quality issues are caught before code review, preventing post-merge hardening.
+
+**Acceptance Criteria:**
+
+**Given** the BMad developer workflow (CS → VS → DS → CR)
+**When** this story is executed
+**Then** the QA agent (Murat/bmad-tea) must be configured for invocation during the story cycle
+**And** a maturity checklist must be defined and added to the story file template
+**And** the CI pipeline (HK.4) must include a QA check step
+**And** the QA workflow must be documented for future stories.
+
+### Story HK.6: Migrar Tracking de Débito para GitHub Issues
+
+As a developer,
+I want all technical debt tracked in GitHub Issues instead of scattered markdown files,
+So that the team has a single source of truth with proper labeling and prioritization.
+
+**Acceptance Criteria:**
+
+**Given** the 25 tech debt items and 5 product decisions from Epic 3 retrospective
+**When** this story is executed
+**Then** all 30 items must be created as GitHub Issues with appropriate labels (`tech-debt`, `decision-pending`, severity: `critical`/`high`/`medium`/`low`)
+**And** a `tech-debt.yaml` index file must be created for programmatic access
+**And** the `deferred-work.md` file must be deprecated with a note pointing to GitHub Issues
+**And** the issue creation must be automated via a script (not manual entry).
+
+### Story HK.7: Resolver Todos os test.fixme
+
+As a developer,
+I want all 8 skipped E2E tests passing in CI,
+So that the test suite provides full confidence before Epic 4 begins.
+
+**Acceptance Criteria:**
+
+**Given** the current 8 `test.fixme` across 4 E2E spec files
+**When** this story is executed
+**Then** the "Supabase unreachable" issue must be root-caused and fixed for Server Action tests
+**And** the seed flake (`ON CONFLICT DO UPDATE` zeroing bio) must be resolved (via HK.4 deterministic seed)
+**And** conflict detection tests (RED/YELLOW/GREEN) must pass in CI
+**And** all 371+ unit tests must continue passing
+**And** zero `test.fixme` or `test.skip` must remain in the Playwright suite.
 
 ## Epic 4: Mensageria e Notificações Assíncronas (WhatsApp/Email)
 
