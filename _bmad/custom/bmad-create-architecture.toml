@@ -1,0 +1,19 @@
+# Memtrace x BMAD integration — Create Architecture (Winston)
+# Architecture design backed by real code structure from the graph.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[workflow]
+activation_steps_prepend = [
+    "Memtrace: execute list_communities — baseline of current logical modules. New architecture must account for existing community boundaries.",
+    "Memtrace: execute get_api_topology — current cross-service dependency map. New architecture must not increase coupling without explicit benefit.",
+    "Memtrace: execute find_bridge_symbols — identify current architectural chokepoints (high betweenness centrality). Design to minimize new bridges.",
+]
+
+persistent_facts = [
+    "Community alignment: compare proposed module boundaries against list_communities output. If the new design splits an existing community, surface the refactoring cost explicitly — splitting communities implies code reorganization.",
+    "Impact estimation: run get_impact on any symbol that would move between modules under the new architecture. Blast radius = migration cost to include in the design document.",
+    "Bridge minimization: run find_bridge_symbols and identify which would be created or removed by the new architecture. Bridges are high-maintenance chokepoints — the design should minimize them. Each proposed bridge needs explicit justification.",
+    "Service boundary validation: from get_api_topology, confirm the new architecture doesn't increase cross-service dependencies without explicit benefit. New dependencies = new failure modes.",
+    "Load-bearing awareness: cross-reference proposed architecture with find_central_symbols top-15. Load-bearing symbols must remain in stable modules, not experimental ones.",
+    "Architecture document rule: every module boundary decision must reference graph data (community name, symbol count, edge count). No hand-wavy justifications.",
+]

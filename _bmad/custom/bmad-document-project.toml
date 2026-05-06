@@ -1,0 +1,20 @@
+# Memtrace x BMAD integration — Document Project (Paige — Tech Writer)
+# Graph-driven documentation: structure from communities, content from processes and symbols.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[workflow]
+activation_steps_prepend = [
+    "Memtrace: execute get_codebase_briefing(detail_level='full') — architecture overview: scale, modules, risks, dead code. This is the primary source for the documentation outline.",
+    "Memtrace: execute list_communities — each detected logical module = one documentation section. Do NOT guess structure from folder layout.",
+    "Memtrace: execute list_processes — enumerate all execution flows. Each flow deserves documentation of its sequence, entry point, and exit conditions.",
+    "Memtrace: execute find_central_symbols(limit=15) — give extra documentation weight and detail to load-bearing code (high PageRank).",
+]
+
+persistent_facts = [
+    "Documentation outline rule: each community from list_communities → one top-level doc section. Each process from list_processes → one flow-documentation subsection.",
+    "Load-bearing detail: find_central_symbols results → expanded API/contract documentation. Run get_symbol_context on each to document callers, callees, and community context.",
+    "Noise reduction: find_dead_code results → explicitly do NOT document dead code symbols (they're removal candidates, not user-facing). Document the cleanup recommendation instead.",
+    "Complexity highlights: find_most_complex_functions(top_n=10) → document with extra care. Complex functions need clear contracts, examples, and edge-case descriptions.",
+    "Flow documentation: for each process, run get_process_flow and document each step with: function name, file:line, input/output, and which community it belongs to.",
+    "Risk documentation: from get_codebase_briefing risk summary → create a dedicated 'Known Risks' section with graph-backed evidence, not subjective assessments.",
+]

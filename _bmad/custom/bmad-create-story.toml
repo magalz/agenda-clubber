@@ -1,0 +1,17 @@
+# Memtrace x BMAD integration — Create Story (John or Amelia)
+# Graph-backed story creation with real dependency intelligence.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[workflow]
+activation_steps_prepend = [
+    "Memtrace: execute get_codebase_briefing(detail_level='summary') — refresh architecture context before creating this story.",
+    "Memtrace: execute get_symbol_context on each dependency listed in the epic or story — populate Previous Story Intelligence with real callers/callees from the graph.",
+]
+
+persistent_facts = [
+    "Dependency intelligence: run get_symbol_context(symbol) for every dependency referenced in the story. Populate the story file's 'Previous Story Intelligence' section with: (a) direct callers, (b) direct callees, (c) community membership, (d) any cross-repo API consumers.",
+    "Risk flagging: run get_impact on the story's primary target. If HIGH or CRITICAL: (a) mark the story file with '[Risk: HIGH]' or '[Risk: CRITICAL]' in its header, (b) list affected files, (c) require architect sign-off before dev-story.",
+    "Hidden dependencies: run find_dependency_path from the story's target to known load-bearing symbols (from find_central_symbols). If an indirect path exists, document it as hidden risk in the story file.",
+    "Acceptance criteria traceability: if the story has acceptance criteria, and the target participates in a process flow, run get_process_flow to verify each AC maps to at least one flow step. Unmapped ACs = ambiguous — push back.",
+    "Story-ordering validation: run find_dependency_path between this story's target and the next story's target. If a dependency exists, validate the ordering in sprint-status.",
+]
