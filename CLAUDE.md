@@ -1,5 +1,11 @@
 # Agenda Clubber — Claude Code Rules
 
+## Comandos de Shell
+
+- **Python:** use `python` (NÃO `python3`). Este é um ambiente Windows onde o binário é `python`.
+- **Scripts BMad:** execute scripts com `python _bmad/scripts/<script>.py` a partir da raiz do projeto.
+- **PowerShell:** use cmdlets nativos (`Get-ChildItem`, `Remove-Item`, etc.) quando sugerir comandos ao usuário.
+
 ## Sync Obrigatório ao Início de Sessão
 
 **OBRIGATÓRIO:** Qualquer sessão que acesse artefatos de projeto (sprint-status, story files, planning artifacts) deve executar os comandos abaixo antes de qualquer leitura de estado:
