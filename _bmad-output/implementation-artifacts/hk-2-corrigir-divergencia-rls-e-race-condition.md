@@ -1,6 +1,6 @@
 # Story HK.2: Corrigir Divergência RLS e Race Condition Zustand
 
-Status: review
+Status: done
 
 ## Story
 
@@ -232,3 +232,33 @@ opencode-go/deepseek-v4-flash
 ### Change Log
 
 - **2026-05-06:** RLS simplificada em `010_events_rls.sql` + nova migração `011_fix_rls_divergence.sql`. Race condition corrigida em `hooks.ts` (setCrossEvents movido de queryFn para useEffect). 418 testes passam, type-check zero, lint zero.
+
+### Review Findings
+
+#### Code Review (2026-05-06)
+
+**Layers executed:** Blind Hunter (Gemini), Edge Case Hunter (Gemini), Acceptance Auditor (Gemini)
+**Total findings:** 13 (10 dismissed, 1 deferred, 2 merged)
+
+##### Deferred
+
+- [x] [Review][Defer] Missing schema qualifier `ON public.events` in migration `011_fix_rls_divergence.sql:5` — deferred, pre-existing pattern across all migrations (010, 011, etc.). Systemic issue, not specific to HK.2.
+
+##### Dismissed
+
+- [x] [Review][Dismiss] Modifying past migration 010 — spec explicitly required T1.1 edit. 011 migration is production-safe form (DROP+CREATE). 010 edit is documentation-only.
+- [x] [Review][Dismiss] Redundant migration strategy — 010 edit + 011 migration both specified in T1.1/T1.2. Complementary, not redundant.
+- [x] [Review][Dismiss] RLS bypass security vulnerability — Server Actions use `service_role` (bypass RLS). RLS is defense-in-depth; app-layer masking is primary. Documented in spec.
+- [x] [Review][Dismiss] Anti-pattern: TanStack Query → Zustand sync — Established project architecture. Zustand needed for realtime-mutable state merge. Documented in spec.
+- [x] [Review][Dismiss] UI flicker via useEffect — useEffect fires in same microtask as TanStack cache commit. React batches state updates.
+- [x] [Review][Dismiss] Silent failure on errors — Pre-existing behavior. `if (query.data)` preserves last-good data on transient errors — correct for read-only queries.
+- [x] [Review][Dismiss] Unmemoized array reference — `dateIsoStrings` only used in `queryKey`; TanStack uses structural comparison. useMemo unnecessary.
+- [x] [Review][Dismiss] Infinite loop risk — Zustand selectors return stable references. `setCrossEvents` is referentially stable.
+- [x] [Review][Dismiss] Desynchronized loading states — Components read `query` directly for loading states (TanStack Query). Zustand only used for merge.
+- [x] [Review][Dismiss] Client fetches planning events → private data over network — Merged with RLS finding. App-layer masking is primary; RLS is defense-in-depth.
+- [x] [Review][Dismiss] fetchCrossCollectiveEvents error → stale data — Same as silent-failure finding. Guard preserves last-successful data correctly.
+- [x] [Review][Dismiss] dates becomes empty → stale events persist — Query disabled by `enabled: dates.length > 0`. Clearing on transient empty range would be worse UX.
+
+##### Acceptance Auditor
+
+**0 violations.** All 3 ACs verified satisfied. FilterEventForViewer, EventCard, DayDetailSheet, Zustand store — all unmodified as required. TanStack Query remains source of truth.

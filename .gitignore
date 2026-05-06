@@ -10,6 +10,9 @@
 !.yarn/releases
 !.yarn/versions
 
+# memtrace session logs — lessons learned, usage patterns, feedback for devs
+/memtrace-session-log*.md
+
 # testing
 /coverage
 

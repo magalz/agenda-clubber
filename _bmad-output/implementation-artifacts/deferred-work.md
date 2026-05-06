@@ -20,3 +20,9 @@ Issues adiadas deliberadamente para ciclos futuros. Cada entrada referencia um t
   - Limpar tabela `artists` no início do `global-setup.ts` (`DELETE WHERE slug IN ('test-dj', ...)`) para garantir seed limpo a cada run
   - Considerar remover `Suspense` do `page.tsx` de `/artists/[slug]` (documentado in-deferred pelo autor original)
 
+---
+
+## Deferred from: code review of hk-2-corrigir-divergencia-rls-e-race-condition (2026-05-06)
+
+- **[BH-7] Missing schema qualifier `ON public.events`** — Migrations 010 e 011 usam `ON events` sem qualificador de schema `public.`. Pattern pre-existente em todas as migrations. Risco: search_path diferente em ambientes complexos de CI. Recomendação: story dedicada para auditar e corrigir todas as migrations (`ON public.<table>`).
+
