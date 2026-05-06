@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { EventCard } from './event-card';
 import type { CalendarEvent } from '../types';
 
@@ -242,5 +243,45 @@ describe('EventCard', () => {
         );
 
         expect(screen.getByText('Festa Techno')).toBeDefined();
+    });
+
+    it('calls onStatusChange with confirmed when clicking confirm button on planning+green event', async () => {
+        const user = userEvent.setup();
+        const onStatusChange = vi.fn();
+
+        render(
+            <EventCard
+                event={{ ...baseEvent, status: 'planning', conflictLevel: 'green' }}
+                collectiveId="coll-a"
+                isStatusPending={false}
+                isTogglePending={false}
+                onStatusChange={onStatusChange}
+                onToggleVisibility={vi.fn()}
+            />
+        );
+
+        await user.click(screen.getByText('Confirmar evento'));
+
+        expect(onStatusChange).toHaveBeenCalledWith('ev-1', 'confirmed');
+    });
+
+    it('calls onStatusChange with planning when clicking "Reabrir planejamento" on confirmed event', async () => {
+        const user = userEvent.setup();
+        const onStatusChange = vi.fn();
+
+        render(
+            <EventCard
+                event={baseEvent}
+                collectiveId="coll-a"
+                isStatusPending={false}
+                isTogglePending={false}
+                onStatusChange={onStatusChange}
+                onToggleVisibility={vi.fn()}
+            />
+        );
+
+        await user.click(screen.getByText('Reabrir planejamento'));
+
+        expect(onStatusChange).toHaveBeenCalledWith('ev-1', 'planning');
     });
 });

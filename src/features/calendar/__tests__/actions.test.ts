@@ -80,7 +80,7 @@ function setupUpdateChain() {
 setupUpdateChain();
 
 import { createEvent, updateEvent, updateEventStatus } from '../actions';
-import { authorizeAndFetchEvent, buildUpdateData, recomputeConflicts } from '../helpers';
+import { authorizeAndFetchEvent, buildUpdateData, recomputeConflicts, calculateEventDateUtc } from '../helpers';
 
 describe('createEvent', () => {
     const validInput = {
@@ -791,6 +791,22 @@ describe('buildUpdateData', () => {
         expect(result.isLocationPublic).toBe(true);
         expect(result.isLineupPublic).toBeUndefined();
     });
+
+    it('handles simultaneous location and date changes', async () => {
+        mockGeocode.mockResolvedValue({
+            lat: -22.9068,
+            lng: -43.1729,
+            displayName: 'Rio de Janeiro, Brazil',
+        });
+        mockResolveTimezone.mockResolvedValue('America/Sao_Paulo');
+
+        const result = await buildUpdateData({ location: 'Rio de Janeiro', eventDate: '2026-07-01' }, baseExisting as never);
+
+        expect(result.locationName).toBe('Rio de Janeiro');
+        expect(result.eventDate).toBe('2026-07-01');
+        expect(result.eventDateUtc).toBeInstanceOf(Date);
+        expect(mockGeocode).toHaveBeenCalledWith('Rio de Janeiro');
+    });
 });
 
 describe('recomputeConflicts', () => {
@@ -830,5 +846,34 @@ describe('recomputeConflicts', () => {
         await recomputeConflicts('event-uuid-123', '2026-06-15', '2026-06-15');
 
         expect(mockUpdate).toHaveBeenCalled(); // fallback UPDATE
+    });
+});
+
+describe('calculateEventDateUtc', () => {
+    it('returns a valid Date for a given date and timezone', () => {
+        const result = calculateEventDateUtc('2026-06-15', 'America/Sao_Paulo');
+
+        expect(result).toBeInstanceOf(Date);
+        expect(result.getTime()).not.toBeNaN();
+    });
+
+    it('calculates correct UTC offset for America/Sao_Paulo (UTC-3)', () => {
+        const result = calculateEventDateUtc('2026-06-15', 'America/Sao_Paulo');
+
+        // Noon in SP (UTC-3) = 15:00 UTC
+        expect(result.getUTCFullYear()).toBe(2026);
+        expect(result.getUTCMonth()).toBe(5); // June
+        expect(result.getUTCDate()).toBe(15);
+        expect(result.getUTCHours()).toBe(15);
+    });
+
+    it('calculates correct UTC offset for positive timezone (Europe/Paris, UTC+2 in summer)', () => {
+        const result = calculateEventDateUtc('2026-06-15', 'Europe/Paris');
+
+        // Noon in Paris (UTC+2 in summer) = 10:00 UTC
+        expect(result.getUTCFullYear()).toBe(2026);
+        expect(result.getUTCMonth()).toBe(5);
+        expect(result.getUTCDate()).toBe(15);
+        expect(result.getUTCHours()).toBe(10);
     });
 });

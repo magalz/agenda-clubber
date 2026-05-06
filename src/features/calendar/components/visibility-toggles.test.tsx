@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { VisibilityToggles } from './visibility-toggles';
 
 describe('VisibilityToggles', () => {
@@ -70,5 +71,47 @@ describe('VisibilityToggles', () => {
         expect(nameCb.getAttribute('data-state')).toBe('checked');
         expect(locationCb.getAttribute('data-state')).toBe('unchecked');
         expect(lineupCb.getAttribute('data-state')).toBe('checked');
+    });
+
+    it('calls onToggle with eventId, field, and value when checkbox is clicked', async () => {
+        const user = userEvent.setup();
+        const onToggle = vi.fn();
+
+        render(
+            <VisibilityToggles
+                eventId="ev-1"
+                isNamePublic={true}
+                isLocationPublic={false}
+                isLineupPublic={false}
+                disabled={false}
+                onToggle={onToggle}
+            />
+        );
+
+        const checkboxes = screen.getAllByRole('checkbox');
+        await user.click(checkboxes[0]);
+
+        expect(onToggle).toHaveBeenCalledWith('ev-1', 'isNamePublic', false);
+    });
+
+    it('does not call onToggle when disabled', async () => {
+        const user = userEvent.setup();
+        const onToggle = vi.fn();
+
+        render(
+            <VisibilityToggles
+                eventId="ev-1"
+                isNamePublic={true}
+                isLocationPublic={false}
+                isLineupPublic={false}
+                disabled={true}
+                onToggle={onToggle}
+            />
+        );
+
+        const checkboxes = screen.getAllByRole('checkbox');
+        await user.click(checkboxes[0]);
+
+        expect(onToggle).not.toHaveBeenCalled();
     });
 });
