@@ -114,6 +114,63 @@ The manual `replay_history` → `index_directory` dance after every commit is fr
 
 ---
 
+# Memtrace Session Log — Create Story HK.1
+
+**Epic:** epic-housekeeping
+**Process:** criação de story hk-1 (create-story workflow)
+**Session:** 2026-05-06 · Context engine — análise para story file HK.1
+**Agent:** opencode-go/deepseek-v4-flash
+**Commits:** `6ed328d`
+
+---
+
+## 1. How Memtrace Was Used
+
+| Phase | Tool Call | Purpose |
+|-------|-----------|---------|
+| Activation | `get_codebase_briefing` | Repo scale, modules, high-risk symbols before creating story |
+| Dep. intelligence | `get_symbol_context(updateEvent)` | Callers (1), callees (6), processo (CollectiveDashboardPageProcess) |
+| Dep. intelligence | `get_symbol_context(DayDetailSheet)` | Callers (1), callees (10), funções inline (isOwnEvent, renderEvent) |
+| Risk flagging | `get_impact(updateEvent)` | Blast radius: LOW → sem bloqueio arquitetural |
+| Risk flagging | `get_impact(DayDetailSheet)` | Blast radius: LOW → sem bloqueio arquitetural |
+| Source reading | `find_symbol(updateEvent)` | Localizar posição exata no código |
+| Source reading | `find_symbol(DayDetailSheet)` | Localizar posição exata no código |
+| Hidden deps | `find_dependency_path(DayDetailSheet→getViewerContext)` | Caminho indireto: DayDetailSheet → updateEvent → getViewerContext (depth 2) |
+| AC traceability | `get_process_flow(CollectiveDashboardPageProcess)` | 82 steps. updateEvent=step 20, DayDetailSheet=step 16. AC1 (subcomponentes) e AC2 (complexidade) mapeiam para steps distintos. |
+| Story ordering | `find_dependency_path(updateEvent→fetchCrossCollectiveEvents)` | SEM caminho → HK.1 e HK.2 são independentes, ordenação válida |
+
+## 2. What It Would Look Like Without Memtrace
+
+- **Dependency intelligence**: Read both `.ts` files + cross-reference imports manually to find all callers/callees of updateEvent
+- **Risk assessment**: No blast-radius data — would guess whether refactoring is safe
+- **Hidden deps**: Would not know that DayDetailSheet → updateEvent → getViewerContext is the auth chain; might extract only the obvious callers
+- **Process/AC mapping**: Would manually trace the 82-step dashboard flow — error-prone, easy to miss steps
+- **Story ordering**: Would assume HK.1 before HK.2 is correct based on intuition; no graph evidence
+
+## 3. Measurable Gains
+
+| Metric | With Memtrace | Without (estimate) |
+|--------|---------------|-------------------|
+| Time to map dependencies | 2 calls (`symbol_context`) | Reading 2 source files + grepping imports (~15 min) |
+| Hidden dependency chain discovered | DayDetailSheet → updateEvent → getViewerContext (load-bearing) | Would require reading all 3 files and tracing manually |
+| Process step mapping | 82 steps in 1 call | Manual tracing through 82+ function calls |
+| AC → flow mapping confidence | updateEvent (step 20) + DayDetailSheet (step 16) | "Parece que cobre" — sem evidência |
+| Story ordering validation | No path between HK.1 and HK.2 → independentes | Intuição sem dados |
+
+## 4. How It Could Be Used Better
+
+### 4.1. Process flow analysis antes do create-story
+
+`get_process_flow` foi chamado, mas apenas depois do story file criado. **Insight**: chamar `get_process_flow` ANTES de escrever o story file, para que os steps do fluxo já alimentem as ACs diretamente.
+
+### 4.2. find_central_symbols como input de hidden deps
+
+Os load-bearing symbols (`getViewerContext`, PageRank top-10) foram descobertos apenas no segundo round. **Insight**: rodar `find_central_symbols` no início e cross-referenciar com os targets da story — se um target depende de um símbolo central, isso é hidden risk não documentado.
+
+## 5. What is a good feature Memtrace could have to help me better?
+
+---
+
 # Memtrace Session Log — Story HK.2 (Create)
 
 **Epic:** epic-housekeeping
