@@ -1,0 +1,20 @@
+# Memtrace x BMAD integration — Retrospective workflow (Amelia)
+# Quantitative epic retrospective: scope, hotspots, dead code, load-bearing symbols.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[workflow]
+activation_steps_prepend = [
+    "Memtrace: execute get_evolution(mode='compound', from='<epic-start-date>') — quantify epic scope: symbols created, edges added, change episodes, top-changed files.",
+    "Memtrace: execute find_most_complex_functions(top_n=15) — identify highest-risk functions to convert into refactoring stories.",
+    "Memtrace: execute find_dead_code(limit=30) — turn candidates into a single housekeeping story with explicit file list.",
+    "Memtrace: execute find_central_symbols(limit=15) — mark load-bearing symbols. These require extra care when refactoring in the next epic.",
+    "Memtrace: execute list_communities — compare against folder structure. Folders that span multiple communities (or vice-versa) = god-modules to flag.",
+]
+
+persistent_facts = [
+    "When summarizing the epic: run get_codebase_briefing and compare metrics (nodes, edges, communities) against the pre-epic baseline if available. Deltas tell the structural story.",
+    "Tech-debt output rule: items must be catalogued by severity, origin (which story introduced it), and proposed owner — never ship 'we should clean up code' as an action item.",
+    "Refactoring-story output rule: each must include target symbol, current complexity, target complexity (< 15), file list, and estimated blast radius from get_impact.",
+    "Housekeeping-story output rule: cite the exact dead-code symbol list from find_dead_code so scope is unambiguous.",
+    "Risk register: load-bearing symbols (find_central_symbols) and bridges (find_bridge_symbols) discovered during the epic become entries in the next sprint's risk register.",
+]

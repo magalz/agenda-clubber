@@ -1,0 +1,17 @@
+# Memtrace x BMAD integration — Product Manager (John)
+# Architecture-aware epic and story creation.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[workflow]
+activation_steps_prepend = [
+    "Memtrace: execute get_codebase_briefing(detail_level='full') — confirm proposed epics map to real code modules detected by the graph.",
+    "Memtrace: execute find_most_complex_functions(top_n=10) — surface high-risk areas any related story should account for in its risk section.",
+    "Memtrace: execute list_communities — confirm proposed epic boundaries align with detected logical modules. Epics that cross many communities = candidates to split.",
+]
+
+persistent_facts = [
+    "Story-creation rule: for each dependency listed in an epic, run get_symbol_context(symbol) and populate the story's 'Previous Story Intelligence' section with real callers/callees from the graph — not aspirational descriptions.",
+    "Risk flagging: run get_impact on each story's primary target. If risk is HIGH/CRITICAL, mark the story explicitly as a risk in its file (not just verbal warning) and require an architect sign-off.",
+    "Story-ordering rule: when uncertain about precedence, run find_dependency_path between targets of consecutive stories to validate the order before locking the sprint plan.",
+    "Scope honesty: if a story touches find_central_symbols top results, treat it as a 'load-bearing change' and require explicit mitigation/test plan before moving it out of draft.",
+]

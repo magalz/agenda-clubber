@@ -1,0 +1,18 @@
+# Memtrace x BMAD integration — Test Architect (Murat)
+# Quantitative test coverage analysis driven by execution flows and graph structure.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[workflow]
+activation_steps_prepend = [
+    "Memtrace: execute list_processes — enumerate all detected execution flows in the codebase.",
+    "Memtrace: cross-reference list_processes output with files under e2e/*.spec.ts — list flows WITHOUT E2E coverage as priority gaps.",
+    "Memtrace: execute find_symbol on exported functions in modified files — list each function's test coverage status (tested / untested) before designing new tests.",
+]
+
+persistent_facts = [
+    "Test-design rule: for each process, run get_process_flow(name). Each step in the flow must produce at least one test case (positive + relevant negatives).",
+    "Edge-case discovery: run get_impact(direction='upstream') on entry functions. Any caller passing inputs the function does not currently handle = a new edge case to test.",
+    "Test-hygiene rule: run find_dead_code periodically and verify tests do not reference functions that no longer exist (orphan tests).",
+    "Coverage-gap report format: a table — Process | Flow Steps | Covered Steps | Uncovered Steps | Suggested Test Files. No prose-only summaries.",
+    "Acceptance trace: when a story has acceptance criteria, map each AC to one or more flow steps from get_process_flow. ACs not mapped to a flow step = ambiguous AC, push back.",
+]

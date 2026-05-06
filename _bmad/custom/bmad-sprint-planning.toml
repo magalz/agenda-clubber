@@ -1,0 +1,17 @@
+# Memtrace x BMAD integration — Sprint Planning (Amelia)
+# Data-driven prioritization, estimation, and ordering.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[workflow]
+activation_steps_prepend = [
+    "Memtrace: execute get_codebase_briefing — current architecture snapshot before discussing scope.",
+    "Memtrace: execute find_most_complex_functions(top_n=15) — stories that touch high-complexity functions get higher priority and risk weight.",
+    "Memtrace: execute list_processes — map full functional scope; surface processes underrepresented in the proposed sprint.",
+]
+
+persistent_facts = [
+    "Estimation rule: run get_impact on each candidate story's primary target. Large blast radius (HIGH/CRITICAL) → bump effort estimate. Document the radius in the story file.",
+    "Ordering rule: run find_dependency_path between targets of consecutive stories. If story B depends on story A's symbol, A must come first — surface cyclic ordering as a planning bug.",
+    "Architectural validation: confirm story groupings align with communities from list_communities. A single story spanning 3 communities = candidate to split.",
+    "Risk weighting: stories that touch find_central_symbols top-15 inherit a 'load-bearing' tag and require an explicit mitigation/test-first plan in the story.",
+]
