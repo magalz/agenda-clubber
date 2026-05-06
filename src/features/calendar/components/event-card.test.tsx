@@ -9,6 +9,15 @@ vi.mock('./ethical-delay-button', () => ({
     ),
 }));
 
+vi.mock('../logic/visibility', () => ({
+    filterEventForViewer: vi.fn((event: { name: string; locationName: string; lineup: string[] }) => ({
+        ...event,
+        name: 'Nome não revelado',
+        locationName: 'Local não revelado',
+        lineup: [],
+    })),
+}));
+
 const baseEvent: CalendarEvent = {
     id: 'ev-1',
     collectiveId: 'coll-a',
@@ -194,5 +203,44 @@ describe('EventCard', () => {
         );
 
         expect(screen.getByText(/DJ X/)).toBeDefined();
+    });
+
+    it('masks name with lock icon for cross-collective planning events', () => {
+        render(
+            <EventCard
+                event={{
+                    ...baseEvent,
+                    collectiveId: 'other-coll',
+                    status: 'planning',
+                    isNamePublic: false,
+                    isLocationPublic: false,
+                    isLineupPublic: false,
+                }}
+                collectiveId="my-coll"
+                isStatusPending={false}
+                isTogglePending={false}
+                onStatusChange={vi.fn()}
+                onToggleVisibility={vi.fn()}
+            />
+        );
+
+        expect(screen.getByText('Nome não revelado')).toBeDefined();
+        expect(screen.getByLabelText('Nome não revelado')).toBeDefined();
+        expect(screen.queryByText('Festa Techno')).toBeNull();
+    });
+
+    it('does not crash when lineup is null', () => {
+        render(
+            <EventCard
+                event={{ ...baseEvent, lineup: null as unknown as string[] }}
+                collectiveId="coll-a"
+                isStatusPending={false}
+                isTogglePending={false}
+                onStatusChange={vi.fn()}
+                onToggleVisibility={vi.fn()}
+            />
+        );
+
+        expect(screen.getByText('Festa Techno')).toBeDefined();
     });
 });

@@ -171,16 +171,33 @@ opencode-go/deepseek-v4-flash
 
 ### Debug Log References
 
+### Code Review Results (Gemini, 3 layers)
+
+**Layer 1 — Blind Hunter:**
+- MUST-FIX: 3 helpers exportados de `'use server'` → movidos para `helpers.ts` (sem `'use server'`)
+
+**Layer 2 — Edge Case Hunter:**
+- MUST-FIX: `displayEvent.lineup.length` sem optional chaining → corrigido com `?.`
+- Falso positivo (descartado): `buildUpdateData` "sempre seta locationName" — o código tem `if (location !== existing.locationName)`, condicional correto
+
+**Layer 3 — Acceptance Auditor:**
+- AC 1, 2, 3: PASS
+- MUST-FIX: null lineup crash (same fix as Layer 2)
+- SHOULD-FIX: cross-collective masking test → adicionado. updateEvent → recomputeConflicts integration test → adicionado
+
 ### Completion Notes List
 
 - DayDetailSheet reduzido de 274 → ~85 linhas. renderEvent (130 linhas de JSX) e isOwnEvent extraídos para EventCard + ConflictBadge + VisibilityToggles.
 - updateEvent reduzido de 95 → ~30 linhas. Cognitive complexity de ~28 → ~4.
 - 3 helpers extraídos (buildUpdateData, recomputeConflicts, authorizeAndFetchEvent) e reutilizados.
-- 33 novos testes adicionados — 100% pass, sem regressões.
-- type-check e lint: zero erros.
+- Helpers movidos para `helpers.ts` (sem `'use server'`) — corrige exposição insegura de Server Actions.
+- Null lineup corrigido com optional chaining em EventCard.
+- +1 teste: cross-collective masking. +1 teste: updateEvent integration (newDate passthrough). +1 teste: null lineup.
+- 410 testes, type-check e lint: zero erros.
 
 ### File List
 
+- NEW: `src/features/calendar/helpers.ts`
 - NEW: `src/features/calendar/components/conflict-badge.tsx`
 - NEW: `src/features/calendar/components/conflict-badge.test.tsx`
 - NEW: `src/features/calendar/components/event-card.tsx`
@@ -193,4 +210,5 @@ opencode-go/deepseek-v4-flash
 
 ### Change Log
 
-[06/05/2026] HK.1 — Refatoração completa de DayDetailSheet e updateEvent. Subcomponentes extraídos (ConflictBadge, EventCard, VisibilityToggles). Helpers extraídos (buildUpdateData, recomputeConflicts, authorizeAndFetchEvent). 33 novos testes. 407/407 pass.
+[06/05/2026] HK.1 — Refatoração: DayDetailSheet em subcomponentes, updateEvent em helpers. 33 novos testes.
+[06/05/2026] HK.1 — Review Gemini: helpers movidos para helpers.ts (segurança Server Actions), null lineup fix, +3 testes. 410/410 pass.

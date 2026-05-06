@@ -79,7 +79,8 @@ function setupUpdateChain() {
 // Default update chain so fallback UPDATE in catch block works everywhere
 setupUpdateChain();
 
-import { createEvent, updateEvent, updateEventStatus, authorizeAndFetchEvent, buildUpdateData, recomputeConflicts } from '../actions';
+import { createEvent, updateEvent, updateEventStatus } from '../actions';
+import { authorizeAndFetchEvent, buildUpdateData, recomputeConflicts } from '../helpers';
 
 describe('createEvent', () => {
     const validInput = {
@@ -506,6 +507,23 @@ describe('updateEvent', () => {
         expect(result.error).toBeNull(); // event still updated
         // fallback UPDATE with error message
         expect(mockUpdate).toHaveBeenCalled();
+    });
+
+    it('passes correct newDate from parsed input to recomputeConflicts', async () => {
+        const { getViewerContext } = await import('@/features/auth/helpers');
+        (getViewerContext as ReturnType<typeof vi.fn>).mockResolvedValue({
+            kind: 'authenticated',
+            role: 'produtor',
+            profileId: 'profile-uuid',
+            isAdmin: false,
+        });
+
+        mockEvaluateAndPersist.mockResolvedValue({ level: 'green', justification: null, rules: [] });
+        mockGetNeighborIds.mockResolvedValue([]);
+
+        await updateEvent('event-uuid-123', { eventDate: '2026-07-01' });
+
+        expect(mockGetNeighborIds).toHaveBeenCalledWith('event-uuid-123', '2026-07-01', expect.any(Object));
     });
 });
 

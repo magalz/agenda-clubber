@@ -59,12 +59,12 @@ export function EventCard({
 
             <p className="text-xs text-muted-foreground">{displayEvent.genrePrimary}</p>
 
-            {displayEvent.lineup.length > 0 && (
+            {(displayEvent.lineup?.length ?? 0) > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
                     Line-up: {displayEvent.lineup.join(', ')}
                 </p>
             )}
-            {isLineupMasked && displayEvent.lineup.length === 0 && event.lineup.length > 0 && (
+            {isLineupMasked && (displayEvent.lineup?.length ?? 0) === 0 && (event.lineup?.length ?? 0) > 0 && (
                 <p className="text-xs text-muted-foreground italic flex items-center gap-1 mt-1">
                     Line-up não revelada <Lock className="w-3 h-3" aria-label="Line-up não revelada" />
                 </p>
