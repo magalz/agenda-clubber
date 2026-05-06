@@ -46,3 +46,9 @@ e2e/.auth/
 
 # local code review artifacts
 test-results/
+
+# agent / tooling directories
+.claude/
+.logs/
+.memdb/
+.memtrace/
