@@ -1,6 +1,6 @@
 # Story HK.3: Limpeza de Dead Code
 
-Status: review
+Status: done
 
 ## Story
 
@@ -247,6 +247,24 @@ DeepSeek V4 Flash (opencode-go/deepseek-v4-flash)
 
 ### Change Log
 
+### Review Findings
+
+**Code Review:** 06/05/2026 (3 layers paralelos: Blind Hunter, Edge Case Hunter, Acceptance Auditor)
+
+**Resultado:** ✅ CLEAN — 0 decision-needed, 1 patch, 0 defer, 4 dismiss
+
+**Patch resolvido:**
+- [x] [Review][Patch] CSS morta em `CheckIcon` — `group-has-data-[slot=command-shortcut]` nunca mais dará match porque `CommandShortcut` foi removido. [src/components/ui/command.tsx:152]
+
+**Dismissed (4 — falsos positivos do Blind Hunter sem contexto de projeto):**
+- `.env.local` ausente do diff — está no `.gitignore`, correto não commitar
+- "Breaking API changes" — Memtrace confirmou 0 callers para todos os 17 símbolos
+- "InputGroup semantic breakage" — InputGroup/Addon têm 1 caller cada, auto-suficientes
+- "tsconfig path resolution" — `test-results/` só existe na raiz, exclusão funciona
+
+**Acceptance Auditor:** PASS completo — 100% compliance com os ACs.
+
 | Data | Mudança |
 |------|---------|
 | 2026-05-06 | HK.3 implementado: 17 exports Shadcn UI removidos de 7 componentes. 2 falsos positivos Memtrace documentados (justifications.ts BUILDERS dispatch, code-block.tsx CopyIcon useState). Fixes extra: tsconfig.json exclude test-results, .env.local DATABASE_URL. Lint zero, 422/422 testes, build OK. |
+| 2026-05-06 | Code review: 0 decision-needed, 1 patch (CSS morta em CheckIcon removida), 4 dismiss. Acceptance Auditor PASS. Story marked done. |
