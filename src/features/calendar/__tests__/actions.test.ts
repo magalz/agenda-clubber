@@ -80,6 +80,7 @@ function setupUpdateChain() {
 setupUpdateChain();
 
 import { createEvent, updateEvent, updateEventStatus } from '../actions';
+import { authorizeAndFetchEvent, buildUpdateData, recomputeConflicts, calculateEventDateUtc } from '../helpers';
 
 describe('createEvent', () => {
     const validInput = {
@@ -507,6 +508,23 @@ describe('updateEvent', () => {
         // fallback UPDATE with error message
         expect(mockUpdate).toHaveBeenCalled();
     });
+
+    it('passes correct newDate from parsed input to recomputeConflicts', async () => {
+        const { getViewerContext } = await import('@/features/auth/helpers');
+        (getViewerContext as ReturnType<typeof vi.fn>).mockResolvedValue({
+            kind: 'authenticated',
+            role: 'produtor',
+            profileId: 'profile-uuid',
+            isAdmin: false,
+        });
+
+        mockEvaluateAndPersist.mockResolvedValue({ level: 'green', justification: null, rules: [] });
+        mockGetNeighborIds.mockResolvedValue([]);
+
+        await updateEvent('event-uuid-123', { eventDate: '2026-07-01' });
+
+        expect(mockGetNeighborIds).toHaveBeenCalledWith('event-uuid-123', '2026-07-01', expect.any(Object));
+    });
 });
 
 describe('updateEventStatus', () => {
@@ -623,5 +641,239 @@ describe('updateEventStatus', () => {
         await updateEventStatus('event-uuid-123', 'confirmed');
 
         expect(mockEvaluateAndPersist).toHaveBeenCalledWith('event-uuid-123', expect.any(Object));
+    });
+});
+
+describe('authorizeAndFetchEvent', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns UNAUTHORIZED when not authenticated', async () => {
+        const { getViewerContext } = await import('@/features/auth/helpers');
+        (getViewerContext as ReturnType<typeof vi.fn>).mockResolvedValue({ kind: 'anon' });
+
+        const result = await authorizeAndFetchEvent('event-uuid-123');
+
+        expect(result.error?.code).toBe('UNAUTHORIZED');
+        expect(mockSelect).not.toHaveBeenCalled();
+    });
+
+    it('returns NOT_FOUND when event does not exist', async () => {
+        const { getViewerContext } = await import('@/features/auth/helpers');
+        (getViewerContext as ReturnType<typeof vi.fn>).mockResolvedValue({
+            kind: 'authenticated',
+            role: 'produtor',
+            profileId: 'profile-uuid',
+            isAdmin: false,
+        });
+
+        mockLimit.mockResolvedValue([]);
+
+        const result = await authorizeAndFetchEvent('nonexistent-id');
+
+        expect(result.error?.code).toBe('NOT_FOUND');
+    });
+
+    it('returns FORBIDDEN when user is not the creator', async () => {
+        const { getViewerContext } = await import('@/features/auth/helpers');
+        (getViewerContext as ReturnType<typeof vi.fn>).mockResolvedValue({
+            kind: 'authenticated',
+            role: 'produtor',
+            profileId: 'other-profile-uuid',
+            isAdmin: false,
+        });
+
+        mockLimit.mockResolvedValue([{ createdBy: 'profile-uuid' }]);
+
+        const result = await authorizeAndFetchEvent('event-uuid-123');
+
+        expect(result.error?.code).toBe('FORBIDDEN');
+    });
+
+    it('returns data with existing and viewer on success', async () => {
+        const { getViewerContext } = await import('@/features/auth/helpers');
+        (getViewerContext as ReturnType<typeof vi.fn>).mockResolvedValue({
+            kind: 'authenticated',
+            role: 'produtor',
+            profileId: 'profile-uuid',
+            isAdmin: false,
+        });
+
+        const mockEvent = { id: 'event-uuid-123', createdBy: 'profile-uuid' };
+        mockLimit.mockResolvedValue([mockEvent]);
+
+        const result = await authorizeAndFetchEvent('event-uuid-123');
+
+        expect(result.error).toBeNull();
+        expect(result.data).toBeDefined();
+        if (result.data) {
+            expect(result.data.existing.id).toBe('event-uuid-123');
+            expect(result.data.viewer.profileId).toBe('profile-uuid');
+        }
+    });
+});
+
+describe('buildUpdateData', () => {
+    const baseExisting = {
+        id: 'event-uuid-123',
+        collectiveId: 'collective-uuid',
+        name: 'Festival das Flores',
+        eventDate: '2026-06-15',
+        eventDateUtc: new Date('2026-06-15T15:00:00Z'),
+        locationName: 'D-Edge, São Paulo',
+        latitude: '-23.5505',
+        longitude: '-46.6333',
+        timezone: 'America/Sao_Paulo',
+        genrePrimary: 'Techno',
+        lineup: null,
+        status: 'planning',
+        isNamePublic: true,
+        isLocationPublic: false,
+        isLineupPublic: false,
+        createdBy: 'profile-uuid',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+    };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('returns only fields that changed', async () => {
+        const result = await buildUpdateData({ name: 'Updated Festival' }, baseExisting as never);
+
+        expect(result.name).toBe('Updated Festival');
+        expect(result.eventDate).toBeUndefined();
+        expect(result.genrePrimary).toBeUndefined();
+    });
+
+    it('geocodes when location changes', async () => {
+        mockGeocode.mockResolvedValue({
+            lat: -22.9068,
+            lng: -43.1729,
+            displayName: 'Rio de Janeiro, Brazil',
+        });
+        mockResolveTimezone.mockResolvedValue('America/Sao_Paulo');
+
+        const result = await buildUpdateData({ location: 'Rio de Janeiro' }, baseExisting as never);
+
+        expect(result.locationName).toBe('Rio de Janeiro');
+        expect(mockGeocode).toHaveBeenCalledWith('Rio de Janeiro');
+        expect(mockResolveTimezone).toHaveBeenCalledWith(-22.9068, -43.1729);
+    });
+
+    it('calculates eventDateUtc when date changes without location change', async () => {
+        const result = await buildUpdateData({ eventDate: '2026-07-01' }, baseExisting as never);
+
+        expect(result.eventDate).toBe('2026-07-01');
+        expect(result.eventDateUtc).toBeInstanceOf(Date);
+        expect(mockGeocode).not.toHaveBeenCalled();
+    });
+
+    it('returns empty object when no fields provided', async () => {
+        const result = await buildUpdateData({}, baseExisting as never);
+
+        expect(Object.keys(result).length).toBe(0);
+    });
+
+    it('does not geocode when location is same as existing', async () => {
+        const result = await buildUpdateData({ location: 'D-Edge, São Paulo' }, baseExisting as never);
+
+        expect(result.locationName).toBeUndefined();
+        expect(mockGeocode).not.toHaveBeenCalled();
+    });
+
+    it('includes privacy toggles when provided', async () => {
+        const result = await buildUpdateData({ isNamePublic: false, isLocationPublic: true }, baseExisting as never);
+
+        expect(result.isNamePublic).toBe(false);
+        expect(result.isLocationPublic).toBe(true);
+        expect(result.isLineupPublic).toBeUndefined();
+    });
+
+    it('handles simultaneous location and date changes', async () => {
+        mockGeocode.mockResolvedValue({
+            lat: -22.9068,
+            lng: -43.1729,
+            displayName: 'Rio de Janeiro, Brazil',
+        });
+        mockResolveTimezone.mockResolvedValue('America/Sao_Paulo');
+
+        const result = await buildUpdateData({ location: 'Rio de Janeiro', eventDate: '2026-07-01' }, baseExisting as never);
+
+        expect(result.locationName).toBe('Rio de Janeiro');
+        expect(result.eventDate).toBe('2026-07-01');
+        expect(result.eventDateUtc).toBeInstanceOf(Date);
+        expect(mockGeocode).toHaveBeenCalledWith('Rio de Janeiro');
+    });
+});
+
+describe('recomputeConflicts', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockEvaluateAndPersist.mockResolvedValue({ level: 'green', justification: null, rules: [] });
+        mockGetNeighborIds.mockResolvedValue([]);
+    });
+
+    it('recomputes old neighbors when date changes', async () => {
+        mockGetNeighborIds
+            .mockResolvedValueOnce(['old-n-1'])
+            .mockResolvedValueOnce(['new-n-1']);
+
+        await recomputeConflicts('event-uuid-123', '2026-06-15', '2026-07-01');
+
+        expect(mockGetNeighborIds).toHaveBeenCalledWith('event-uuid-123', '2026-06-15', expect.any(Object));
+        expect(mockEvaluateAndPersist).toHaveBeenCalledWith('old-n-1', expect.any(Object));
+        expect(mockEvaluateAndPersist).toHaveBeenCalledWith('event-uuid-123', expect.any(Object));
+        expect(mockEvaluateAndPersist).toHaveBeenCalledWith('new-n-1', expect.any(Object));
+    });
+
+    it('skips old neighbors when date does not change', async () => {
+        mockGetNeighborIds.mockResolvedValue(['n-1']);
+
+        await recomputeConflicts('event-uuid-123', '2026-06-15', '2026-06-15');
+
+        expect(mockGetNeighborIds).toHaveBeenCalledTimes(1);
+        expect(mockEvaluateAndPersist).toHaveBeenCalledWith('event-uuid-123', expect.any(Object));
+        expect(mockEvaluateAndPersist).toHaveBeenCalledWith('n-1', expect.any(Object));
+    });
+
+    it('handles engine failure gracefully with fallback UPDATE', async () => {
+        mockGetNeighborIds.mockResolvedValue(['n-1']);
+        mockEvaluateAndPersist.mockRejectedValue(new Error('DB error'));
+
+        await recomputeConflicts('event-uuid-123', '2026-06-15', '2026-06-15');
+
+        expect(mockUpdate).toHaveBeenCalled(); // fallback UPDATE
+    });
+});
+
+describe('calculateEventDateUtc', () => {
+    it('returns a valid Date for a given date and timezone', () => {
+        const result = calculateEventDateUtc('2026-06-15', 'America/Sao_Paulo');
+
+        expect(result).toBeInstanceOf(Date);
+        expect(result.getTime()).not.toBeNaN();
+    });
+
+    it('calculates correct UTC offset for America/Sao_Paulo (UTC-3)', () => {
+        const result = calculateEventDateUtc('2026-06-15', 'America/Sao_Paulo');
+
+        // Noon in SP (UTC-3) = 15:00 UTC
+        expect(result.getUTCFullYear()).toBe(2026);
+        expect(result.getUTCMonth()).toBe(5); // June
+        expect(result.getUTCDate()).toBe(15);
+        expect(result.getUTCHours()).toBe(15);
+    });
+
+    it('calculates correct UTC offset for positive timezone (Europe/Paris, UTC+2 in summer)', () => {
+        const result = calculateEventDateUtc('2026-06-15', 'Europe/Paris');
+
+        // Noon in Paris (UTC+2 in summer) = 10:00 UTC
+        expect(result.getUTCFullYear()).toBe(2026);
+        expect(result.getUTCMonth()).toBe(5);
+        expect(result.getUTCDate()).toBe(15);
+        expect(result.getUTCHours()).toBe(10);
     });
 });

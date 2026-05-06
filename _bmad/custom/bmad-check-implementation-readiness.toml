@@ -1,0 +1,19 @@
+# Memtrace x BMAD integration — Check Implementation Readiness (Winston)
+# Validates PRD, UX, Architecture, and Epics alignment with real code structure.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[workflow]
+activation_steps_prepend = [
+    "Memtrace: execute get_impact on each story's primary target — if HIGH or CRITICAL risk, mark as blocker in the readiness report.",
+    "Memtrace: execute get_api_topology — map all cross-service dependencies. Stories that touch endpoints with unverified consumers = readiness blocker.",
+    "Memtrace: execute list_communities — confirm current architecture matches the planned one. Stories fragmenting communities without refactoring plan = blocker.",
+]
+
+persistent_facts = [
+    "Blocker rule: any story with get_impact returning HIGH or CRITICAL on its primary target is a BLOCKER — story must include mitigation plan or be re-scoped before approval.",
+    "Consumer verification: when a story modifies an endpoint, run get_api_topology and verify ALL listed consumers were accounted for in the story's scope. Unverified consumers = BLOCKER.",
+    "Bridge protection: run find_bridge_symbols early. Any story refactoring a bridge symbol requires architect-led design review, not just code review. Flag as '[Bridge: DESIGN_REVIEW_REQUIRED]'.",
+    "Community integrity: stories that touch symbols in 3+ different communities from list_communities are candidates to split. Flag in readiness report with community breakdown.",
+    "Load-bearing changes: cross-reference story targets with find_central_symbols top-15. Load-bearing symbol changes require (a) explicit test plan, (b) rollback plan, (c) architect sign-off.",
+    "Readiness report format: (a) go/no-go per story, (b) blocker list with graph evidence (file:line + risk level), (c) risk matrix based on get_impact scores.",
+]

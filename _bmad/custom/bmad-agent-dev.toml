@@ -1,0 +1,21 @@
+# Memtrace x BMAD integration — Dev Agent persona (Amelia)
+# Standalone agent persona. Complements bmad-dev-story.toml.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[agent]
+activation_steps_prepend = [
+    "Memtrace: execute get_codebase_briefing(detail_level='summary') to refresh architecture context for this session.",
+    "Memtrace: execute find_code with a natural-language description of the user's task to locate existing related code before writing anything new.",
+    "Memtrace: execute get_changes_since to surface what changed since the last session in this repo.",
+]
+
+persistent_facts = [
+    "BEFORE editing any file: run get_impact(symbol, direction='both') on the target. If risk is HIGH or CRITICAL, pause and warn the user with the affected files list before proceeding.",
+    "BEFORE editing any function: run get_symbol_context(symbol) to understand callers, callees, and the logical community the symbol belongs to.",
+    "BEFORE refactoring: run find_bridge_symbols on the target. If the symbol is a bridge between subsystems, treat as high-risk — extra scrutiny and explicit user confirmation required.",
+    "BEFORE editing potentially load-bearing code: run find_central_symbols on the file. Alert if the target appears in the top results — high PageRank means many indirect dependents.",
+    "DURING implementation: use find_code to search for existing patterns (validation, helpers, utilities) before implementing from scratch. Reuse over reinvention.",
+    "BEFORE changing a Server Action / Route Handler / exported function signature: run find_api_endpoints + find_api_calls (or get_api_topology) to enumerate consumers. Update them in the same change set if the signature breaks.",
+    "AFTER implementing: run get_evolution(from='<session-start-timestamp>', mode='compound') to detect unintended changes outside the scope.",
+    "AFTER implementing: run find_dead_code on changed files. Flag and remove any new symbols introduced without callers.",
+]

@@ -1,0 +1,20 @@
+# Memtrace x BMAD integration — Generate Project Context
+# project-context.md generated entirely from Memtrace graph data — NOT from filesystem walking.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[workflow]
+activation_steps_prepend = [
+    "Memtrace: execute get_codebase_briefing(detail_level='full') — this IS the outline for project-context.md. Symbol counts, community list, risks.",
+    "Memtrace: execute list_communities — populate the Modules section with each community name and its key symbols.",
+]
+
+persistent_facts = [
+    "CRITICAL: Do NOT walk the filesystem with tree/ls/glob to discover structure. Use Memtrace graph data as the SINGLE source of truth for architecture.",
+    "Scale & Architecture section: use get_codebase_briefing data — total symbols, edges, communities, language breakdown, risk summary.",
+    "Modules section: use list_communities output. Each community = one module entry with its top symbols from find_central_symbols.",
+    "Key Flows section: use list_processes output. Each process = one flow entry with its entry point and step count.",
+    "Load-Bearing Code section: use find_central_symbols(limit=10) with PageRank context. List each symbol with its file:line and why it matters.",
+    "Complexity Hotspots section: use find_most_complex_functions(top_n=10) with complexity score and risk level.",
+    "Risk Areas section: use get_codebase_briefing risk summary. Cross-reference with find_bridge_symbols for architectural risks.",
+    "Dead Code appendix: use find_dead_code to list uncalled symbols. Recommend cleanup but do NOT include dead code in the main context (it's not load-bearing).",
+]

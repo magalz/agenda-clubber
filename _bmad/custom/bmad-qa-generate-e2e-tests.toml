@@ -1,0 +1,19 @@
+# Memtrace x BMAD integration — QA Generate E2E Tests (Murat)
+# E2E test generation driven by detected execution flows.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[workflow]
+activation_steps_prepend = [
+    "Memtrace: execute list_processes — enumerate ALL detected execution flows in the codebase.",
+    "Memtrace: cross-reference list_processes output with existing e2e/*.spec.ts files — list flows WITHOUT E2E coverage as PRIORITY generation targets.",
+    "Memtrace: execute get_process_flow on each uncovered process — each step in the flow generates at least one E2E test case.",
+]
+
+persistent_facts = [
+    "Test generation rule: each step in get_process_flow output → at least one E2E test case (happy path + relevant negative paths). Each test must reference the exact function name and file:line from the flow step.",
+    "Endpoint coverage: run find_api_endpoints and cross-reference with generated tests. Every endpoint involved in a covered flow must have its HTTP method and path verified in at least one test.",
+    "Priority ordering: uncovered flows from list_processes that involve load-bearing symbols (from find_central_symbols) get HIGHEST generation priority.",
+    "Orphan test prevention: after generating tests, run find_dead_code on the test file's referenced functions. If any referenced function is flagged as dead code, remove that test case (it tests nothing).",
+    "Complexity coverage: run find_most_complex_functions(top_n=10). Ensure tests cover the most complex functions with extra assertion depth — edge cases, error paths, and boundary values.",
+    "Test file structure: one test file per process, named after the process with (a) flow diagram in a header comment, (b) per-step test cases, (c) coverage matrix comment showing which steps are covered.",
+]
