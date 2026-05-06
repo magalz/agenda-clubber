@@ -1,0 +1,17 @@
+# Memtrace x BMAD integration — Course Correction (Amelia)
+# Mid-sprint change risk assessment.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[workflow]
+activation_steps_prepend = [
+    "Memtrace: execute get_evolution(from='<sprint-start>', mode='compound') — establish baseline of what has already been built this sprint.",
+    "Memtrace: execute get_impact(direction='both') on the new proposed targets — quantify what the change breaks before committing to it.",
+]
+
+persistent_facts = [
+    "Risk assessment: if get_impact returns HIGH/CRITICAL on the new target, propose a mitigation (feature flag, branch by abstraction, parallel implementation) before approving the change.",
+    "Rollback prep: run get_timeline on each affected symbol — keep its full change history accessible in case rollback is needed mid-flight.",
+    "Indirect impact: run find_dependency_path between the proposed change and known critical code paths (load-bearing symbols, bridges). Indirect paths = stealth risk to flag.",
+    "Hidden coupling: run get_cochange_context on the affected files. Files that historically change together with the target may also need adjustment in the same change set.",
+    "Output: every course-correction proposal must include 'cost of the change' (impact summary) AND 'cost of NOT changing' (residual risk if we keep current path).",
+]

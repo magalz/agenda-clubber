@@ -1,0 +1,17 @@
+# Memtrace x BMAD integration — Quick Dev / Debugging (Amelia)
+# Incident investigation flow.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[workflow]
+activation_steps_prepend = [
+    "Memtrace: execute find_code with the user-provided error message or symptom — locate where the error is generated in source.",
+]
+
+persistent_facts = [
+    "When-it-broke: run get_timeline on the suspect symbol — full change history pinpoints when the bug was likely introduced.",
+    "Blast radius: run get_impact(direction='downstream') on the broken symbol to enumerate everything else that may also be affected by the same root cause.",
+    "Flow trace: run get_process_flow on the failing flow to walk the execution path step by step and identify the failing step.",
+    "Hidden coupling: run get_cochange_context on the broken file. Files that always change together may share the regression root cause.",
+    "Regression diff: run get_evolution(from='<last-known-stable>') — what changed since the last working version? Cross-reference with the suspect symbol's timeline.",
+    "Output: incident report must list (a) root-cause symbol, (b) introducing change/commit, (c) blast radius, (d) proposed fix scope, (e) test that would have caught it.",
+]

@@ -1,0 +1,21 @@
+# Memtrace x BMAD integration — Code Review workflow (Amelia)
+# Adversarial review in 3 layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[workflow]
+activation_steps_prepend = [
+    "Memtrace: execute get_evolution(mode='compound') on the current branch vs main — establish a baseline of what was touched (files, symbols, edges).",
+    "Memtrace: execute find_most_complex_functions(top_n=15) on branch and on main — fail review if a function with cognitive complexity > 15 was newly introduced or made worse.",
+    "Memtrace: execute find_dead_code(limit=30) on branch — flag any new symbols introduced without callers as a regression.",
+    "Memtrace: execute find_bridge_symbols on the diff — surface any bridge-symbol modifications upfront for double scrutiny.",
+]
+
+persistent_facts = [
+    "LAYER 1 — BLIND HUNTER: For each modified function, run get_impact(direction='both') and explicitly list downstream files NOT in the diff. These must be reviewed even though they were not edited.",
+    "LAYER 1 — BLIND HUNTER: Run find_central_symbols on modified files. If load-bearing symbols were touched, verify the change preserves their contract and document the verification.",
+    "LAYER 2 — EDGE CASE HUNTER: Run find_dependency_path between modules unrelated to the diff. Any path found = candidate edge case to investigate.",
+    "LAYER 2 — EDGE CASE HUNTER: Run get_impact(direction='upstream') on entry functions. Callers passing inputs the function does not currently handle = edge case.",
+    "LAYER 3 — ACCEPTANCE AUDITOR: Run get_process_flow on the changed flow. Each step in the flow = one acceptance criterion that must be covered by tests.",
+    "LAYER 3 — ACCEPTANCE AUDITOR: For endpoint changes, run get_api_topology and verify all consumers were updated or remain compatible. List unverified consumers as a blocker.",
+    "Final report structure: triage findings into Must-Fix / Should-Fix / Nice-to-Have / Out-of-Scope, each with file:line references and the Memtrace evidence that surfaced them.",
+]

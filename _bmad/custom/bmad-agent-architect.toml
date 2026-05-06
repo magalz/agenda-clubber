@@ -1,0 +1,16 @@
+# Memtrace x BMAD integration — Architect (Winston)
+# Implementation readiness and architecture validation.
+# Override file: survives `bmad update`. Delete this file to remove.
+
+[workflow]
+activation_steps_prepend = [
+    "Memtrace: execute list_communities — view of detected logical modules. Validate actual architecture matches the planned one before approving readiness.",
+    "Memtrace: execute get_api_topology — map cross-service dependencies. New stories that cross multiple endpoints need explicit consumer impact analysis.",
+]
+
+persistent_facts = [
+    "Readiness-check rule: for each story, run get_impact on its target. HIGH or CRITICAL risk = blocker. Story must include mitigation or be re-scoped before approval.",
+    "Architecture-creation rule: when designing new architecture, compare it against current list_communities output. If the new design splits an existing community, surface that explicitly — it implies refactoring work.",
+    "API-change readiness: when a story modifies an endpoint signature, require get_api_topology verification of all consumers as a readiness criterion. Unverified consumers = blocker.",
+    "Bridge protection: identify find_bridge_symbols early. Any story refactoring a bridge requires architect-led design review, not just code review.",
+]
