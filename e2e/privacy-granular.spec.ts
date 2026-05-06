@@ -6,8 +6,7 @@ test.describe('Cross-collective privacy granular', () => {
 
     test('event from other collective in planning shows only genre + placeholder', async ({ page }) => {
         await page.goto('/dashboard/collective');
-
-        await page.waitForTimeout(2000);
+        await page.waitForSelector('[role="grid"]', { timeout: 10000 });
 
         const cells = page.locator('[role="grid"] [role="gridcell"], [data-testid="day-cell"]');
         const count = await cells.count();
@@ -35,8 +34,7 @@ test.describe('Cross-collective privacy granular', () => {
 
     test('event from other collective with isNamePublic=true shows name', async ({ page }) => {
         await page.goto('/dashboard/collective');
-
-        await page.waitForTimeout(2000);
+        await page.waitForSelector('[role="grid"]', { timeout: 10000 });
 
         const cells = page.locator('[role="grid"] [role="gridcell"], [data-testid="day-cell"]');
         const count = await cells.count();
@@ -64,8 +62,7 @@ test.describe('Cross-collective privacy granular', () => {
 
     test('confirmed event from other collective shows all fields', async ({ page }) => {
         await page.goto('/dashboard/collective');
-
-        await page.waitForTimeout(2000);
+        await page.waitForSelector('[role="grid"]', { timeout: 10000 });
 
         const cells = page.locator('[role="grid"] [role="gridcell"], [data-testid="day-cell"]');
         const count = await cells.count();
@@ -93,8 +90,7 @@ test.describe('Cross-collective privacy granular', () => {
 
     test('other collective events do not show privacy toggles', async ({ page }) => {
         await page.goto('/dashboard/collective');
-
-        await page.waitForTimeout(2000);
+        await page.waitForSelector('[role="grid"]', { timeout: 10000 });
 
         const cells = page.locator('[role="grid"] [role="gridcell"], [data-testid="day-cell"]');
         const count = await cells.count();

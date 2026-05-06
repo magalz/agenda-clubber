@@ -15,7 +15,7 @@ CREATE POLICY "events_select_policy" ON events
     USING (
         created_by = auth.uid()
         OR status = 'confirmed'
-        OR (status = 'planning' AND (is_name_public = true OR is_location_public = true OR is_lineup_public = true))
+        OR status = 'planning'
     );
 
 -- Policy: INSERT — authenticated users only

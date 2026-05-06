@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8">
+<style>
+body { font-family: system-ui, sans-serif; max-width: 900px; margin: auto; padding: 2em; line-height: 1.6; }
+code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+pre { background: #f4f4f4; padding: 1em; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+th { background: #f0f0f0; }
+blockquote { border-left: 4px solid #ddd; margin: 0; padding-left: 1em; color: #666; }
+h1, h2, h3 { margin-top: 1.5em; }
+</style>
+</head>
+<body><h1>Memtrace × BMAD — Integration Guide</h1>
+<hr />
+<h2>⚡ Before You Start — Model Recommendations</h2>
+<p>This guide has two very different usage profiles. Use the right model for each:</p>
+<table>
+<thead>
+<tr>
+<th>Moment</th>
+<th>Model</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Guided setup</strong> (Section 3 — interactive installation)</td>
+<td>🧠 <strong>POWERFUL model + max thinking</strong> (Pro, Opus, Sonnet with reasoning enabled)</td>
+<td>You'll make ~15 integration decisions that affect ALL your workflows. The AI needs to retain long context, navigate between Memtrace and BMAD tools, understand tradeoffs, and generate 9 structured <code>.toml</code> files. Flash/Haiku can lose the thread and forget answers mid-flow.</td>
+</tr>
+<tr>
+<td><strong>Daily use</strong> (<code>/bmad-code-review</code>, <code>/bmad-agent-dev</code>, etc.)</td>
+<td>⚡ <strong>LIGHTWEIGHT model</strong> (Flash, Haiku, normal Sonnet)</td>
+<td>The decisions are already in the <code>.toml</code> files. The agent just needs to follow the script — executing <code>get_impact</code>, <code>find_code</code>, <code>get_evolution</code> as instructed by <code>activation_steps_prepend</code>. Individual tool calls, no deep reasoning needed.</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>💡 <strong>Rule of thumb:</strong> If you're INSTALLING (setup), use the big brain. If you're USING (daily work), the lightweight one is enough.</p>
+</blockquote>
+<p><strong>Technical requirements:</strong>
+- BMAD installed in the project (with <code>_bmad/</code> at the root)
+- Memtrace MCP server running with the repository indexed (<code>memtrace index</code>)
+- AI client with MCP tool support (Claude Code, OpenCode, Cursor, etc.)
+- No tool-specific dependencies — the system is AI-client agnostic</p>
+<hr />
+<h2>Index</h2>
+<ol>
+<li><a href="#-case-study-memtrace-impact-on-a-bmad-project">Case Study: Memtrace Impact on a BMAD Project</a></li>
+<li><a href="#1-memtrace-tools-summary">Memtrace Tools Summary</a></li>
+<li><a href="#2-integration-by-bmad-workflow">Integration by BMAD Workflow (with agent and prompt)</a></li>
+<li><a href="#210-complete-prompts-by-workflow">Complete Prompts by Workflow</a></li>
+<li><a href="#3-ai-guided-setup">AI-Guided Setup — Interactive Installation</a></li>
+</ol>
+<hr />
+<h2>📊 Case Study: Memtrace Impact on a BMAD Project</h2>
+<blockquote>
+<p><strong>Context:</strong> Web project with ~280 indexed symbols, 5 logical modules, Next.js + PostgreSQL stack. A 5-story epic delivered the product's core intelligence engine (rule engine, reactive calendar, granular privacy). Timeline: 7 days.</p>
+</blockquote>
+<h3>Before × After: What Memtrace Changed in the Retrospective</h3>
+<table>
+<thead>
+<tr>
+<th>Memtrace Tool</th>
+<th>Concrete Result</th>
+<th>Without Memtrace</th>
+<th>Approximate Time Saved</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>get_codebase_briefing</code></td>
+<td>Scope quantified in 5s: 485 new symbols, 2,273 edges, 5 modules</td>
+<td>Read package.json, <code>tree</code> the project, open 5-10 files manually, infer architecture</td>
+<td>~20 min → 5s</td>
+</tr>
+<tr>
+<td><code>get_evolution(compound)</code></td>
+<td>142 change episodes, top 10 most-changed files, 485 symbols created</td>
+<td><code>git log --oneline</code>, <code>git diff --stat</code>, manually count, miss branch-level changes</td>
+<td>~30 min → 5s</td>
+</tr>
+<tr>
+<td><code>find_most_complex_functions</code></td>
+<td>2 high-risk functions identified (complexity 28 and 17) became refactoring stories</td>
+<td>Manual code review looking for long functions — subjective, likely wouldn't identify the right ones</td>
+<td>~1-2h → 5s (and more accurate)</td>
+</tr>
+<tr>
+<td><code>find_dead_code</code></td>
+<td>80 uncalled symbols → housekeeping story with precise scope</td>
+<td>Would never be done in a retrospective. "We should clean up code" — vague, no action</td>
+<td>Infinite → 5s (made it possible)</td>
+</tr>
+<tr>
+<td><code>find_central_symbols</code></td>
+<td>Most-connected type (62 references) confirmed analysis focus was correct</td>
+<td>Impossible without graph analysis. Guessing based on code familiarity</td>
+<td>Infeasible → 5s</td>
+</tr>
+<tr>
+<td><code>get_symbol_context</code></td>
+<td>Engine's main function: 7 callees, detected community, mapped flow</td>
+<td>Read 7 files, trace imports, understand dependencies manually</td>
+<td>~20 min → 5s</td>
+</tr>
+</tbody>
+</table>
+<h3>Gains by Cycle Phase</h3>
+<table>
+<thead>
+<tr>
+<th>BMAD Phase</th>
+<th>Without Memtrace</th>
+<th>With Memtrace</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Planning</strong></td>
+<td>Epics based on intuition about architecture</td>
+<td>Epics validated against real modules detected by the graph</td>
+</tr>
+<tr>
+<td><strong>Implementation</strong></td>
+<td>Edit function without knowing blast radius — discover in PR that it broke 6 files</td>
+<td><code>get_impact</code> pre-edit: HIGH/CRITICAL risk flagged before writing code</td>
+</tr>
+<tr>
+<td><strong>Code Review</strong></td>
+<td>Review diff without context of what's outside it</td>
+<td><code>get_impact</code> reveals indirectly affected files; <code>find_dependency_path</code> finds edge cases</td>
+</tr>
+<tr>
+<td><strong>Testing</strong></td>
+<td>"Tests seem to cover everything"</td>
+<td><code>list_processes</code> → cross-reference with E2E → "3 user flows without coverage"</td>
+</tr>
+<tr>
+<td><strong>Retrospective</strong></td>
+<td>Qualitative discussion: "that component feels large"</td>
+<td>Quantitative discussion: "complexity 17, 230 lines, 80 dead symbols — here are 7 housekeeping stories"</td>
+</tr>
+</tbody>
+</table>
+<h3>Before × After: Action Structure</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Before (without Memtrace)</th>
+<th>After (with Memtrace)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tech debt</strong></td>
+<td>1 vague entry in <code>deferred-work.md</code></td>
+<td>25 items catalogued by severity, origin, and owner</td>
+</tr>
+<tr>
+<td><strong>Refactoring</strong></td>
+<td>"We should refactor component X"</td>
+<td>Story H1: <code>updateEngine</code> (complexity 28 → target &lt; 15) with precise scope and files</td>
+</tr>
+<tr>
+<td><strong>Housekeeping</strong></td>
+<td>"There's dead code somewhere"</td>
+<td>Story H3: 80 symbols to remove, exact file list</td>
+</tr>
+<tr>
+<td><strong>Product decisions</strong></td>
+<td>Discussion postponed "for later"</td>
+<td>5 pending decisions catalogued as <code>decision-pending</code> with traceable origin</td>
+</tr>
+<tr>
+<td><strong>CI/CD</strong></td>
+<td>Monolithic pipeline, slow feedback</td>
+<td>Parallelizable jobs, complexity and dead code gates, deterministic seed</td>
+</tr>
+</tbody>
+</table>
+<h3>What Was Previously Impossible</h3>
+<table>
+<thead>
+<tr>
+<th>Insight</th>
+<th>Tool</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Know that an interface has 62 references and is the system's most central symbol</td>
+<td><code>find_central_symbols</code></td>
+</tr>
+<tr>
+<td>Discover that the rule engine belongs to a logical community</td>
+<td><code>get_symbol_context</code> / <code>list_communities</code></td>
+</tr>
+<tr>
+<td>Precisely quantify an epic's scope in symbols and edges</td>
+<td><code>get_evolution(compound)</code></td>
+</tr>
+<tr>
+<td>Identify uncalled functions without exhaustive manual grep</td>
+<td><code>find_dead_code</code></td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>💡 <strong>Conclusion:</strong> Memtrace didn't replace qualitative analysis — it gave it <strong>quantitative teeth</strong>. Where there was "that module seems large", there's now "cognitive complexity 28, 95 lines, 6 callees". This turned subjective discussions into measurable action items.</p>
+</blockquote>
+<hr />
+<h2>1. Memtrace Tools Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>What it does</th>
+<th>Best moment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>get_codebase_briefing</code></td>
+<td>Overview: scale, modules, risks, dead code</td>
+<td>Start of any session</td>
+</tr>
+<tr>
+<td><code>find_code</code></td>
+<td>Semantic code search ("retry logic", "auth token")</td>
+<td>Exploring code without knowing exact names</td>
+</tr>
+<tr>
+<td><code>find_symbol</code></td>
+<td>Exact symbol name lookup</td>
+<td>When you know what to find</td>
+</tr>
+<tr>
+<td><code>get_symbol_context</code></td>
+<td>Callers + callees + community + process for a symbol</td>
+<td>Before editing any function</td>
+</tr>
+<tr>
+<td><code>get_impact</code></td>
+<td>Blast radius: what would break if I change X?</td>
+<td>Before refactoring, before merge</td>
+</tr>
+<tr>
+<td><code>find_most_complex_functions</code></td>
+<td>Top-N most complex functions</td>
+<td>Prioritize refactoring, PR gate</td>
+</tr>
+<tr>
+<td><code>find_dead_code</code></td>
+<td>Functions/methods with zero callers</td>
+<td>Cleanup, PR gate</td>
+</tr>
+<tr>
+<td><code>find_central_symbols</code></td>
+<td>Highest PageRank symbols (most connected)</td>
+<td>Identify load-bearing code</td>
+</tr>
+<tr>
+<td><code>find_bridge_symbols</code></td>
+<td>Architectural chokepoints between subsystems</td>
+<td>High-risk refactoring</td>
+</tr>
+<tr>
+<td><code>find_dependency_path</code></td>
+<td>Shortest path between symbol A and B</td>
+<td>Debugging, dependency analysis</td>
+</tr>
+<tr>
+<td><code>get_evolution</code></td>
+<td>What changed between two dates/commits</td>
+<td>Retrospective, pre-PR check</td>
+</tr>
+<tr>
+<td><code>get_changes_since</code></td>
+<td>What changed since my last session</td>
+<td>Session continuity</td>
+</tr>
+<tr>
+<td><code>get_process_flow</code></td>
+<td>Step-by-step execution flow</td>
+<td>Test design, debugging</td>
+</tr>
+<tr>
+<td><code>list_processes</code></td>
+<td>All detected execution flows</td>
+<td>Test coverage mapping</td>
+</tr>
+<tr>
+<td><code>list_communities</code></td>
+<td>Logical modules detected by Louvain</td>
+<td>Architecture analysis</td>
+</tr>
+<tr>
+<td><code>get_api_topology</code></td>
+<td>Who calls which endpoint (cross-service)</td>
+<td>Cross-service dependency analysis</td>
+</tr>
+<tr>
+<td><code>get_cochange_context</code></td>
+<td>Which files historically change together?</td>
+<td>Hidden coupling</td>
+</tr>
+<tr>
+<td><code>get_timeline</code></td>
+<td>Complete symbol history over time</td>
+<td>Debugging, "when did this break?"</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>2. Integration by BMAD Workflow</h2>
+<p>Each section shows: the BMAD workflow, the target agent (with the command to invoke them), the Memtrace tool, a short prompt, and the value.</p>
+<h3>2.1 Planning (PRD → Epics → Stories)</h3>
+<table>
+<thead>
+<tr>
+<th>BMAD Workflow</th>
+<th>Agent (command)</th>
+<th>Memtrace Tool</th>
+<th>Short Prompt</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-create-epics-and-stories</code></td>
+<td>John — PM (<code>/bmad-agent-pm</code>)</td>
+<td><code>get_codebase_briefing</code></td>
+<td>"Before creating epics, run <code>get_codebase_briefing</code> and confirm the epics map to the actual code modules."</td>
+<td>Confirms epics map to real modules</td>
+</tr>
+<tr>
+<td><code>bmad-create-story</code></td>
+<td>John (<code>/bmad-agent-pm</code>) or Amelia (<code>/bmad-agent-dev</code>)</td>
+<td><code>get_symbol_context</code></td>
+<td>"For each dependency listed in the epic, run <code>get_symbol_context</code> and populate 'Previous Story Intelligence' with real callers/callees."</td>
+<td>Populates dependencies with real graph data</td>
+</tr>
+<tr>
+<td><code>bmad-check-implementation-readiness</code></td>
+<td>Winston — Architect (<code>/bmad-agent-architect</code>)</td>
+<td><code>get_impact</code></td>
+<td>"Run <code>get_impact</code> on each story's target. If HIGH/CRITICAL, mark as blocker."</td>
+<td>Detects if story touches high-risk code</td>
+</tr>
+</tbody>
+</table>
+<h3>2.2 Implementation (dev-story)</h3>
+<table>
+<thead>
+<tr>
+<th>Moment</th>
+<th>Agent (command)</th>
+<th>Memtrace Tool</th>
+<th>Short Prompt</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Story start</td>
+<td>Amelia — Dev (<code>/bmad-agent-dev</code>)</td>
+<td><code>find_code</code></td>
+<td>"Use <code>find_code</code> with natural language to locate existing code related to this feature before starting implementation."</td>
+<td>Finds patterns faster than glob/grep</td>
+</tr>
+<tr>
+<td>Before editing ANY file</td>
+<td>Amelia (<code>/bmad-agent-dev</code>)</td>
+<td><code>get_impact</code></td>
+<td>"Before editing this function, run <code>get_impact(direction='both')</code>. If HIGH/CRITICAL risk, warn me and suggest a safer approach."</td>
+<td><strong>Safety gate</strong> before edits</td>
+</tr>
+<tr>
+<td>During implementation</td>
+<td>Amelia (<code>/bmad-agent-dev</code>)</td>
+<td><code>find_code</code></td>
+<td>"Use <code>find_code</code> to search for existing patterns on how we handle [Zod/RLS/geocoding] before implementing from scratch."</td>
+<td>Pattern reuse</td>
+</tr>
+<tr>
+<td>After implementing</td>
+<td>Amelia (<code>/bmad-agent-dev</code>)</td>
+<td><code>get_evolution</code></td>
+<td>"After implementing, run <code>get_evolution(from='&lt;timestamp&gt;', mode='compound')</code> to check for unintended changes."</td>
+<td>Detects regressions</td>
+</tr>
+<tr>
+<td>For APIs</td>
+<td>Amelia (<code>/bmad-agent-dev</code>)</td>
+<td><code>find_api_endpoints</code> + <code>find_api_calls</code></td>
+<td>"Run <code>find_api_endpoints</code> and <code>find_api_calls</code> to see who calls this endpoint before changing the signature."</td>
+<td>Avoids breaking consumers</td>
+</tr>
+</tbody>
+</table>
+<h3>2.3 Code Review</h3>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Agent (command)</th>
+<th>Memtrace Tool</th>
+<th>Short Prompt</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Blind Hunter</td>
+<td>Amelia — Dev (<code>/bmad-code-review</code>)</td>
+<td><code>get_impact</code></td>
+<td>"For each modified function, run <code>get_impact</code> and list downstream files not in the diff — review them too."</td>
+<td>Files affected outside the diff</td>
+</tr>
+<tr>
+<td>Edge Case Hunter</td>
+<td>Amelia (<code>/bmad-code-review</code>)</td>
+<td><code>find_dependency_path</code></td>
+<td>"Run <code>find_dependency_path</code> between modules unrelated to the diff. Paths found = edge cases."</td>
+<td>Surprise paths = edge cases</td>
+</tr>
+<tr>
+<td>Acceptance Auditor</td>
+<td>Amelia (<code>/bmad-code-review</code>)</td>
+<td><code>get_process_flow</code></td>
+<td>"Run <code>get_process_flow</code> on the changed flow. Each step = one AC. Verify all are covered by tests."</td>
+<td>Each process step = one AC</td>
+</tr>
+<tr>
+<td>Automated gate (CI)</td>
+<td>N/A (pipeline)</td>
+<td><code>find_dead_code</code> + <code>find_most_complex_functions</code></td>
+<td>"Add a CI step that compares <code>find_dead_code</code> and <code>find_most_complex_functions</code> on branch vs main. Fail on regression."</td>
+<td>Automated quality</td>
+</tr>
+</tbody>
+</table>
+<h3>2.4 Testing</h3>
+<table>
+<thead>
+<tr>
+<th>Activity</th>
+<th>Agent (command)</th>
+<th>Memtrace Tool</th>
+<th>Short Prompt</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Coverage analysis</td>
+<td>Murat — QA (<code>/bmad-tea</code>)</td>
+<td><code>list_processes</code></td>
+<td>"Run <code>list_processes</code> and cross-reference with <code>e2e/</code> specs. List user flows without E2E coverage."</td>
+<td>Which flows lack E2E?</td>
+</tr>
+<tr>
+<td>Test design</td>
+<td>Murat (<code>/bmad-tea</code>)</td>
+<td><code>get_process_flow</code></td>
+<td>"For process [Name], run <code>get_process_flow</code>. Each step in the flow should generate at least one test case."</td>
+<td>Each step = one test case</td>
+</tr>
+<tr>
+<td>Gap analysis</td>
+<td>Murat (<code>/bmad-tea</code>)</td>
+<td><code>find_symbol</code></td>
+<td>"List exported functions in modified files with <code>find_symbol</code>. Check if each has test coverage."</td>
+<td>Exported functions without tests = gap</td>
+</tr>
+<tr>
+<td>Edge case discovery</td>
+<td>Murat (<code>/bmad-tea</code>)</td>
+<td><code>get_impact</code></td>
+<td>"Run <code>get_impact(direction='upstream')</code> on entry functions. Callers with unexpected inputs = new edge cases."</td>
+<td>Unexpected inputs from callers</td>
+</tr>
+</tbody>
+</table>
+<h3>2.5 Retrospective</h3>
+<table>
+<thead>
+<tr>
+<th>Moment</th>
+<th>Agent (command)</th>
+<th>Memtrace Tool</th>
+<th>Short Prompt</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Epic overview</td>
+<td>Amelia — Dev (<code>/bmad-retrospective</code>)</td>
+<td><code>get_evolution</code></td>
+<td>"Run <code>get_evolution(mode='compound')</code> from epic start to end to quantify scope."</td>
+<td>Quantified scope</td>
+</tr>
+<tr>
+<td>What to refactor</td>
+<td>Amelia (<code>/bmad-retrospective</code>)</td>
+<td><code>find_most_complex_functions</code></td>
+<td>"Run <code>find_most_complex_functions(top_n=15)</code> and suggest refactoring stories for the highest-risk ones."</td>
+<td>Objective pain point list</td>
+</tr>
+<tr>
+<td>What to clean up</td>
+<td>Amelia (<code>/bmad-retrospective</code>)</td>
+<td><code>find_dead_code</code></td>
+<td>"Run <code>find_dead_code(limit=30)</code>. Turn the candidates into a housekeeping story."</td>
+<td>Quantified cleanup scope</td>
+</tr>
+<tr>
+<td>What is critical</td>
+<td>Amelia (<code>/bmad-retrospective</code>)</td>
+<td><code>find_central_symbols</code></td>
+<td>"Run <code>find_central_symbols(limit=15)</code>. Mark as load-bearing — extra care when refactoring."</td>
+<td>Structurally critical code</td>
+</tr>
+</tbody>
+</table>
+<h3>2.6 Sprint Planning</h3>
+<table>
+<thead>
+<tr>
+<th>Moment</th>
+<th>Agent (command)</th>
+<th>Memtrace Tool</th>
+<th>Short Prompt</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prioritization</td>
+<td>Amelia — Dev (<code>/bmad-sprint-planning</code>)</td>
+<td><code>find_most_complex_functions</code></td>
+<td>"Run <code>find_most_complex_functions</code> and prioritize stories touching high-complexity functions."</td>
+<td>Complex functions = higher risk</td>
+</tr>
+<tr>
+<td>Estimation</td>
+<td>Amelia (<code>/bmad-sprint-planning</code>)</td>
+<td><code>get_impact</code></td>
+<td>"Run <code>get_impact</code> on each story's targets. Large blast radius = more effort."</td>
+<td>Blast radius as effort proxy</td>
+</tr>
+<tr>
+<td>Ordering</td>
+<td>Amelia (<code>/bmad-sprint-planning</code>)</td>
+<td><code>get_codebase_briefing</code></td>
+<td>"Run <code>get_codebase_briefing</code> and validate whether story order makes architectural sense."</td>
+<td>Order validated by real architecture</td>
+</tr>
+</tbody>
+</table>
+<h3>2.7 Course Correction</h3>
+<table>
+<thead>
+<tr>
+<th>Moment</th>
+<th>Agent (command)</th>
+<th>Memtrace Tool</th>
+<th>Short Prompt</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Understand impact</td>
+<td>Amelia — Dev (<code>/bmad-correct-course</code>)</td>
+<td><code>get_evolution</code></td>
+<td>"Run <code>get_evolution</code> since sprint start to understand what was already built."</td>
+<td>Progress baseline</td>
+</tr>
+<tr>
+<td>Change risk</td>
+<td>Amelia (<code>/bmad-correct-course</code>)</td>
+<td><code>get_impact</code></td>
+<td>"Run <code>get_impact</code> on new targets. If the change breaks existing code, suggest mitigation."</td>
+<td>Risk assessment</td>
+</tr>
+<tr>
+<td>Rollback</td>
+<td>Amelia (<code>/bmad-correct-course</code>)</td>
+<td><code>get_timeline</code></td>
+<td>"Run <code>get_timeline</code> on affected symbols for full history in case rollback is needed."</td>
+<td>History for reversion</td>
+</tr>
+</tbody>
+</table>
+<h3>2.8 Debugging / Incident</h3>
+<table>
+<thead>
+<tr>
+<th>Moment</th>
+<th>Agent (command)</th>
+<th>Memtrace Tool</th>
+<th>Short Prompt</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Find cause</td>
+<td>Amelia — Dev (<code>/bmad-quick-dev</code>)</td>
+<td><code>find_code</code></td>
+<td>"Use <code>find_code</code> with the error message '...' to locate where the error is generated in code."</td>
+<td>Locates error origin</td>
+</tr>
+<tr>
+<td>When it broke</td>
+<td>Amelia (<code>/bmad-quick-dev</code>)</td>
+<td><code>get_timeline</code></td>
+<td>"Run <code>get_timeline</code> on symbol [name] to see all changes and identify when the bug was introduced."</td>
+<td>Complete symbol history</td>
+</tr>
+<tr>
+<td>Blast radius</td>
+<td>Amelia (<code>/bmad-quick-dev</code>)</td>
+<td><code>get_impact</code></td>
+<td>"Run <code>get_impact(symbol, direction='downstream')</code> on the broken symbol to see what else was affected."</td>
+<td>What else broke</td>
+</tr>
+<tr>
+<td>Hidden coupling</td>
+<td>Amelia (<code>/bmad-quick-dev</code>)</td>
+<td><code>get_cochange_context</code></td>
+<td>"Run <code>get_cochange_context</code> on the broken file. Files that always change together may be related."</td>
+<td>Hidden dependencies</td>
+</tr>
+</tbody>
+</table>
+<h3>2.9 Session Continuity</h3>
+<table>
+<thead>
+<tr>
+<th>Moment</th>
+<th>Agent (command)</th>
+<th>Memtrace Tool</th>
+<th>Short Prompt</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First session</td>
+<td>Any BMAD agent</td>
+<td><code>get_codebase_briefing</code></td>
+<td>"Run <code>get_codebase_briefing(detail_level='full')</code> to understand the architecture before starting."</td>
+<td>Architecture in 30s</td>
+</tr>
+<tr>
+<td>Resume session</td>
+<td>Any BMAD agent</td>
+<td><code>get_changes_since</code></td>
+<td>"Run <code>get_changes_since</code> on the repo to see what changed since the last session."</td>
+<td>Quick context</td>
+</tr>
+<tr>
+<td>Understand branch</td>
+<td>Any BMAD agent</td>
+<td><code>get_codebase_briefing</code></td>
+<td>"Run <code>get_codebase_briefing</code> on the current branch to understand what was built on it."</td>
+<td>Branch scope</td>
+</tr>
+</tbody>
+</table>
+<h3>2.10 Story &amp; Epic Creation</h3>
+<table>
+<thead>
+<tr>
+<th>BMAD Workflow</th>
+<th>Agent (command)</th>
+<th>Memtrace Tool</th>
+<th>Short Prompt</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-create-epics-and-stories</code></td>
+<td>John — PM (<code>/bmad-agent-pm</code>)</td>
+<td><code>get_codebase_briefing</code></td>
+<td>"Before creating epics, run <code>get_codebase_briefing(detail_level='full')</code> and confirm the epics map to the actual code modules."</td>
+<td>Confirms epics map to real modules</td>
+</tr>
+<tr>
+<td><code>bmad-create-epics-and-stories</code></td>
+<td>John (<code>/bmad-agent-pm</code>)</td>
+<td><code>list_communities</code></td>
+<td>"Run <code>list_communities</code> and validate that epic boundaries align with detected logical modules. Epics spanning many communities = candidates to split."</td>
+<td>Architectural alignment</td>
+</tr>
+<tr>
+<td><code>bmad-create-epics-and-stories</code></td>
+<td>John (<code>/bmad-agent-pm</code>)</td>
+<td><code>find_most_complex_functions</code></td>
+<td>"Run <code>find_most_complex_functions(top_n=10)</code>. Surface high-risk areas any story should account for in its risk section."</td>
+<td>Proactive risk awareness</td>
+</tr>
+<tr>
+<td><code>bmad-create-story</code></td>
+<td>John (<code>/bmad-agent-pm</code>) or Amelia (<code>/bmad-agent-dev</code>)</td>
+<td><code>get_symbol_context</code></td>
+<td>"For each dependency listed in the epic, run <code>get_symbol_context</code> and populate 'Previous Story Intelligence' with real callers/callees."</td>
+<td>Populates dependencies with real graph data</td>
+</tr>
+<tr>
+<td><code>bmad-create-story</code></td>
+<td>John or Amelia</td>
+<td><code>get_impact</code></td>
+<td>"Run <code>get_impact</code> on each story's primary target. If HIGH/CRITICAL, mark as risk in the story file (not just verbal warning)."</td>
+<td>Risk-aware story creation</td>
+</tr>
+</tbody>
+</table>
+<h3>2.11 Architecture &amp; Readiness</h3>
+<table>
+<thead>
+<tr>
+<th>BMAD Workflow</th>
+<th>Agent (command)</th>
+<th>Memtrace Tool</th>
+<th>Short Prompt</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-create-architecture</code></td>
+<td>Winston — Architect (<code>/bmad-agent-architect</code>)</td>
+<td><code>list_communities</code></td>
+<td>"Run <code>list_communities</code>. Compare the proposed architecture with detected logical modules. If the new design splits an existing community, surface that explicitly."</td>
+<td>Architectural alignment</td>
+</tr>
+<tr>
+<td><code>bmad-create-architecture</code></td>
+<td>Winston (<code>/bmad-agent-architect</code>)</td>
+<td><code>get_api_topology</code></td>
+<td>"Run <code>get_api_topology</code> to map cross-service dependencies. New architecture must account for existing service boundaries."</td>
+<td>Cross-service awareness</td>
+</tr>
+<tr>
+<td><code>bmad-create-architecture</code></td>
+<td>Winston (<code>/bmad-agent-architect</code>)</td>
+<td><code>find_bridge_symbols</code></td>
+<td>"Run <code>find_bridge_symbols</code>. Identify architectural chokepoints before designing around them."</td>
+<td>Chokepoint awareness</td>
+</tr>
+<tr>
+<td><code>bmad-check-implementation-readiness</code></td>
+<td>Winston (<code>/bmad-agent-architect</code>)</td>
+<td><code>get_impact</code></td>
+<td>"Run <code>get_impact</code> on each story's target. If HIGH/CRITICAL, mark as blocker — story must include mitigation or be re-scoped."</td>
+<td>Detects if story touches high-risk code</td>
+</tr>
+<tr>
+<td><code>bmad-check-implementation-readiness</code></td>
+<td>Winston (<code>/bmad-agent-architect</code>)</td>
+<td><code>get_api_topology</code></td>
+<td>"Run <code>get_api_topology</code> for any story that modifies an endpoint. Unverified consumers = readiness blocker."</td>
+<td>Consumer impact verification</td>
+</tr>
+<tr>
+<td><code>bmad-check-implementation-readiness</code></td>
+<td>Winston (<code>/bmad-agent-architect</code>)</td>
+<td><code>list_communities</code></td>
+<td>"Run <code>list_communities</code> and validate stories don't fragment a community without explicit refactoring plan."</td>
+<td>Community integrity check</td>
+</tr>
+</tbody>
+</table>
+<h3>2.12 Documentation &amp; Project Context</h3>
+<table>
+<thead>
+<tr>
+<th>BMAD Workflow</th>
+<th>Agent (command)</th>
+<th>Memtrace Tool</th>
+<th>Short Prompt</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-document-project</code></td>
+<td>Paige — Tech Writer (<code>/bmad-agent-tech-writer</code>)</td>
+<td><code>get_codebase_briefing</code></td>
+<td>"Run <code>get_codebase_briefing(detail_level='full')</code> to understand the architecture before documenting. Don't guess the structure — use the graph."</td>
+<td>Architecture in 30s replaces hours of manual exploration</td>
+</tr>
+<tr>
+<td><code>bmad-document-project</code></td>
+<td>Paige (<code>/bmad-agent-tech-writer</code>)</td>
+<td><code>list_communities</code></td>
+<td>"Run <code>list_communities</code> and use detected logical modules as the document outline. Each community = one documentation section."</td>
+<td>Structure from data, not intuition</td>
+</tr>
+<tr>
+<td><code>bmad-document-project</code></td>
+<td>Paige (<code>/bmad-agent-tech-writer</code>)</td>
+<td><code>list_processes</code></td>
+<td>"Run <code>list_processes</code> to enumerate execution flows. Each flow deserves documentation of its sequence and entry points."</td>
+<td>Flow-based documentation</td>
+</tr>
+<tr>
+<td><code>bmad-document-project</code></td>
+<td>Paige (<code>/bmad-agent-tech-writer</code>)</td>
+<td><code>find_central_symbols</code></td>
+<td>"Run <code>find_central_symbols(limit=15)</code> and give extra documentation weight to load-bearing code."</td>
+<td>Focus docs on what matters most</td>
+</tr>
+<tr>
+<td><code>bmad-generate-project-context</code></td>
+<td>Amelia — Dev (<code>/bmad-agent-dev</code>)</td>
+<td><code>get_codebase_briefing</code></td>
+<td>"Run <code>get_codebase_briefing(detail_level='full')</code> — use the graph data as the primary source for the context file, NOT file-system walking."</td>
+<td>Project-context.md driven by real architecture</td>
+</tr>
+<tr>
+<td><code>bmad-generate-project-context</code></td>
+<td>Amelia (<code>/bmad-agent-dev</code>)</td>
+<td><code>list_communities</code></td>
+<td>"Run <code>list_communities</code> to populate the module breakdown section of project-context.md."</td>
+<td>Modules from graph, not folder guesses</td>
+</tr>
+</tbody>
+</table>
+<h3>2.13 E2E Test Generation</h3>
+<table>
+<thead>
+<tr>
+<th>BMAD Workflow</th>
+<th>Agent (command)</th>
+<th>Memtrace Tool</th>
+<th>Short Prompt</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-qa-generate-e2e-tests</code></td>
+<td>Murat — QA (<code>/bmad-tea</code>)</td>
+<td><code>list_processes</code></td>
+<td>"Run <code>list_processes</code> to enumerate all execution flows. Each flow = a candidate for E2E test generation."</td>
+<td>Which flows need tests?</td>
+</tr>
+<tr>
+<td><code>bmad-qa-generate-e2e-tests</code></td>
+<td>Murat (<code>/bmad-tea</code>)</td>
+<td><code>get_process_flow</code></td>
+<td>"For each process, run <code>get_process_flow(name)</code>. Each step in the flow should generate at least one E2E test case (happy path + relevant negatives)."</td>
+<td>Each step = one test case</td>
+</tr>
+<tr>
+<td><code>bmad-qa-generate-e2e-tests</code></td>
+<td>Murat (<code>/bmad-tea</code>)</td>
+<td><code>find_api_endpoints</code></td>
+<td>"Run <code>find_api_endpoints</code> to list all endpoints. Cross-reference with existing test files — uncovered endpoints = generation priority."</td>
+<td>Full API surface coverage</td>
+</tr>
+</tbody>
+</table>
+<h3>2.14 Technical Research (Conditional)</h3>
+<blockquote>
+<p><strong>⚠️ CONDITIONAL USE:</strong> Memtrace is only relevant here when the research topic involves the <strong>current codebase itself</strong> (e.g., "what ORM would replace our current Prisma setup?", "should we refactor this module to use EventEmitter?"). If the research is purely external (e.g., "React vs Vue for a new project"), skip ALL Memtrace tools — they add no value.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>BMAD Workflow</th>
+<th>Agent (command)</th>
+<th>Memtrace Tool</th>
+<th>Condition</th>
+<th>Short Prompt</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-technical-research</code></td>
+<td>Any agent</td>
+<td><code>find_code</code></td>
+<td>ONLY if topic is about current code</td>
+<td>"Use <code>find_code</code> with the research topic keywords to locate relevant existing code that would be affected by or replaced by the technology being researched."</td>
+<td>Finds affected code</td>
+</tr>
+<tr>
+<td><code>bmad-technical-research</code></td>
+<td>Any agent</td>
+<td><code>get_symbol_context</code></td>
+<td>ONLY if specific symbols identified</td>
+<td>"Run <code>get_symbol_context</code> on symbols that would be impacted by the proposed technology change."</td>
+<td>Impact analysis</td>
+</tr>
+<tr>
+<td><code>bmad-technical-research</code></td>
+<td>Any agent</td>
+<td><code>find_most_complex_functions</code></td>
+<td>ONLY if evaluating refactoring options</td>
+<td>"Run <code>find_most_complex_functions(top_n=10)</code> to identify candidate areas where the new technology would provide the most benefit."</td>
+<td>Prioritize by complexity</td>
+</tr>
+<tr>
+<td><code>bmad-technical-research</code></td>
+<td>Any agent</td>
+<td><code>get_impact</code></td>
+<td>ONLY if evaluating migration effort</td>
+<td>"Run <code>get_impact</code> on symbols that would need migration. Large blast radius = higher cost estimate."</td>
+<td>Effort estimation</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3>2.15 Complete Prompts by Workflow</h3>
+<blockquote>
+<p><strong>Copy and paste</strong> the prompt below to the indicated agent. Each prompt already includes all recommended Memtrace tools for that workflow, in the correct order, with safety triggers.</p>
+</blockquote>
+<hr />
+<h4>📋 Epic &amp; Story Planning</h4>
+<p><strong>Agent:</strong> John — PM (<code>/bmad-agent-pm</code>)</p>
+<div class="codehilite"><pre><span></span><code>Before creating epics and stories, run these Memtrace checks:
+
+1. get_codebase_briefing(detail_level=&quot;full&quot;) — understand current architecture
+2. find_most_complex_functions(top_n=10) — identify high-risk code
+3. list_communities — confirm detected modules match proposed epic boundaries
+
+Then, for each created story:
+4. get_symbol_context on listed dependencies — populate &quot;Previous Story Intelligence&quot; with real graph callers/callees
+5. get_impact on the primary target — if HIGH/CRITICAL, mark as risk in the story file
+
+If uncertain about story ordering:
+6. find_dependency_path between targets of consecutive stories to validate precedence
+</code></pre></div>
+
+<hr />
+<h4>🛠️ Story Implementation</h4>
+<p><strong>Agent:</strong> Amelia — Dev (<code>/bmad-agent-dev</code>)</p>
+<div class="codehilite"><pre><span></span><code><span class="nx">You</span><span class="w"> </span><span class="nx">are</span><span class="w"> </span><span class="nx">implementing</span><span class="w"> </span><span class="nx">this</span><span class="w"> </span><span class="nx">story</span><span class="p">.</span><span class="w"> </span><span class="nx">Follow</span><span class="w"> </span><span class="nx">this</span><span class="w"> </span><span class="nx">Memtrace</span><span class="w"> </span><span class="nx">protocol</span><span class="p">:</span>
+
+<span class="nx">BEFORE</span><span class="w"> </span><span class="nx">editing</span><span class="w"> </span><span class="nx">any</span><span class="w"> </span><span class="nx">file</span><span class="p">:</span>
+<span class="mi">1</span><span class="p">.</span><span class="w"> </span><span class="nx">find_code</span><span class="w"> </span><span class="nx">with</span><span class="w"> </span><span class="nx">natural</span><span class="w"> </span><span class="nx">language</span><span class="w"> </span><span class="nx">about</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">feature</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">locate</span><span class="w"> </span><span class="nx">existing</span><span class="w"> </span><span class="nx">related</span><span class="w"> </span><span class="nx">code</span>
+<span class="mi">2</span><span class="p">.</span><span class="w"> </span><span class="nx">get_impact</span><span class="w"> </span><span class="nx">on</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">primary</span><span class="w"> </span><span class="nx">target</span><span class="w"> </span><span class="p">(</span><span class="nx">direction</span><span class="p">=</span><span class="s">&quot;both&quot;</span><span class="p">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nx">HIGH</span><span class="o">/</span><span class="nx">CRITICAL</span><span class="p">,</span><span class="w"> </span><span class="nx">warn</span><span class="w"> </span><span class="nx">me</span><span class="w"> </span><span class="nx">before</span><span class="w"> </span><span class="nx">proceeding</span>
+<span class="mi">3</span><span class="p">.</span><span class="w"> </span><span class="nx">get_symbol_context</span><span class="w"> </span><span class="nx">on</span><span class="w"> </span><span class="nx">each</span><span class="w"> </span><span class="nx">listed</span><span class="w"> </span><span class="nx">dependency</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">understand</span><span class="w"> </span><span class="nx">real</span><span class="w"> </span><span class="nx">callers</span><span class="o">/</span><span class="nx">callees</span>
+
+<span class="nx">DURING</span><span class="w"> </span><span class="nx">implementation</span><span class="p">:</span>
+<span class="mi">4</span><span class="p">.</span><span class="w"> </span><span class="nx">find_code</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">search</span><span class="w"> </span><span class="nx">existing</span><span class="w"> </span><span class="nx">patterns</span><span class="w"> </span><span class="p">(</span><span class="s">&quot;how do we handle Zod validation?&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;is there an RLS helper?&quot;</span><span class="p">)</span>
+<span class="mi">5</span><span class="p">.</span><span class="w"> </span><span class="nx">find_api_endpoints</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">find_api_calls</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">before</span><span class="w"> </span><span class="nx">changing</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">Server</span><span class="w"> </span><span class="nx">Action</span><span class="w"> </span><span class="nx">signature</span><span class="p">,</span><span class="w"> </span><span class="nx">see</span><span class="w"> </span><span class="nx">who</span><span class="w"> </span><span class="nx">calls</span><span class="w"> </span><span class="nx">it</span>
+<span class="mi">6</span><span class="p">.</span><span class="w"> </span><span class="nx">find_bridge_symbols</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">target</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">bridge</span><span class="w"> </span><span class="nx">symbol</span><span class="p">,</span><span class="w"> </span><span class="nx">refactor</span><span class="w"> </span><span class="nx">with</span><span class="w"> </span><span class="nx">extra</span><span class="w"> </span><span class="nx">care</span>
+
+<span class="nx">AFTER</span><span class="w"> </span><span class="nx">implementing</span><span class="p">:</span>
+<span class="mi">7</span><span class="p">.</span><span class="w"> </span><span class="nx">get_evolution</span><span class="p">(</span><span class="nx">from</span><span class="p">=</span><span class="s">&quot;&lt;timestamp before starting&gt;&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">mode</span><span class="p">=</span><span class="s">&quot;compound&quot;</span><span class="p">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">check</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">unintended</span><span class="w"> </span><span class="nx">changes</span>
+<span class="mi">8</span><span class="p">.</span><span class="w"> </span><span class="nx">find_dead_code</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">confirm</span><span class="w"> </span><span class="nx">no</span><span class="w"> </span><span class="nx">new</span><span class="w"> </span><span class="nx">symbols</span><span class="w"> </span><span class="nx">without</span><span class="w"> </span><span class="nx">callers</span><span class="w"> </span><span class="nx">were</span><span class="w"> </span><span class="nx">introduced</span>
+</code></pre></div>
+
+<hr />
+<h4>🔍 Code Review (3 layers)</h4>
+<p><strong>Agent:</strong> Amelia — Dev (<code>/bmad-code-review</code>)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Run</span><span class="w"> </span><span class="n">adversarial</span><span class="w"> </span><span class="n">review</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="n">layers</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">Memtrace</span><span class="w"> </span><span class="n">support</span><span class="p">:</span>
+
+<span class="n">LAYER</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">BLIND</span><span class="w"> </span><span class="n">HUNTER</span><span class="p">:</span>
+<span class="mf">1.</span><span class="w"> </span><span class="n">get_evolution</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">branch</span><span class="w"> </span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;compound&quot;</span><span class="p">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">baseline</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">what</span><span class="w"> </span><span class="n">was</span><span class="w"> </span><span class="n">touched</span>
+<span class="mf">2.</span><span class="w"> </span><span class="n">get_impact</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">EACH</span><span class="w"> </span><span class="n">modified</span><span class="w"> </span><span class="n">function</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">list</span><span class="w"> </span><span class="n">downstream</span><span class="w"> </span><span class="n">files</span><span class="w"> </span><span class="n">NOT</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">diff</span><span class="w"> </span><span class="p">(</span><span class="n">must</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">reviewed</span><span class="w"> </span><span class="n">too</span><span class="p">)</span>
+<span class="mf">3.</span><span class="w"> </span><span class="n">find_bridge_symbols</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">diff</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">refactors</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">bridges</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">high</span><span class="w"> </span><span class="n">risk</span><span class="p">,</span><span class="w"> </span><span class="n">double</span><span class="w"> </span><span class="n">scrutiny</span>
+<span class="mf">4.</span><span class="w"> </span><span class="n">find_central_symbols</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">modified</span><span class="w"> </span><span class="n">files</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nb">load</span><span class="o">-</span><span class="n">bearing</span><span class="w"> </span><span class="n">symbols</span><span class="w"> </span><span class="n">were</span><span class="w"> </span><span class="n">touched</span><span class="p">,</span><span class="w"> </span><span class="n">verify</span><span class="w"> </span><span class="n">carefully</span>
+
+<span class="n">LAYER</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">EDGE</span><span class="w"> </span><span class="n">CASE</span><span class="w"> </span><span class="n">HUNTER</span><span class="p">:</span>
+<span class="mf">5.</span><span class="w"> </span><span class="n">find_dependency_path</span><span class="w"> </span><span class="n">between</span><span class="w"> </span><span class="n">modules</span><span class="w"> </span><span class="n">unrelated</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">diff</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">paths</span><span class="w"> </span><span class="n">found</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">edge</span><span class="w"> </span><span class="n">cases</span>
+<span class="mf">6.</span><span class="w"> </span><span class="n">get_impact</span><span class="p">(</span><span class="n">direction</span><span class="o">=</span><span class="s2">&quot;upstream&quot;</span><span class="p">)</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">entry</span><span class="w"> </span><span class="n">functions</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">callers</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">unexpected</span><span class="w"> </span><span class="n">inputs</span><span class="err">?</span>
+
+<span class="n">LAYER</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">ACCEPTANCE</span><span class="w"> </span><span class="n">AUDITOR</span><span class="p">:</span>
+<span class="mf">7.</span><span class="w"> </span><span class="n">get_process_flow</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">changed</span><span class="w"> </span><span class="n">flow</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">each</span><span class="w"> </span><span class="n">step</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">one</span><span class="w"> </span><span class="n">AC</span><span class="p">,</span><span class="w"> </span><span class="n">verify</span><span class="w"> </span><span class="n">test</span><span class="w"> </span><span class="n">coverage</span>
+<span class="mf">8.</span><span class="w"> </span><span class="n">find_dead_code</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">did</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">PR</span><span class="w"> </span><span class="n">introduce</span><span class="w"> </span><span class="n">new</span><span class="w"> </span><span class="n">symbols</span><span class="w"> </span><span class="n">without</span><span class="w"> </span><span class="n">callers</span><span class="err">?</span>
+<span class="mf">9.</span><span class="w"> </span><span class="n">find_most_complex_functions</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">compare</span><span class="w"> </span><span class="n">branch</span><span class="w"> </span><span class="n">vs</span><span class="w"> </span><span class="n">main</span><span class="p">,</span><span class="w"> </span><span class="n">fail</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">function</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">complexity</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">15</span><span class="w"> </span><span class="n">was</span><span class="w"> </span><span class="n">introduced</span>
+</code></pre></div>
+
+<hr />
+<h4>🧪 QA &amp; Testing</h4>
+<p><strong>Agent:</strong> Murat — QA (<code>/bmad-tea</code>)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Analyze</span><span class="w"> </span><span class="n">project</span><span class="w"> </span><span class="n">test</span><span class="w"> </span><span class="n">quality</span><span class="w"> </span><span class="k">using</span><span class="w"> </span><span class="nl">Memtrace</span><span class="p">:</span>
+
+<span class="mf">1.</span><span class="w"> </span><span class="n">list_processes</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="k">map</span><span class="w"> </span><span class="ow">all</span><span class="w"> </span><span class="n">detected</span><span class="w"> </span><span class="n">execution</span><span class="w"> </span><span class="n">flows</span>
+<span class="mf">2.</span><span class="w"> </span><span class="k">Cross</span><span class="o">-</span><span class="n">reference</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">e2e</span><span class="cm">/*.spec.ts — list flows WITHOUT E2E coverage</span>
+<span class="cm">3. For each uncovered flow: get_process_flow(&quot;[name]&quot;) — each step = one test case to generate</span>
+<span class="cm">4. find_symbol on modified files — list exported functions, check if each has a test</span>
+<span class="cm">5. get_impact(direction=&quot;upstream&quot;) on entry functions — callers with unexpected inputs = new edge cases</span>
+<span class="cm">6. find_dead_code — verify tests don&#39;t reference functions that no longer exist</span>
+</code></pre></div>
+
+<hr />
+<h4>🔄 Epic Retrospective</h4>
+<p><strong>Agent:</strong> Amelia — Dev (<code>/bmad-retrospective</code>)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Run</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">retrospective</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">quantitative</span><span class="w"> </span><span class="n">Memtrace</span><span class="w"> </span><span class="n">analysis</span><span class="p">:</span>
+
+<span class="mf">1.</span><span class="w"> </span><span class="n">get_evolution</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;compound&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">from</span><span class="o">=</span><span class="s2">&quot;&lt;epic start date&gt;&quot;</span><span class="p">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">quantified</span><span class="w"> </span><span class="n">scope</span><span class="p">:</span><span class="w"> </span><span class="n">symbols</span><span class="p">,</span><span class="w"> </span><span class="n">edges</span><span class="p">,</span><span class="w"> </span><span class="n">episodes</span>
+<span class="mf">2.</span><span class="w"> </span><span class="n">find_most_complex_functions</span><span class="p">(</span><span class="n">top_n</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">prioritize</span><span class="w"> </span><span class="n">refactoring</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="n">highest</span><span class="w"> </span><span class="n">risk</span>
+<span class="mf">3.</span><span class="w"> </span><span class="n">find_dead_code</span><span class="p">(</span><span class="n">limit</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">turn</span><span class="w"> </span><span class="n">candidates</span><span class="w"> </span><span class="n">into</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">housekeeping</span><span class="w"> </span><span class="n">story</span>
+<span class="mf">4.</span><span class="w"> </span><span class="n">find_central_symbols</span><span class="p">(</span><span class="n">limit</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">mark</span><span class="w"> </span><span class="nb">load</span><span class="o">-</span><span class="n">bearing</span><span class="p">,</span><span class="w"> </span><span class="n">extra</span><span class="w"> </span><span class="n">care</span><span class="w"> </span><span class="n">when</span><span class="w"> </span><span class="n">refactoring</span>
+<span class="mf">5.</span><span class="w"> </span><span class="n">list_communities</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">compare</span><span class="w"> </span><span class="n">structure</span><span class="w"> </span><span class="n">before</span><span class="o">/</span><span class="n">after</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">epic</span><span class="p">,</span><span class="w"> </span><span class="n">detect</span><span class="w"> </span><span class="n">god</span><span class="o">-</span><span class="n">modules</span>
+<span class="mf">6.</span><span class="w"> </span><span class="n">get_codebase_briefing</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">compare</span><span class="w"> </span><span class="n">metrics</span><span class="w"> </span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span><span class="w"> </span><span class="n">edges</span><span class="p">)</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">pre</span><span class="o">-</span><span class="n">epic</span><span class="w"> </span><span class="n">briefing</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">available</span>
+</code></pre></div>
+
+<hr />
+<h4>📊 Sprint Planning</h4>
+<p><strong>Agent:</strong> Amelia — Dev (<code>/bmad-sprint-planning</code>)</p>
+<div class="codehilite"><pre><span></span><code>Plan the sprint with Memtrace data:
+
+1. get_codebase_briefing — overview of current architecture
+2. find_most_complex_functions(top_n=15) — stories touching complex functions = priority
+3. get_impact on each candidate story&#39;s targets — large blast radius = more effort, adjust estimates
+4. list_processes — understand full functional scope when prioritizing
+5. find_dependency_path between consecutive stories — validate no cyclic dependencies in ordering
+</code></pre></div>
+
+<hr />
+<h4>🚨 Course Correction (mid-sprint change)</h4>
+<p><strong>Agent:</strong> Amelia — Dev (<code>/bmad-correct-course</code>)</p>
+<div class="codehilite"><pre><span></span><code>Assess the impact of the proposed change with Memtrace:
+
+1. get_evolution(from=&quot;&lt;sprint start&gt;&quot;, mode=&quot;compound&quot;) — what was already built?
+2. get_impact on new targets — does the change break existing code? If so, suggest mitigation
+3. get_timeline on affected symbols — full history for rollback if needed
+4. find_dependency_path between the change and critical code — indirect impact paths
+5. get_cochange_context on affected files — which files always change together? Do they also need adjustment?
+</code></pre></div>
+
+<hr />
+<h4>🐛 Debugging / Incident Investigation</h4>
+<p><strong>Agent:</strong> Amelia — Dev (<code>/bmad-quick-dev</code>)</p>
+<div class="codehilite"><pre><span></span><code>Investigate the issue with Memtrace:
+
+1. find_code with the error message &quot;...&quot; — locate where the error is generated
+2. get_timeline on the error symbol — when was the last change? What changed?
+3. get_impact(symbol, direction=&quot;downstream&quot;) — what else broke?
+4. get_process_flow of the affected flow — trace the full path, find the failing step
+5. get_cochange_context on the broken file — files that change together may be related
+6. get_evolution(from=&quot;&lt;last stable version&gt;&quot;) — what changed since it worked?
+</code></pre></div>
+
+<hr />
+<h4>🔗 Session Start or Resume</h4>
+<p><strong>Agent:</strong> Any (<code>/bmad-help</code> or target agent)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Prepare</span><span class="w"> </span><span class="n">session</span><span class="w"> </span><span class="n">context</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">Memtrace</span><span class="p">:</span>
+
+<span class="mf">1.</span><span class="w"> </span><span class="n">get_codebase_briefing</span><span class="p">(</span><span class="n">detail_level</span><span class="o">=</span><span class="s2">&quot;full&quot;</span><span class="p">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">understand</span><span class="w"> </span><span class="n">architecture</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="mi">30</span><span class="w"> </span><span class="n">seconds</span>
+<span class="mf">2.</span><span class="w"> </span><span class="n">get_changes_since</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">what</span><span class="w"> </span><span class="n">changed</span><span class="w"> </span><span class="n">since</span><span class="w"> </span><span class="n">last</span><span class="w"> </span><span class="n">session</span><span class="err">?</span><span class="w"> </span><span class="p">(</span><span class="k">if</span><span class="w"> </span><span class="n">resuming</span><span class="p">)</span>
+<span class="mf">3.</span><span class="w"> </span><span class="n">list_communities</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">view</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">logical</span><span class="w"> </span><span class="n">modules</span>
+<span class="mf">4.</span><span class="w"> </span><span class="n">find_central_symbols</span><span class="p">(</span><span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">know</span><span class="w"> </span><span class="n">which</span><span class="w"> </span><span class="n">symbols</span><span class="w"> </span><span class="n">are</span><span class="w"> </span><span class="nb">load</span><span class="o">-</span><span class="n">bearing</span><span class="w"> </span><span class="n">before</span><span class="w"> </span><span class="n">touching</span><span class="w"> </span><span class="n">anything</span>
+</code></pre></div>
+
+<hr />
+<h4>📋 Epic Creation</h4>
+<p><strong>Agent:</strong> John — PM (<code>/bmad-agent-pm</code>)</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">Before</span><span class="w"> </span><span class="nt">creating</span><span class="w"> </span><span class="nt">epics</span><span class="o">,</span><span class="w"> </span><span class="nt">run</span><span class="w"> </span><span class="nt">these</span><span class="w"> </span><span class="nt">Memtrace</span><span class="w"> </span><span class="nt">checks</span><span class="o">:</span>
+
+<span class="nt">1</span><span class="o">.</span><span class="w"> </span><span class="nt">get_codebase_briefing</span><span class="o">(</span><span class="nt">detail_level</span><span class="o">=</span><span class="s2">&quot;full&quot;</span><span class="o">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nt">understand</span><span class="w"> </span><span class="nt">current</span><span class="w"> </span><span class="nt">architecture</span><span class="w"> </span><span class="nt">before</span><span class="w"> </span><span class="nt">proposing</span><span class="w"> </span><span class="nt">epics</span>
+<span class="nt">2</span><span class="o">.</span><span class="w"> </span><span class="nt">list_communities</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nt">validate</span><span class="w"> </span><span class="nt">that</span><span class="w"> </span><span class="nt">proposed</span><span class="w"> </span><span class="nt">epic</span><span class="w"> </span><span class="nt">boundaries</span><span class="w"> </span><span class="nt">map</span><span class="w"> </span><span class="nt">to</span><span class="w"> </span><span class="nt">detected</span><span class="w"> </span><span class="nt">logical</span><span class="w"> </span><span class="nt">modules</span><span class="w"> </span><span class="o">(</span><span class="nt">Louvain</span><span class="w"> </span><span class="nt">communities</span><span class="o">)</span>
+<span class="nt">3</span><span class="o">.</span><span class="w"> </span><span class="nt">find_most_complex_functions</span><span class="o">(</span><span class="nt">top_n</span><span class="o">=</span><span class="nt">10</span><span class="o">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nt">surface</span><span class="w"> </span><span class="nt">high-risk</span><span class="w"> </span><span class="nt">code</span><span class="w"> </span><span class="nt">areas</span><span class="o">;</span><span class="w"> </span><span class="nt">any</span><span class="w"> </span><span class="nt">epic</span><span class="w"> </span><span class="nt">touching</span><span class="w"> </span><span class="nt">them</span><span class="w"> </span><span class="nt">inherits</span><span class="w"> </span><span class="nt">risk</span>
+
+<span class="nt">Then</span><span class="w"> </span><span class="nt">for</span><span class="w"> </span><span class="nt">each</span><span class="w"> </span><span class="nt">epic</span><span class="w"> </span><span class="nt">created</span><span class="o">:</span>
+<span class="nt">4</span><span class="o">.</span><span class="w"> </span><span class="nt">For</span><span class="w"> </span><span class="nt">each</span><span class="w"> </span><span class="nt">story</span><span class="w"> </span><span class="nt">dependency</span><span class="w"> </span><span class="nt">listed</span><span class="o">:</span><span class="w"> </span><span class="nt">get_symbol_context</span><span class="o">(</span><span class="nt">symbol</span><span class="o">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nt">populate</span><span class="w"> </span><span class="s2">&quot;Previous Story Intelligence&quot;</span><span class="w"> </span><span class="nt">with</span><span class="w"> </span><span class="nt">real</span><span class="w"> </span><span class="nt">graph</span><span class="w"> </span><span class="nt">callers</span><span class="o">/</span><span class="nt">callees</span><span class="o">,</span><span class="w"> </span><span class="nt">not</span><span class="w"> </span><span class="nt">aspirational</span><span class="w"> </span><span class="nt">descriptions</span>
+<span class="nt">5</span><span class="o">.</span><span class="w"> </span><span class="nt">get_impact</span><span class="w"> </span><span class="nt">on</span><span class="w"> </span><span class="nt">each</span><span class="w"> </span><span class="nt">story</span><span class="err">&#39;</span><span class="nt">s</span><span class="w"> </span><span class="nt">primary</span><span class="w"> </span><span class="nt">target</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nt">if</span><span class="w"> </span><span class="nt">HIGH</span><span class="o">/</span><span class="nt">CRITICAL</span><span class="o">,</span><span class="w"> </span><span class="nt">mark</span><span class="w"> </span><span class="nt">the</span><span class="w"> </span><span class="nt">story</span><span class="w"> </span><span class="nt">file</span><span class="w"> </span><span class="nt">with</span><span class="w"> </span><span class="nt">an</span><span class="w"> </span><span class="nt">explicit</span><span class="w"> </span><span class="nt">risk</span><span class="w"> </span><span class="nt">flag</span><span class="w"> </span><span class="nt">and</span><span class="w"> </span><span class="nt">require</span><span class="w"> </span><span class="nt">architect</span><span class="w"> </span><span class="nt">sign-off</span>
+
+<span class="nt">Validation</span><span class="o">:</span>
+<span class="nt">6</span><span class="o">.</span><span class="w"> </span><span class="nt">find_dependency_path</span><span class="w"> </span><span class="nt">between</span><span class="w"> </span><span class="nt">targets</span><span class="w"> </span><span class="nt">of</span><span class="w"> </span><span class="nt">consecutive</span><span class="w"> </span><span class="nt">stories</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nt">validate</span><span class="w"> </span><span class="nt">story</span><span class="w"> </span><span class="nt">ordering</span><span class="w"> </span><span class="nt">before</span><span class="w"> </span><span class="nt">locking</span><span class="w"> </span><span class="nt">the</span><span class="w"> </span><span class="nt">sprint</span><span class="w"> </span><span class="nt">plan</span>
+<span class="nt">7</span><span class="o">.</span><span class="w"> </span><span class="nt">confirm</span><span class="w"> </span><span class="nt">no</span><span class="w"> </span><span class="nt">epic</span><span class="w"> </span><span class="nt">spans</span><span class="w"> </span><span class="nt">more</span><span class="w"> </span><span class="nt">than</span><span class="w"> </span><span class="nt">3</span><span class="w"> </span><span class="nt">communities</span><span class="w"> </span><span class="nt">without</span><span class="w"> </span><span class="nt">explicit</span><span class="w"> </span><span class="nt">justification</span>
+</code></pre></div>
+
+<hr />
+<h4>📝 Story Creation (Individual)</h4>
+<p><strong>Agent:</strong> John — PM (<code>/bmad-agent-pm</code>) or Amelia — Dev (<code>/bmad-agent-dev</code>)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Create</span><span class="w"> </span><span class="n">this</span><span class="w"> </span><span class="n">story</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">graph</span><span class="o">-</span><span class="n">backed</span><span class="w"> </span><span class="n">intelligence</span><span class="p">:</span>
+
+<span class="mf">1.</span><span class="w"> </span><span class="n">get_codebase_briefing</span><span class="p">(</span><span class="n">detail_level</span><span class="o">=</span><span class="s2">&quot;summary&quot;</span><span class="p">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">refresh</span><span class="w"> </span><span class="n">architecture</span><span class="w"> </span><span class="n">context</span>
+<span class="mf">2.</span><span class="w"> </span><span class="n">get_symbol_context</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">each</span><span class="w"> </span><span class="n">dependency</span><span class="w"> </span><span class="n">listed</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">story</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">populate</span><span class="w"> </span><span class="s2">&quot;Previous Story Intelligence&quot;</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">real</span><span class="w"> </span><span class="n">callers</span><span class="p">,</span><span class="w"> </span><span class="n">callees</span><span class="p">,</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">community</span><span class="w"> </span><span class="n">membership</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">graph</span>
+<span class="mf">3.</span><span class="w"> </span><span class="n">get_impact</span><span class="w"> </span><span class="n">on</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">story</span><span class="s1">&#39;s primary target — if HIGH or CRITICAL:</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Mark</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">story</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="s2">&quot;[Risk: HIGH]&quot;</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s2">&quot;[Risk: CRITICAL]&quot;</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Add</span><span class="w"> </span><span class="n">affected</span><span class="w"> </span><span class="n">files</span><span class="w"> </span><span class="n">list</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Require</span><span class="w"> </span><span class="n">architect</span><span class="w"> </span><span class="nb">sign</span><span class="o">-</span><span class="n">off</span><span class="w"> </span><span class="n">before</span><span class="w"> </span><span class="n">dev</span><span class="o">-</span><span class="n">story</span>
+<span class="mf">4.</span><span class="w"> </span><span class="n">find_dependency_path</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">this</span><span class="w"> </span><span class="n">story</span><span class="s1">&#39;s target to known load-bearing symbols (from find_central_symbols) — indirect connections = hidden risk to document</span>
+<span class="mf">5.</span><span class="w"> </span><span class="n">After</span><span class="w"> </span><span class="n">story</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">written</span><span class="p">:</span><span class="w"> </span><span class="n">validate</span><span class="w"> </span><span class="n">that</span><span class="w"> </span><span class="n">ALL</span><span class="w"> </span><span class="n">acceptance</span><span class="w"> </span><span class="n">criteria</span><span class="w"> </span><span class="n">trace</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">at</span><span class="w"> </span><span class="n">least</span><span class="w"> </span><span class="n">one</span><span class="w"> </span><span class="n">process</span><span class="w"> </span><span class="n">step</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">get_process_flow</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">applicable</span>
+</code></pre></div>
+
+<hr />
+<h4>🏗️ Architecture Design</h4>
+<p><strong>Agent:</strong> Winston — Architect (<code>/bmad-agent-architect</code>)</p>
+<div class="codehilite"><pre><span></span><code>Design architecture backed by real code structure:
+
+1. list_communities — baseline of current logical modules
+2. get_api_topology — current cross-service dependency map
+3. find_bridge_symbols — identify current architectural chokepoints (betweenness centrality)
+
+When proposing architecture changes:
+4. Compare proposed module boundaries against list_communities output — if the new design splits an existing community, surface the refactoring cost explicitly
+5. Run get_impact on any symbol that would move between modules — blast radius = migration cost
+6. Identify find_bridge_symbols that would be created or removed by the new architecture — bridges are high-maintenance, design to minimize them
+
+Validation:
+7. Every new module boundary must have a justification against community data
+8. Cross-service dependencies from get_api_topology must not increase without explicit benefit
+</code></pre></div>
+
+<hr />
+<h4>✅ Implementation Readiness Check</h4>
+<p><strong>Agent:</strong> Winston — Architect (<code>/bmad-agent-architect</code>)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Validate</span><span class="w"> </span><span class="n">readiness</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">Memtrace</span><span class="w"> </span><span class="k">data</span><span class="err">:</span>
+
+<span class="mf">1.</span><span class="w"> </span><span class="n">list_communities</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">confirm</span><span class="w"> </span><span class="k">current</span><span class="w"> </span><span class="n">architecture</span><span class="w"> </span><span class="n">matches</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">planned</span><span class="w"> </span><span class="n">one</span>
+<span class="mf">2.</span><span class="w"> </span><span class="n">get_api_topology</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="k">map</span><span class="w"> </span><span class="ow">all</span><span class="w"> </span><span class="k">cross</span><span class="o">-</span><span class="n">service</span><span class="w"> </span><span class="n">dependencies</span>
+
+<span class="k">For</span><span class="w"> </span><span class="k">each</span><span class="w"> </span><span class="n">story</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="nl">sprint</span><span class="p">:</span>
+<span class="mf">3.</span><span class="w"> </span><span class="n">get_impact</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">story</span><span class="err">&#39;</span><span class="n">s</span><span class="w"> </span><span class="k">primary</span><span class="w"> </span><span class="n">target</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">HIGH</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">CRITICAL</span><span class="w"> </span><span class="n">risk</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nl">BLOCKER</span><span class="p">:</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Story</span><span class="w"> </span><span class="n">must</span><span class="w"> </span><span class="k">include</span><span class="w"> </span><span class="n">mitigation</span><span class="w"> </span><span class="k">plan</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">re</span><span class="o">-</span><span class="n">scoped</span>
+<span class="w">   </span><span class="o">-</span><span class="w"> </span><span class="n">Document</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">risk</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">readiness</span><span class="w"> </span><span class="n">report</span>
+<span class="mf">4.</span><span class="w"> </span><span class="k">If</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">story</span><span class="w"> </span><span class="k">modifies</span><span class="w"> </span><span class="n">an</span><span class="w"> </span><span class="nl">endpoint</span><span class="p">:</span><span class="w"> </span><span class="n">get_api_topology</span><span class="w"> </span><span class="n">filtered</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">that</span><span class="w"> </span><span class="n">endpoint</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">verify</span><span class="w"> </span><span class="ow">ALL</span><span class="w"> </span><span class="n">consumers</span><span class="w"> </span><span class="n">were</span><span class="w"> </span><span class="n">accounted</span><span class="w"> </span><span class="k">for</span><span class="p">.</span><span class="w"> </span><span class="n">Unverified</span><span class="w"> </span><span class="n">consumers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">BLOCKER</span><span class="p">.</span>
+<span class="mf">5.</span><span class="w"> </span><span class="n">find_bridge_symbols</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="ow">any</span><span class="w"> </span><span class="n">story</span><span class="w"> </span><span class="n">refactors</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">bridge</span><span class="w"> </span><span class="n">symbol</span><span class="p">,</span><span class="w"> </span><span class="n">flag</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">architect</span><span class="o">-</span><span class="n">led</span><span class="w"> </span><span class="n">design</span><span class="w"> </span><span class="n">review</span>
+
+<span class="k">Output</span><span class="err">:</span><span class="w"> </span><span class="n">readiness</span><span class="w"> </span><span class="n">report</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="k">go</span><span class="o">/</span><span class="k">no</span><span class="o">-</span><span class="k">go</span><span class="w"> </span><span class="n">per</span><span class="w"> </span><span class="n">story</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="n">blocker</span><span class="w"> </span><span class="n">list</span><span class="w"> </span><span class="k">with</span><span class="w"> </span><span class="n">graph</span><span class="w"> </span><span class="n">evidence</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="n">risk</span><span class="w"> </span><span class="n">matrix</span><span class="w"> </span><span class="n">based</span><span class="w"> </span><span class="k">on</span><span class="w"> </span><span class="n">get_impact</span><span class="w"> </span><span class="n">scores</span><span class="p">.</span>
+</code></pre></div>
+
+<hr />
+<h4>📄 Document Project</h4>
+<p><strong>Agent:</strong> Paige — Tech Writer (<code>/bmad-agent-tech-writer</code>)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Document</span><span class="w"> </span><span class="n">this</span><span class="w"> </span><span class="n">project</span><span class="w"> </span><span class="n">using</span><span class="w"> </span><span class="n">graph</span><span class="w"> </span><span class="n">data</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">primary</span><span class="w"> </span><span class="n">source</span><span class="p">:</span>
+
+<span class="mf">1.</span><span class="w"> </span><span class="n">get_codebase_briefing</span><span class="p">(</span><span class="n">detail_level</span><span class="o">=</span><span class="s2">&quot;full&quot;</span><span class="p">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">architecture</span><span class="w"> </span><span class="n">overview</span><span class="p">:</span><span class="w"> </span><span class="n">scale</span><span class="p">,</span><span class="w"> </span><span class="n">modules</span><span class="p">,</span><span class="w"> </span><span class="n">risks</span><span class="p">,</span><span class="w"> </span><span class="n">dead</span><span class="w"> </span><span class="n">code</span>
+<span class="mf">2.</span><span class="w"> </span><span class="n">list_communities</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">use</span><span class="w"> </span><span class="n">detected</span><span class="w"> </span><span class="n">logical</span><span class="w"> </span><span class="n">modules</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">documentation</span><span class="w"> </span><span class="n">outline</span><span class="o">.</span><span class="w"> </span><span class="n">Each</span><span class="w"> </span><span class="n">community</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">one</span><span class="w"> </span><span class="n">section</span>
+<span class="mf">3.</span><span class="w"> </span><span class="n">list_processes</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">enumerate</span><span class="w"> </span><span class="n">all</span><span class="w"> </span><span class="n">execution</span><span class="w"> </span><span class="n">flows</span><span class="o">.</span><span class="w"> </span><span class="n">Each</span><span class="w"> </span><span class="n">flow</span><span class="w"> </span><span class="n">deserves</span><span class="w"> </span><span class="n">documentation</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">its</span><span class="w"> </span><span class="n">sequence</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">entry</span><span class="w"> </span><span class="n">points</span>
+<span class="mf">4.</span><span class="w"> </span><span class="n">find_central_symbols</span><span class="p">(</span><span class="n">limit</span><span class="o">=</span><span class="mi">15</span><span class="p">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">give</span><span class="w"> </span><span class="n">extra</span><span class="w"> </span><span class="n">documentation</span><span class="w"> </span><span class="n">weight</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">detail</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="nb">load</span><span class="o">-</span><span class="n">bearing</span><span class="w"> </span><span class="n">code</span><span class="w"> </span><span class="p">(</span><span class="n">high</span><span class="w"> </span><span class="n">PageRank</span><span class="p">)</span>
+<span class="mf">5.</span><span class="w"> </span><span class="n">find_most_complex_functions</span><span class="p">(</span><span class="n">top_n</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">document</span><span class="w"> </span><span class="n">these</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">extra</span><span class="w"> </span><span class="n">care</span><span class="p">;</span><span class="w"> </span><span class="n">complex</span><span class="w"> </span><span class="n">functions</span><span class="w"> </span><span class="n">need</span><span class="w"> </span><span class="n">clear</span><span class="w"> </span><span class="n">contracts</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">examples</span>
+
+<span class="n">Documentation</span><span class="w"> </span><span class="n">structure</span><span class="w"> </span><span class="n">rule</span><span class="p">:</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Each</span><span class="w"> </span><span class="n">community</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">list_communities</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">one</span><span class="w"> </span><span class="n">top</span><span class="o">-</span><span class="n">level</span><span class="w"> </span><span class="n">doc</span><span class="w"> </span><span class="n">section</span>
+<span class="o">-</span><span class="w"> </span><span class="n">Each</span><span class="w"> </span><span class="n">process</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">list_processes</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">one</span><span class="w"> </span><span class="n">flow</span><span class="o">-</span><span class="n">documentation</span><span class="w"> </span><span class="n">subsection</span>
+<span class="o">-</span><span class="w"> </span><span class="n">find_central_symbols</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">expanded</span><span class="w"> </span><span class="n">API</span><span class="o">/</span><span class="n">contract</span><span class="w"> </span><span class="n">documentation</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">callers</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">callees</span><span class="w"> </span><span class="n">from</span><span class="w"> </span><span class="n">get_symbol_context</span>
+<span class="o">-</span><span class="w"> </span><span class="n">find_dead_code</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">explicitly</span><span class="w"> </span><span class="n">NOT</span><span class="w"> </span><span class="n">documented</span><span class="w"> </span><span class="p">(</span><span class="n">reduce</span><span class="w"> </span><span class="n">noise</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">dead</span><span class="w"> </span><span class="n">code</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="n">user</span><span class="o">-</span><span class="n">facing</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h4>📋 Generate Project Context</h4>
+<p><strong>Agent:</strong> Amelia — Dev (<code>/bmad-agent-dev</code>)</p>
+<div class="codehilite"><pre><span></span><code>Generate project-context.md driven entirely by Memtrace graph data:
+
+DO NOT walk the filesystem with tree/ls/glob. Use Memtrace as the single source of truth.
+
+1. get_codebase_briefing(detail_level=&quot;full&quot;) — this IS your outline:
+   <span class="k">-</span> Symbol counts → project scale section
+   <span class="k">-</span> Community list → module breakdown section
+   <span class="k">-</span> Top risks → risk section
+
+2. list_communities — populate the &quot;Modules&quot; section with each community name + its top symbols from find_central_symbols
+
+3. list_processes — populate the &quot;Key Flows&quot; section with each process name + entry point
+
+4. find_central_symbols(limit=10) — add a &quot;Load-Bearing Code&quot; section listing these symbols with their PageRank context
+
+5. find_most_complex_functions(top_n=10) — add a &quot;Complexity Hotspots&quot; section
+
+Structure of project-context.md:
+<span class="k">-</span> Scale &amp; Architecture (from get_codebase_briefing)
+<span class="k">-</span> Modules (from list_communities)
+<span class="k">-</span> Key Flows (from list_processes)
+<span class="k">-</span> Load-Bearing Code (from find_central_symbols)
+<span class="k">-</span> Complexity Hotspots (from find_most_complex_functions)
+<span class="k">-</span> Risk Areas (from get_codebase_briefing risk summary)
+</code></pre></div>
+
+<hr />
+<h4>🧪 Generate E2E Tests</h4>
+<p><strong>Agent:</strong> Murat — QA (<code>/bmad-tea</code>)</p>
+<div class="codehilite"><pre><span></span><code><span class="n">Generate</span><span class="w"> </span><span class="n">E2E</span><span class="w"> </span><span class="n">tests</span><span class="w"> </span><span class="n">driven</span><span class="w"> </span><span class="n">by</span><span class="w"> </span><span class="n">detected</span><span class="w"> </span><span class="n">execution</span><span class="w"> </span><span class="n">flows</span><span class="o">:</span>
+
+<span class="mf">1.</span><span class="w"> </span><span class="n">list_processes</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="n">enumerate</span><span class="w"> </span><span class="n">ALL</span><span class="w"> </span><span class="n">detected</span><span class="w"> </span><span class="n">execution</span><span class="w"> </span><span class="n">flows</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">codebase</span>
+<span class="mf">2.</span><span class="w"> </span><span class="n">Cross</span><span class="o">-</span><span class="n">reference</span><span class="w"> </span><span class="n">with</span><span class="w"> </span><span class="n">existing</span><span class="w"> </span><span class="n">e2e</span><span class="cm">/*.spec.ts files — list flows WITHOUT E2E coverage as PRIORITY targets</span>
+
+<span class="cm">For each uncovered flow:</span>
+<span class="cm">3. get_process_flow(&quot;[process name]&quot;) — trace the full execution path step by step</span>
+
+<span class="cm">Test generation rules:</span>
+<span class="cm">4. Each step in get_process_flow output = at least one E2E test case (happy path + relevant negative paths)</span>
+<span class="cm">5. Each test must reference the exact function name and file:line from the flow step</span>
+<span class="cm">6. find_api_endpoints — cross-reference: every endpoint involved in the flow must have its HTTP method and path verified in the test</span>
+
+<span class="cm">Quality checks after generation:</span>
+<span class="cm">7. find_dead_code — verify no generated test references a function that no longer exists (orphan test)</span>
+<span class="cm">8. find_most_complex_functions — ensure complexity hotspots from the flow have extra assertion depth</span>
+
+<span class="cm">Output: a test file per process with (a) flow diagram comment, (b) per-step test cases, (c) coverage of positive + negative + edge cases.</span>
+</code></pre></div>
+
+<hr />
+<h4>🔬 Technical Research (Conditional)</h4>
+<p><strong>Agent:</strong> Any relevant agent</p>
+<div class="codehilite"><pre><span></span><code><span class="err">⚠️</span><span class="w"> </span><span class="nx">BEFORE</span><span class="w"> </span><span class="nx">USING</span><span class="w"> </span><span class="nx">MEMTRACE</span><span class="p">:</span><span class="w"> </span><span class="nx">Determine</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">research</span><span class="w"> </span><span class="nx">topic</span><span class="w"> </span><span class="nx">involves</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">CURRENT</span><span class="w"> </span><span class="nx">codebase</span><span class="p">.</span>
+
+<span class="nx">IF</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">research</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="nx">about</span><span class="p">:</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">External</span><span class="w"> </span><span class="nx">technology</span><span class="w"> </span><span class="nx">comparison</span><span class="w"> </span><span class="p">(</span><span class="s">&quot;React vs Vue&quot;</span><span class="p">)</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">SKIP</span><span class="w"> </span><span class="nx">all</span><span class="w"> </span><span class="nx">Memtrace</span><span class="w"> </span><span class="nx">tools</span><span class="w"> </span><span class="nx">entirely</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">Evaluating</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="kn">library</span><span class="o">/</span><span class="nx">framework</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">a</span><span class="w"> </span><span class="nx">NEW</span><span class="w"> </span><span class="nx">project</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">SKIP</span><span class="w"> </span><span class="nx">all</span><span class="w"> </span><span class="nx">Memtrace</span><span class="w"> </span><span class="nx">tools</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">General</span><span class="w"> </span><span class="nx">technology</span><span class="w"> </span><span class="nx">trends</span><span class="p">,</span><span class="w"> </span><span class="nx">ecosystem</span><span class="w"> </span><span class="nx">analysis</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">SKIP</span><span class="w"> </span><span class="nx">all</span><span class="w"> </span><span class="nx">Memtrace</span><span class="w"> </span><span class="nx">tools</span>
+
+<span class="nx">IF</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">research</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="nx">about</span><span class="p">:</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">Replacing</span><span class="o">/</span><span class="nx">upgrading</span><span class="w"> </span><span class="nx">technology</span><span class="w"> </span><span class="nx">IN</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">current</span><span class="w"> </span><span class="nx">codebase</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">USE</span><span class="w"> </span><span class="nx">Memtrace</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">Refactoring</span><span class="w"> </span><span class="nx">approach</span><span class="w"> </span><span class="nx">evaluation</span><span class="w"> </span><span class="nx">on</span><span class="w"> </span><span class="nx">current</span><span class="w"> </span><span class="nx">code</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">USE</span><span class="w"> </span><span class="nx">Memtrace</span>
+<span class="w">  </span><span class="o">-</span><span class="w"> </span><span class="nx">Migration</span><span class="w"> </span><span class="nx">effort</span><span class="w"> </span><span class="nx">estimation</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nx">current</span><span class="w"> </span><span class="nx">codebase</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">USE</span><span class="w"> </span><span class="nx">Memtrace</span>
+
+<span class="nx">When</span><span class="w"> </span><span class="nx">applicable</span><span class="p">,</span><span class="w"> </span><span class="nx">use</span><span class="w"> </span><span class="nx">these</span><span class="w"> </span><span class="nx">Memtrace</span><span class="w"> </span><span class="nx">tools</span><span class="p">:</span>
+
+<span class="mi">1</span><span class="p">.</span><span class="w"> </span><span class="nx">find_code</span><span class="w"> </span><span class="nx">with</span><span class="w"> </span><span class="nx">research</span><span class="w"> </span><span class="nx">topic</span><span class="w"> </span><span class="nx">keywords</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">locate</span><span class="w"> </span><span class="nx">existing</span><span class="w"> </span><span class="nx">code</span><span class="w"> </span><span class="nx">affected</span><span class="w"> </span><span class="nx">by</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="nx">replaceable</span><span class="w"> </span><span class="nx">by</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">technology</span><span class="w"> </span><span class="nx">being</span><span class="w"> </span><span class="nx">researched</span>
+<span class="mi">2</span><span class="p">.</span><span class="w"> </span><span class="nx">get_symbol_context</span><span class="w"> </span><span class="nx">on</span><span class="w"> </span><span class="nx">identified</span><span class="w"> </span><span class="nx">symbols</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">understand</span><span class="w"> </span><span class="nx">their</span><span class="w"> </span><span class="nx">role</span><span class="w"> </span><span class="nx">before</span><span class="w"> </span><span class="nx">proposing</span><span class="w"> </span><span class="nx">changes</span>
+<span class="mi">3</span><span class="p">.</span><span class="w"> </span><span class="nx">find_most_complex_functions</span><span class="p">(</span><span class="nx">top_n</span><span class="p">=</span><span class="mi">10</span><span class="p">)</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nx">evaluating</span><span class="w"> </span><span class="nx">refactoring</span><span class="w"> </span><span class="nx">approaches</span><span class="p">,</span><span class="w"> </span><span class="nx">prioritize</span><span class="w"> </span><span class="nx">by</span><span class="w"> </span><span class="nx">complexity</span>
+<span class="mi">4</span><span class="p">.</span><span class="w"> </span><span class="nx">get_impact</span><span class="w"> </span><span class="nx">on</span><span class="w"> </span><span class="nx">symbols</span><span class="w"> </span><span class="nx">that</span><span class="w"> </span><span class="nx">would</span><span class="w"> </span><span class="nx">need</span><span class="w"> </span><span class="nx">migration</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">large</span><span class="w"> </span><span class="nx">blast</span><span class="w"> </span><span class="nx">radius</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">higher</span><span class="w"> </span><span class="nx">cost</span><span class="p">,</span><span class="w"> </span><span class="nx">longer</span><span class="w"> </span><span class="nx">timeline</span>
+<span class="mi">5</span><span class="p">.</span><span class="w"> </span><span class="nx">find_dependency_path</span><span class="w"> </span><span class="nx">between</span><span class="w"> </span><span class="nx">current</span><span class="w"> </span><span class="nx">implementation</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="nx">proposed</span><span class="w"> </span><span class="nx">replacement</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">hidden</span><span class="w"> </span><span class="nx">dependency</span><span class="w"> </span><span class="nx">chains</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">extra</span><span class="w"> </span><span class="nx">migration</span><span class="w"> </span><span class="nx">work</span>
+<span class="mi">6</span><span class="p">.</span><span class="w"> </span><span class="nx">get_cochange_context</span><span class="w"> </span><span class="nx">on</span><span class="w"> </span><span class="nx">affected</span><span class="w"> </span><span class="nx">files</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">files</span><span class="w"> </span><span class="nx">that</span><span class="w"> </span><span class="nx">historically</span><span class="w"> </span><span class="nx">change</span><span class="w"> </span><span class="nx">together</span><span class="w"> </span><span class="nx">may</span><span class="w"> </span><span class="nx">need</span><span class="w"> </span><span class="nx">coordinated</span><span class="w"> </span><span class="nx">migration</span>
+
+<span class="nx">Output</span><span class="w"> </span><span class="nx">must</span><span class="w"> </span><span class="nx">include</span><span class="p">:</span><span class="w"> </span><span class="p">(</span><span class="nx">a</span><span class="p">)</span><span class="w"> </span><span class="nx">affected</span><span class="w"> </span><span class="nx">symbols</span><span class="w"> </span><span class="nx">count</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">b</span><span class="p">)</span><span class="w"> </span><span class="nx">blast</span><span class="w"> </span><span class="nx">radius</span><span class="w"> </span><span class="nx">from</span><span class="w"> </span><span class="nx">get_impact</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nx">c</span><span class="p">)</span><span class="w"> </span><span class="nx">estimated</span><span class="w"> </span><span class="nx">effort</span><span class="w"> </span><span class="nx">tier</span><span class="w"> </span><span class="p">(</span><span class="nx">Small</span><span class="o">/</span><span class="nx">Medium</span><span class="o">/</span><span class="nx">Large</span><span class="o">/</span><span class="nx">Critical</span><span class="p">)</span><span class="w"> </span><span class="nx">based</span><span class="w"> </span><span class="nx">on</span><span class="w"> </span><span class="nx">graph</span><span class="w"> </span><span class="nx">data</span><span class="p">.</span>
+</code></pre></div>
+
+<hr />
+<h2>3. AI-Guided Setup</h2>
+<blockquote>
+<p><strong>⚠️ HUMAN INSTRUCTIONS:</strong> This section is a script for the AI to execute.
+Open BMAD in your project, paste the link to this guide, and say: <strong>"Run the guided setup from section 3."</strong>
+The AI will ask you tool by tool whether you want to install each one.</p>
+</blockquote>
+<hr />
+<h3>🤖 LLM INSTRUCTION BLOCK — START</h3>
+<blockquote>
+<p><strong>YOU (the LLM) are executing an interactive guided setup.</strong> Your goal: walk the user through each Memtrace tool and ask if they want to integrate it into the corresponding BMAD workflow. At the end, update the BMAD agent/workflow files to incorporate all accepted tools.</p>
+</blockquote>
+<p><strong>Setup Protocol:</strong></p>
+<ol>
+<li>
+<p>Greet the user in their language. Explain: "I'll walk you through each Memtrace tool. For each one, I'll explain what it does, where it fits in the BMAD workflow, which agent to talk to (with the command to invoke them), and a short prompt to ask them. You answer <strong>Y</strong> (Yes) or <strong>N</strong> (No). At the end, I'll update your BMAD configs automatically."</p>
+</li>
+<li>
+<p>For each of the 15 tools below, present the tool description, then ask for confirmation. Track all "Y" answers.</p>
+</li>
+<li>
+<p>After going through all tools, proceed to <strong>Phase 2: Apply</strong> below.</p>
+</li>
+</ol>
+<hr />
+<h4>Tool 1: <code>get_codebase_briefing</code></h4>
+<p><strong>What it does:</strong> Codebase overview — scale, modules, risks, dead code.</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-create-epics-and-stories</code></td>
+<td>John — PM (<code>/bmad-agent-pm</code>)</td>
+<td>"Before creating epics, run <code>get_codebase_briefing</code> and confirm the epics map to the actual code modules."</td>
+</tr>
+<tr>
+<td><code>bmad-sprint-planning</code></td>
+<td>Amelia — Dev (<code>/bmad-sprint-planning</code>)</td>
+<td>"Run <code>get_codebase_briefing</code> and validate whether story order makes architectural sense."</td>
+</tr>
+<tr>
+<td>Session start (any)</td>
+<td>All agents</td>
+<td>"Run <code>get_codebase_briefing(detail_level='full')</code> to understand the architecture before starting."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>get_codebase_briefing</code> in the above workflows? (Y/N)</p>
+<hr />
+<h4>Tool 2: <code>find_code</code></h4>
+<p><strong>What it does:</strong> Semantic code search ("retry logic", "auth token pooling").</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-dev-story</code></td>
+<td>Amelia — Dev (<code>/bmad-agent-dev</code>)</td>
+<td>"Use <code>find_code</code> with natural language to locate existing code related to this feature before starting."</td>
+</tr>
+<tr>
+<td>Debugging</td>
+<td>Amelia — Dev (<code>/bmad-quick-dev</code>)</td>
+<td>"Use <code>find_code</code> with the error message to locate where the error is generated."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>find_code</code> as the primary search tool in dev-story and debugging? (Y/N)</p>
+<hr />
+<h4>Tool 3: <code>find_symbol</code></h4>
+<p><strong>What it does:</strong> Exact symbol name lookup (function, class, type).</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-dev-story</code></td>
+<td>Amelia — Dev (<code>/bmad-agent-dev</code>)</td>
+<td>"Use <code>find_symbol</code> to locate the exact implementation of the referenced function/type."</td>
+</tr>
+<tr>
+<td>QA</td>
+<td>Murat — QA (<code>/bmad-tea</code>)</td>
+<td>"List exported functions with <code>find_symbol</code>. Check if each has a corresponding test."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>find_symbol</code> in dev-story and QA? (Y/N)</p>
+<hr />
+<h4>Tool 4: <code>get_symbol_context</code></h4>
+<p><strong>What it does:</strong> Callers, callees, community, and process for a symbol — 360° view.</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-create-story</code></td>
+<td>John — PM (<code>/bmad-agent-pm</code>)</td>
+<td>"For each dependency listed in the epic, run <code>get_symbol_context</code> and populate 'Previous Story Intelligence' with real callers/callees."</td>
+</tr>
+<tr>
+<td><code>bmad-dev-story</code></td>
+<td>Amelia — Dev (<code>/bmad-agent-dev</code>)</td>
+<td>"Before editing this function, run <code>get_symbol_context</code> to understand the full context."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>get_symbol_context</code> in create-story and dev-story? (Y/N)</p>
+<hr />
+<h4>Tool 5: <code>get_impact</code></h4>
+<p><strong>What it does:</strong> Blast radius — how many symbols would be affected if X changes, with risk level.</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-dev-story</code> (pre-edit)</td>
+<td>Amelia — Dev (<code>/bmad-agent-dev</code>)</td>
+<td>"Before editing this function, run <code>get_impact(direction='both')</code>. If HIGH/CRITICAL, warn me."</td>
+</tr>
+<tr>
+<td><code>bmad-code-review</code></td>
+<td>Amelia — Dev (<code>/bmad-code-review</code>)</td>
+<td>"For each modified function, run <code>get_impact</code>. List downstream files not in the diff."</td>
+</tr>
+<tr>
+<td><code>bmad-check-implementation-readiness</code></td>
+<td>Winston — Architect (<code>/bmad-agent-architect</code>)</td>
+<td>"Run <code>get_impact</code> on each story's target. HIGH/CRITICAL → blocker."</td>
+</tr>
+<tr>
+<td><code>bmad-sprint-planning</code></td>
+<td>Amelia — Dev (<code>/bmad-sprint-planning</code>)</td>
+<td>"Run <code>get_impact</code> on targets. Large blast radius = more effort."</td>
+</tr>
+<tr>
+<td><code>bmad-correct-course</code></td>
+<td>Amelia — Dev (<code>/bmad-correct-course</code>)</td>
+<td>"Run <code>get_impact</code> on new targets to assess change risk."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>get_impact</code> as pre-edit safety gate + code review + readiness? (Y/N)</p>
+<hr />
+<h4>Tool 6: <code>find_most_complex_functions</code></h4>
+<p><strong>What it does:</strong> Top-N most complex functions (by cognitive complexity and out-degree).</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-retrospective</code></td>
+<td>Amelia — Dev (<code>/bmad-retrospective</code>)</td>
+<td>"Run <code>find_most_complex_functions(top_n=15)</code> and suggest refactoring stories for the highest-risk ones."</td>
+</tr>
+<tr>
+<td><code>bmad-sprint-planning</code></td>
+<td>Amelia — Dev (<code>/bmad-sprint-planning</code>)</td>
+<td>"Run <code>find_most_complex_functions</code> and prioritize stories touching high-complexity functions."</td>
+</tr>
+<tr>
+<td>CI/CD gate</td>
+<td>Pipeline (<code>.github/workflows/ci.yml</code>)</td>
+<td>"Add a step that compares <code>find_most_complex_functions</code> on branch vs main. Fail if a new function exceeds threshold."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>find_most_complex_functions</code> in retrospective, sprint-planning, and CI? (Y/N)</p>
+<hr />
+<h4>Tool 7: <code>find_dead_code</code></h4>
+<p><strong>What it does:</strong> Functions/methods with zero callers — removal candidates.</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-retrospective</code></td>
+<td>Amelia — Dev (<code>/bmad-retrospective</code>)</td>
+<td>"Run <code>find_dead_code(limit=30)</code>. Turn the candidates into a housekeeping story."</td>
+</tr>
+<tr>
+<td><code>bmad-code-review</code></td>
+<td>Amelia — Dev (<code>/bmad-code-review</code>)</td>
+<td>"Run <code>find_dead_code</code> on the branch. Flag if the PR introduced new symbols without callers."</td>
+</tr>
+<tr>
+<td>CI/CD gate</td>
+<td>Pipeline (<code>.github/workflows/ci.yml</code>)</td>
+<td>"Add a step that compares <code>find_dead_code</code> on branch vs main. Warn if it increases."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>find_dead_code</code> in retrospective, code review, and CI? (Y/N)</p>
+<hr />
+<h4>Tool 8: <code>find_central_symbols</code></h4>
+<p><strong>What it does:</strong> Highest PageRank symbols — load-bearing code.</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-retrospective</code></td>
+<td>Amelia — Dev (<code>/bmad-retrospective</code>)</td>
+<td>"Run <code>find_central_symbols(limit=15)</code>. Mark as load-bearing."</td>
+</tr>
+<tr>
+<td><code>bmad-dev-story</code></td>
+<td>Amelia — Dev (<code>/bmad-agent-dev</code>)</td>
+<td>"Run <code>find_central_symbols</code> on the files you'll edit. Alert if it's a high-centrality symbol."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>find_central_symbols</code> in retrospective and dev-story? (Y/N)</p>
+<hr />
+<h4>Tool 9: <code>find_bridge_symbols</code></h4>
+<p><strong>What it does:</strong> Architectural chokepoints — symbols connecting otherwise disconnected subsystems.</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-dev-story</code> (pre-refactor)</td>
+<td>Amelia — Dev (<code>/bmad-agent-dev</code>)</td>
+<td>"Before refactoring, run <code>find_bridge_symbols</code>. If the target is a bridge, alert — high risk."</td>
+</tr>
+<tr>
+<td><code>bmad-code-review</code></td>
+<td>Amelia — Dev (<code>/bmad-code-review</code>)</td>
+<td>"Run <code>find_bridge_symbols</code> on the diff. Refactors on bridges = extra scrutiny."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>find_bridge_symbols</code> as a pre-refactor alert? (Y/N)</p>
+<hr />
+<h4>Tool 10: <code>get_evolution</code></h4>
+<p><strong>What it does:</strong> What changed between two dates/commits — files and symbols.</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-retrospective</code></td>
+<td>Amelia — Dev (<code>/bmad-retrospective</code>)</td>
+<td>"Run <code>get_evolution(mode='compound')</code> from epic start to end to quantify scope."</td>
+</tr>
+<tr>
+<td><code>bmad-dev-story</code> (post-impl.)</td>
+<td>Amelia — Dev (<code>/bmad-agent-dev</code>)</td>
+<td>"After implementing, run <code>get_evolution(from='&lt;timestamp&gt;', mode='compound')</code> to detect unintended changes."</td>
+</tr>
+<tr>
+<td><code>bmad-correct-course</code></td>
+<td>Amelia — Dev (<code>/bmad-correct-course</code>)</td>
+<td>"Run <code>get_evolution</code> since sprint start to understand progress."</td>
+</tr>
+<tr>
+<td><code>bmad-code-review</code></td>
+<td>Amelia — Dev (<code>/bmad-code-review</code>)</td>
+<td>"Run <code>get_evolution</code> on the branch to see a baseline of what was touched."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>get_evolution</code> in retrospective + dev-story + code review? (Y/N)</p>
+<hr />
+<h4>Tool 11: <code>get_changes_since</code></h4>
+<p><strong>What it does:</strong> What changed since my last session (session anchor).</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Session start (any)</td>
+<td>All agents</td>
+<td>"Run <code>get_changes_since</code> on the repo to see what changed since the last session."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>get_changes_since</code> at the start of every BMAD session? (Y/N)</p>
+<hr />
+<h4>Tool 12: <code>get_process_flow</code></h4>
+<p><strong>What it does:</strong> Step-by-step execution flow (e.g., POST /login → auth → session → DB).</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>QA</td>
+<td>Murat — QA (<code>/bmad-tea</code>)</td>
+<td>"For process [Name], run <code>get_process_flow</code>. Each flow step should generate at least one test case."</td>
+</tr>
+<tr>
+<td><code>bmad-code-review</code> (Acceptance Auditor)</td>
+<td>Amelia — Dev (<code>/bmad-code-review</code>)</td>
+<td>"Run <code>get_process_flow</code> on the changed flow. Each step = one AC. Verify coverage."</td>
+</tr>
+<tr>
+<td>Debugging</td>
+<td>Amelia — Dev (<code>/bmad-quick-dev</code>)</td>
+<td>"Run <code>get_process_flow</code> to trace the full path of the failing request."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>get_process_flow</code> in QA and Acceptance Auditor? (Y/N)</p>
+<hr />
+<h4>Tool 13: <code>list_processes</code></h4>
+<p><strong>What it does:</strong> All execution flows detected in the code.</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>QA</td>
+<td>Murat — QA (<code>/bmad-tea</code>)</td>
+<td>"Run <code>list_processes</code> and cross-reference with <code>e2e/</code> specs. List flows without E2E coverage."</td>
+</tr>
+<tr>
+<td><code>bmad-sprint-planning</code></td>
+<td>Amelia — Dev (<code>/bmad-sprint-planning</code>)</td>
+<td>"Run <code>list_processes</code> to map the full functional scope of the system."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>list_processes</code> in QA and sprint-planning? (Y/N)</p>
+<hr />
+<h4>Tool 14: <code>list_communities</code></h4>
+<p><strong>What it does:</strong> Logical modules detected (Louvain community detection).</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-retrospective</code></td>
+<td>Amelia — Dev (<code>/bmad-retrospective</code>)</td>
+<td>"Run <code>list_communities</code> and compare with folder structure. Detect god-modules."</td>
+</tr>
+<tr>
+<td><code>bmad-create-architecture</code></td>
+<td>Winston — Architect (<code>/bmad-agent-architect</code>)</td>
+<td>"Run <code>list_communities</code>. Validate actual architecture matches the planned one."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>list_communities</code> in retrospective and create-architecture? (Y/N)</p>
+<hr />
+<h4>Tool 15: <code>get_api_topology</code></h4>
+<p><strong>What it does:</strong> Who calls which endpoint — cross-service topology.</p>
+<p><strong>Possible integrations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Agent (command)</th>
+<th>Prompt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-dev-story</code> (pre-API change)</td>
+<td>Amelia — Dev (<code>/bmad-agent-dev</code>)</td>
+<td>"Run <code>find_api_endpoints</code> and <code>find_api_calls</code> to see all consumers before changing the signature."</td>
+</tr>
+<tr>
+<td><code>bmad-check-implementation-readiness</code></td>
+<td>Winston — Architect (<code>/bmad-agent-architect</code>)</td>
+<td>"Run <code>get_api_topology</code> to map cross-service dependencies."</td>
+</tr>
+<tr>
+<td><code>bmad-code-review</code></td>
+<td>Amelia — Dev (<code>/bmad-code-review</code>)</td>
+<td>"Endpoint change? Run <code>get_api_topology</code> and verify all consumers."</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Question:</strong> Install <code>get_api_topology</code> in dev-story and readiness check? (Y/N)</p>
+<hr />
+<h3>Phase 2: Scope — Per-Project or Global?</h3>
+<p><strong>After all 15 tools have been processed, ask the user:</strong></p>
+<blockquote>
+<p>"Integrations will be installed via <code>bmad-customize</code>, which creates <code>.toml</code> override files — without modifying the original skills. This way, configurations survive BMAD updates."</p>
+<p>"<strong>Where to install?</strong>"
+- <strong>[P] Per-project</strong> — files at <code>{project-root}/_bmad/custom/</code> (versioned in repo, affects only this project)
+- <strong>[G] Global</strong> — files at <code>{user-home}/.bmad/custom/</code> (affects ALL BMAD projects on this machine)</p>
+<p>"<strong>Recommendation:</strong> Use [P] per-project, unless you want ALL your projects to use the same Memtrace rules."</p>
+</blockquote>
+<p>Wait for answer. Store <code>install_scope</code> as <code>project</code> or <code>global</code>. Map to path:
+- <code>project</code> → <code>{project-root}/_bmad/custom/</code>
+- <code>global</code> → <code>{user-home}/.bmad/custom/</code></p>
+<hr />
+<h3>Phase 3: Apply — 3-Level Installation Strategy</h3>
+<blockquote>
+<p><strong>IMPORTANT:</strong> Do NOT edit the original <code>SKILL.md</code> files. Use ONLY <code>bmad-customize</code> (<code>.toml</code> override files). This guarantees integrations survive <code>bmad update</code>.</p>
+</blockquote>
+<p>Install in 3 levels:</p>
+<hr />
+<h4>Preflight: Resolver Script</h4>
+<p>Before creating any override file, verify the customization resolver script exists. BMAD skills call this script on activation to merge base + team + user overrides. If the script is missing, overrides are silently ignored.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Check if the script exists</span>
+<span class="nb">test</span><span class="w"> </span>-f<span class="w"> </span><span class="o">{</span>project-root<span class="o">}</span>/_bmad/scripts/resolve_customization.py<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;MISSING&quot;</span>
+</code></pre></div>
+
+<p><strong>If MISSING</strong>, create <code>{project-root}/_bmad/scripts/resolve_customization.py</code> with the resolver implementation. The script must:
+- Accept <code>--skill &lt;skill-root&gt;</code> and <code>--key &lt;key&gt;</code> arguments
+- Read <code>{skill-root}/customize.toml</code> (base), <code>{project-root}/_bmad/custom/{skill-name}.toml</code> (team), <code>{project-root}/_bmad/custom/{skill-name}.user.toml</code> (user)
+- Deep-merge: scalars override, tables deep-merge, arrays append (except arrays-of-tables keyed by <code>code</code>/<code>id</code> which merge by key)
+- Output the resolved section as JSON to stdout</p>
+<hr />
+<h4>Level 1: <code>activation_steps_prepend</code> — Tools that run AUTOMATICALLY on workflow start</h4>
+<p>Each agent receives a <code>.toml</code> file with <code>activation_steps_prepend</code>. These steps execute <strong>without the user having to ask</strong> — when they call <code>/bmad-code-review</code>, the agent automatically starts by running <code>get_evolution</code> and <code>find_most_complex_functions</code> before any manual analysis.</p>
+<p><strong>CRITICAL — Dual-section approach for agent persona skills:</strong> Skills of <code>type: agent</code> (personas like Murat, John, Winston, Amelia) have TWO sections in their <code>.toml</code> file. The framework resolves <code>--key agent</code> automatically; the agent additionally loads <code>--key workflow</code> via a SKILL.md activation step. This keeps methodology rules (<code>persistent_facts</code>) separate from execution steps (<code>activation_steps_prepend</code>).</p>
+<ul>
+<li><strong>Agent persona skills</strong> (<code>bmad-agent-dev</code>, <code>bmad-agent-pm</code>, <code>bmad-agent-architect</code>, <code>bmad-agent-tech-writer</code>, <code>bmad-agent-analyst</code>, <code>bmad-agent-ux-designer</code>, <code>bmad-tea</code>) → use <code>[agent]</code> for <code>persistent_facts</code> + <code>[workflow]</code> for <code>activation_steps_prepend</code> (the SKILL.md On Activation step tells the agent to also load <code>--key workflow</code>)</li>
+<li><strong>Workflow skills</strong> (<code>bmad-dev-story</code>, <code>bmad-code-review</code>, <code>bmad-create-story</code>, <code>bmad-sprint-planning</code>, <code>bmad-retrospective</code>, <code>bmad-correct-course</code>, <code>bmad-quick-dev</code>, <code>bmad-create-epics-and-stories</code>, <code>bmad-create-architecture</code>, <code>bmad-check-implementation-readiness</code>, <code>bmad-document-project</code>, <code>bmad-generate-project-context</code>, <code>bmad-qa-generate-e2e-tests</code>) → use <code>[workflow]</code> only (these are invoked as workflows and resolve <code>--key workflow</code>)</li>
+</ul>
+<p><strong>File format — Agent persona skills (<code>[agent]</code> + <code>[workflow]</code>):</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># {install_scope_path}/bmad-{agent-name}.toml</span>
+<span class="c1"># Methodology rules — resolved by framework via --key agent</span>
+<span class="k">[agent]</span>
+<span class="n">persistent_facts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;BEFORE editing any function, run get_impact...&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="c1"># Execution steps — loaded by agent via SKILL.md step resolving --key workflow</span>
+<span class="k">[workflow]</span>
+<span class="n">activation_steps_prepend</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;Memtrace: execute get_codebase_briefing...&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;Memtrace: execute find_code...&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;Memtrace: execute get_changes_since...&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+</code></pre></div>
+
+<p><strong>File format — Workflow skills (<code>[workflow]</code>):</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># {install_scope_path}/bmad-{workflow-name}.toml</span>
+<span class="k">[workflow]</span>
+<span class="n">activation_steps_prepend</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;Memtrace: execute get_evolution on the current branch...&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="s2">&quot;Memtrace: execute find_most_complex_functions...&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+<span class="n">persistent_facts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;BEFORE editing any function, run get_impact...&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+</code></pre></div>
+
+<p><strong>Agents and their automatic activations:</strong></p>
+<blockquote>
+<p>Agent-type skills use the dual-section approach: <code>[agent]</code> for methodology rules, <code>[workflow]</code> for execution steps.
+Workflow-type skills use <code>[workflow]</code> only. The "Sections" column shows which sections the <code>.toml</code> file contains.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Sections</th>
+<th>Agent</th>
+<th>Runs automatically on start</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bmad-dev-story.toml</code></td>
+<td><code>[workflow]</code></td>
+<td>Amelia — Dev (<code>/bmad-agent-dev</code>)</td>
+<td><code>get_codebase_briefing</code> + <code>find_code</code> on the feature</td>
+</tr>
+<tr>
+<td><code>bmad-agent-dev.toml</code></td>
+<td><code>[agent]</code> + <code>[workflow]</code></td>
+<td>Amelia — Dev (<code>/bmad-agent-dev</code>)</td>
+<td><code>get_codebase_briefing</code> + <code>find_code</code> on the feature + <code>get_changes_since</code></td>
+</tr>
+<tr>
+<td><code>bmad-code-review.toml</code></td>
+<td><code>[workflow]</code></td>
+<td>Amelia — Dev (<code>/bmad-code-review</code>)</td>
+<td><code>get_evolution</code> on branch + <code>find_most_complex_functions</code> vs main</td>
+</tr>
+<tr>
+<td><code>bmad-retrospective.toml</code></td>
+<td><code>[workflow]</code></td>
+<td>Amelia — Dev (<code>/bmad-retrospective</code>)</td>
+<td><code>get_evolution</code> + <code>find_most_complex_functions</code> + <code>find_dead_code</code> + <code>find_central_symbols</code></td>
+</tr>
+<tr>
+<td><code>bmad-tea.toml</code></td>
+<td><code>[agent]</code> + <code>[workflow]</code></td>
+<td>Murat — QA (<code>/bmad-tea</code>)</td>
+<td><code>list_processes</code> + <code>find_symbol</code> on exported functions</td>
+</tr>
+<tr>
+<td><code>bmad-sprint-planning.toml</code></td>
+<td><code>[workflow]</code></td>
+<td>Amelia — Dev (<code>/bmad-sprint-planning</code>)</td>
+<td><code>get_codebase_briefing</code> + <code>find_most_complex_functions</code></td>
+</tr>
+<tr>
+<td><code>bmad-correct-course.toml</code></td>
+<td><code>[workflow]</code></td>
+<td>Amelia — Dev (<code>/bmad-correct-course</code>)</td>
+<td><code>get_evolution</code> since sprint start + <code>get_impact</code> on new targets</td>
+</tr>
+<tr>
+<td><code>bmad-agent-pm.toml</code></td>
+<td><code>[agent]</code> + <code>[workflow]</code></td>
+<td>John — PM (<code>/bmad-agent-pm</code>)</td>
+<td><code>get_codebase_briefing</code> + <code>find_most_complex_functions</code></td>
+</tr>
+<tr>
+<td><code>bmad-agent-architect.toml</code></td>
+<td><code>[agent]</code> + <code>[workflow]</code></td>
+<td>Winston — Architect (<code>/bmad-agent-architect</code>)</td>
+<td><code>list_communities</code> + <code>get_api_topology</code></td>
+</tr>
+<tr>
+<td><code>bmad-quick-dev.toml</code></td>
+<td><code>[workflow]</code></td>
+<td>Amelia — Dev (<code>/bmad-quick-dev</code>)</td>
+<td><code>find_code</code> with the error message</td>
+</tr>
+<tr>
+<td><code>bmad-create-epics-and-stories.toml</code></td>
+<td><code>[workflow]</code></td>
+<td>John — PM (<code>/bmad-agent-pm</code>)</td>
+<td><code>get_codebase_briefing</code> + <code>list_communities</code> + <code>find_most_complex_functions</code></td>
+</tr>
+<tr>
+<td><code>bmad-create-story.toml</code></td>
+<td><code>[workflow]</code></td>
+<td>John — PM or Amelia — Dev</td>
+<td><code>get_codebase_briefing</code> + <code>get_symbol_context</code> on dependencies</td>
+</tr>
+<tr>
+<td><code>bmad-create-architecture.toml</code></td>
+<td><code>[workflow]</code></td>
+<td>Winston — Architect (<code>/bmad-agent-architect</code>)</td>
+<td><code>list_communities</code> + <code>get_api_topology</code> + <code>find_bridge_symbols</code></td>
+</tr>
+<tr>
+<td><code>bmad-check-implementation-readiness.toml</code></td>
+<td><code>[workflow]</code></td>
+<td>Winston — Architect (<code>/bmad-agent-architect</code>)</td>
+<td><code>get_impact</code> on each story target + <code>get_api_topology</code> + <code>list_communities</code></td>
+</tr>
+<tr>
+<td><code>bmad-document-project.toml</code></td>
+<td><code>[workflow]</code></td>
+<td>Paige — Tech Writer (<code>/bmad-agent-tech-writer</code>)</td>
+<td><code>get_codebase_briefing(detail_level='full')</code> + <code>list_communities</code> + <code>list_processes</code> + <code>find_central_symbols</code></td>
+</tr>
+<tr>
+<td><code>bmad-generate-project-context.toml</code></td>
+<td><code>[workflow]</code></td>
+<td>Amelia — Dev (<code>/bmad-agent-dev</code>)</td>
+<td><code>get_codebase_briefing(detail_level='full')</code> + <code>list_communities</code></td>
+</tr>
+<tr>
+<td><code>bmad-qa-generate-e2e-tests.toml</code></td>
+<td><code>[workflow]</code></td>
+<td>Murat — QA (<code>/bmad-tea</code>)</td>
+<td><code>list_processes</code> + <code>get_process_flow</code> on each uncovered process</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>⚠️ <strong><code>bmad-technical-research</code> is conditional</strong> — do NOT create a default <code>.toml</code> for it. The agent must evaluate the research topic first (see Section 2.14). Only if the topic involves the CURRENT codebase should Memtrace tools be used. This is implemented as a <code>persistent_fact</code> rule rather than <code>activation_steps_prepend</code>.</p>
+</blockquote>
+<p><strong>For each file listed above:</strong> create the corresponding <code>.toml</code> file with <code>activation_steps_prepend</code> + <code>persistent_facts</code>. Use the Sections column to determine whether the file uses <code>[workflow]</code> only or both <code>[agent]</code> + <code>[workflow]</code>.</p>
+<blockquote>
+<p><strong>SKILL.md activation step for agent-type skills:</strong> For each agent persona <code>.toml</code> file (dual-section), the agent's <code>SKILL.md</code> must include an "On Activation" step that resolves the <code>[workflow]</code> section at runtime. Add the following to the agent's SKILL.md:
+<code>2. **Load workflow customizations** — Run `python _bmad/scripts/resolve_customization.py --key workflow --skill &lt;this-skill-root-directory&gt;` (e.g., `.agent/skills/{skill-name}/` for OpenCode) and integrate the JSON output (`activation_steps_prepend`) as operational procedures into your context.</code></p>
+</blockquote>
+<hr />
+<h4>Level 2: <code>persistent_facts</code> — Methodology rules the agent considers THROUGHOUT the session</h4>
+<p>Reactive instructions — the agent loads them as context and applies them at the right moments (e.g., "BEFORE editing, get_impact", "DURING implementation, find_code for patterns"). Not rigid steps, but guidelines the agent follows as the flow unfolds.</p>
+<blockquote>
+<p><strong>Dual-section placement:</strong> For agent persona skills, <code>persistent_facts</code> go in <code>[agent]</code> (framework-resolved methodology rules) and <code>activation_steps_prepend</code> go in <code>[workflow]</code> (agent-loaded execution steps). For workflow skills, both stay in <code>[workflow]</code>.</p>
+</blockquote>
+<hr />
+<h4>Level 3: CI/CD gates (<code>.github/workflows/ci.yml</code>)</h4>
+<p><strong>Only if the user accepted</strong> <code>find_most_complex_functions</code> and/or <code>find_dead_code</code> as CI gates: generate YAML config and offer to write to <code>.github/workflows/ci.yml</code>.</p>
+<blockquote>
+<p>⚠️ <strong>CI gates are generated but NOT applied automatically.</strong> Review and adapt to the existing pipeline.</p>
+</blockquote>
+<hr />
+<h3>Phase 4: Summary</h3>
+<p>Print a summary table:</p>
+<div class="codehilite"><pre><span></span><code><span class="err">✅</span><span class="w"> </span><span class="nx">INSTALLATION</span><span class="w"> </span><span class="nx">COMPLETE</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="p">{</span><span class="nx">install_scope</span><span class="p">}</span>
+
+<span class="nx">Files</span><span class="w"> </span><span class="nx">created</span><span class="w"> </span><span class="nx">at</span><span class="w"> </span><span class="p">{</span><span class="nx">install_scope_path</span><span class="p">}:</span>
+
+<span class="o">|</span><span class="w"> </span><span class="nx">File</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Agent</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Level</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|------|-------|-------|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">dev</span><span class="o">-</span><span class="nx">story</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Amelia</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">agent</span><span class="o">-</span><span class="nx">dev</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">agent</span><span class="o">-</span><span class="nx">dev</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Amelia</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">agent</span><span class="o">-</span><span class="nx">dev</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">code</span><span class="o">-</span><span class="nx">review</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Amelia</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">code</span><span class="o">-</span><span class="nx">review</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">retrospective</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Amelia</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">retrospective</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">tea</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Murat</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">tea</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">sprint</span><span class="o">-</span><span class="nx">planning</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Amelia</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">sprint</span><span class="o">-</span><span class="nx">planning</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">correct</span><span class="o">-</span><span class="nx">course</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Amelia</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">correct</span><span class="o">-</span><span class="nx">course</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">agent</span><span class="o">-</span><span class="nx">pm</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">John</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">agent</span><span class="o">-</span><span class="nx">pm</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">agent</span><span class="o">-</span><span class="nx">architect</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Winston</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">agent</span><span class="o">-</span><span class="nx">architect</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">quick</span><span class="o">-</span><span class="nx">dev</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Amelia</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">quick</span><span class="o">-</span><span class="nx">dev</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">create</span><span class="o">-</span><span class="nx">epics</span><span class="o">-</span><span class="k">and</span><span class="o">-</span><span class="nx">stories</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">John</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">agent</span><span class="o">-</span><span class="nx">pm</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">create</span><span class="o">-</span><span class="nx">story</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">John</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="nx">Amelia</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">agent</span><span class="o">-</span><span class="nx">pm</span><span class="w"> </span><span class="k">or</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">agent</span><span class="o">-</span><span class="nx">dev</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">create</span><span class="o">-</span><span class="nx">architecture</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Winston</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">agent</span><span class="o">-</span><span class="nx">architect</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">check</span><span class="o">-</span><span class="nx">implementation</span><span class="o">-</span><span class="nx">readiness</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Winston</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">agent</span><span class="o">-</span><span class="nx">architect</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">document</span><span class="o">-</span><span class="nx">project</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Paige</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">agent</span><span class="o">-</span><span class="nx">tech</span><span class="o">-</span><span class="nx">writer</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">generate</span><span class="o">-</span><span class="nx">project</span><span class="o">-</span><span class="nx">context</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Amelia</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">agent</span><span class="o">-</span><span class="nx">dev</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+<span class="o">|</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">qa</span><span class="o">-</span><span class="nx">generate</span><span class="o">-</span><span class="nx">e2e</span><span class="o">-</span><span class="nx">tests</span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nx">Murat</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="o">/</span><span class="nx">bmad</span><span class="o">-</span><span class="nx">tea</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="o">|</span>
+
+<span class="err">📋</span><span class="w"> </span><span class="nx">Level</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">(</span><span class="nx">activation_steps_prepend</span><span class="p">):</span><span class="w"> </span><span class="nx">Tools</span><span class="w"> </span><span class="nx">that</span><span class="w"> </span><span class="nx">run</span><span class="w"> </span><span class="nx">AUTOMATICALLY</span><span class="w"> </span><span class="nx">on</span><span class="w"> </span><span class="nx">workflow</span><span class="w"> </span><span class="nx">start</span>
+<span class="err">📋</span><span class="w"> </span><span class="nx">Level</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">(</span><span class="nx">persistent_facts</span><span class="p">):</span><span class="w"> </span><span class="nx">Instructions</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">agent</span><span class="w"> </span><span class="nx">considers</span><span class="w"> </span><span class="nx">throughout</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">session</span>
+<span class="err">⚠️</span><span class="w">  </span><span class="nx">Level</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="p">(</span><span class="nx">CI</span><span class="w"> </span><span class="nx">gates</span><span class="p">):</span><span class="w"> </span><span class="nx">Generated</span><span class="w"> </span><span class="nx">but</span><span class="w"> </span><span class="nx">NOT</span><span class="w"> </span><span class="nx">applied</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">review</span><span class="w"> </span><span class="p">.</span><span class="nx">github</span><span class="o">/</span><span class="nx">workflows</span><span class="o">/</span><span class="nx">ci</span><span class="p">.</span><span class="nx">yml</span>
+<span class="err">🔬</span><span class="w"> </span><span class="nx">bmad</span><span class="o">-</span><span class="nx">technical</span><span class="o">-</span><span class="nx">research</span><span class="p">:</span><span class="w"> </span><span class="nx">Conditional</span><span class="w"> </span><span class="nx">rule</span><span class="w"> </span><span class="nx">added</span><span class="w"> </span><span class="err">—</span><span class="w"> </span><span class="nx">Memtrace</span><span class="w"> </span><span class="nx">used</span><span class="w"> </span><span class="nx">only</span><span class="w"> </span><span class="nx">when</span><span class="w"> </span><span class="nx">topic</span><span class="w"> </span><span class="nx">involves</span><span class="w"> </span><span class="nx">current</span><span class="w"> </span><span class="nx">codebase</span>
+
+<span class="err">🔄</span><span class="w"> </span><span class="nx">Integrations</span><span class="w"> </span><span class="nx">survive</span><span class="w"> </span><span class="err">`</span><span class="nx">bmad</span><span class="w"> </span><span class="nx">update</span><span class="err">`</span><span class="w"> </span><span class="p">(</span><span class="k">override</span><span class="w"> </span><span class="nx">files</span><span class="p">,</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="nx">SKILL</span><span class="p">.</span><span class="nx">md</span><span class="p">).</span>
+<span class="err">🗑️</span><span class="w">  </span><span class="nx">To</span><span class="w"> </span><span class="nx">remove</span><span class="p">,</span><span class="w"> </span><span class="nx">delete</span><span class="w"> </span><span class="nx">the</span><span class="w"> </span><span class="nx">corresponding</span><span class="w"> </span><span class="p">.</span><span class="nx">toml</span><span class="w"> </span><span class="nx">file</span><span class="p">.</span>
+</code></pre></div>
+
+<h3>🤖 LLM INSTRUCTION BLOCK — END</h3></body>
+</html>
