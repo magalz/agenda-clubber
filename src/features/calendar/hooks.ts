@@ -69,14 +69,18 @@ export function useCrossCollectiveEvents(dates: Date[]) {
 
     const dateIsoStrings = dates.map((d) => d.toISOString());
 
-    return useQuery({
+    const query = useQuery({
         queryKey: ['cross-collective-events', dateIsoStrings],
         queryFn: async () => {
-            const result = await fetchCrossCollectiveEvents(dateIsoStrings);
-            setCrossEvents(result);
-            return result;
+            return fetchCrossCollectiveEvents(dateIsoStrings);
         },
         staleTime: 30_000,
         enabled: dates.length > 0,
     });
+
+    useEffect(() => {
+        if (query.data) setCrossEvents(query.data);
+    }, [query.data, setCrossEvents]);
+
+    return query;
 }
