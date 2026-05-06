@@ -6,8 +6,85 @@
       "idx": 0,
       "version": "7",
       "when": 1745539200000,
+      "tag": "000_create_tables",
+      "breakpoints": false
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1745539200000,
+      "tag": "001_profiles_rls",
+      "breakpoints": false
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1745539200000,
+      "tag": "002_storage_setup",
+      "breakpoints": false
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1745539200000,
+      "tag": "003_artists_unique_rls",
+      "breakpoints": false
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1745539200000,
+      "tag": "004_nullable_profile_id_genre_primary",
+      "breakpoints": false
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1745539200000,
       "tag": "005_artists_claim_privacy",
-      "breakpoints": true
+      "breakpoints": false
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1745539200000,
+      "tag": "006_artists_slug",
+      "breakpoints": false
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1745539200000,
+      "tag": "007_collective_members_unique",
+      "breakpoints": false
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1745539200000,
+      "tag": "008_events",
+      "breakpoints": false
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1745539200000,
+      "tag": "009_events_conflict",
+      "breakpoints": false
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1745539200000,
+      "tag": "010_events_rls",
+      "breakpoints": false
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1745539200000,
+      "tag": "011_fix_rls_divergence",
+      "breakpoints": false
     }
   ]
 }

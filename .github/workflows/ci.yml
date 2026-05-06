@@ -11,59 +11,114 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  db-migrate:
-    name: Migrate CI Database
-    if: github.event_name == 'pull_request'
+  lint-and-typecheck:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: "npm"
-      - run: npm ci
+      - run: npm ci --prefer-offline
+      - run: npm run lint:ci
+      - run: npm run type-check
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - name: Cache .next
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/tsconfig.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-
+
+      - run: npm ci --prefer-offline
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  db-migrate:
+    name: Migrate CI Database
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+      - run: npm ci --prefer-offline
       - name: Apply Drizzle migrations to CI database
-        run: node scripts/migrate.mjs
+        run: npx drizzle-kit migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-  lint-and-test:
-    name: Lint, Build & Test
+  unit-tests:
+    name: Unit Tests
     needs: [db-migrate]
     if: always() && !cancelled() && (needs.db-migrate.result == 'success' || needs.db-migrate.result == 'skipped')
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+      - run: npm ci --prefer-offline
+      - run: npm run test
+
+  e2e-tests:
+    name: E2E Tests
+    needs: [db-migrate, build]
+    if: always() && !cancelled() && ((needs.db-migrate.result == 'success' || needs.db-migrate.result == 'skipped') && (needs.build.result == 'success'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      CI: true
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Restore .next/cache for E2E build context
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/tsconfig.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Type check
-        run: npm run type-check
-
-      - name: Unit tests
-        run: npm run test
-
-      - name: Build
-        run: npm run build
+      - run: npm ci --prefer-offline
 
       - name: Cache Playwright browsers
         uses: actions/cache@v4
@@ -82,8 +137,13 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      - name: E2E tests
-        run: npm run test:e2e
+      - name: Start Next.js and wait for health check
+        run: |
+          npm run start &
+          npx wait-on http://localhost:3000 --timeout 60000
+
+      - name: E2E tests (CI)
+        run: npm run test:e2e:ci
 
       - name: Upload E2E report on failure
         if: failure()
@@ -92,3 +152,9 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+      - name: PR Test Report Comment
+        if: github.event_name == 'pull_request' && (success() || failure())
+        uses: daun/playwright-report-summary@v3
+        with:
+          report-file: playwright-report/results.json

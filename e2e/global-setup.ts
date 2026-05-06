@@ -69,10 +69,12 @@ async function globalSetup() {
         await assertAuthUserVisible(sql, supabaseUrl, databaseUrl, otherProducerUserId);
 
         // ── 2. Ensure profiles exist ────────────────────────────────────────────
-        const mainProfileId = await upsertProfile(sql, mainUserId, 'E2E Artist', 'artista');
-        const claimerProfileId = await upsertProfile(sql, claimerUserId, 'E2E Claimer', 'artista');
-        const producerProfileId = await upsertProfile(sql, producerUserId, 'E2E Producer', 'produtor');
-        const otherProducerProfileId = await upsertProfile(sql, otherProducerUserId, 'E2E Other Producer', 'produtor');
+        // Clean up all E2E profiles first for deterministic state
+        await sql`DELETE FROM profiles WHERE user_id IN (${mainUserId}, ${claimerUserId}, ${producerUserId}, ${otherProducerUserId})`;
+        const mainProfileId = await insertProfile(sql, mainUserId, 'E2E Artist', 'artista');
+        const claimerProfileId = await insertProfile(sql, claimerUserId, 'E2E Claimer', 'artista');
+        const producerProfileId = await insertProfile(sql, producerUserId, 'E2E Producer', 'produtor');
+        const otherProducerProfileId = await insertProfile(sql, otherProducerUserId, 'E2E Other Producer', 'produtor');
 
         // ── 3. Seed test artists ─────────────────────────────────────────────────
         await sql`DELETE FROM artists WHERE artistic_name ILIKE ${'Artista Ghost XYZ'}`;
@@ -81,60 +83,38 @@ async function globalSetup() {
         await sql`DELETE FROM artists WHERE profile_id = ${mainProfileId}`;
 
         // 'Test DJ' — orphan artist (profile_id IS NULL), claimable, public mode
+        await sql`DELETE FROM artists WHERE artistic_name = ${'Test DJ'}`;
         await sql`
             INSERT INTO artists (artistic_name, slug, location, genre_primary, profile_id, status, is_verified, privacy_settings, bio)
             VALUES (${'Test DJ'}, ${'test-dj'}, ${'São Paulo, SP'}, ${'Techno'}, NULL, ${'approved'}, false, ${sql.json(DEFAULT_PRIVACY)}, ${'Bio do Test DJ'})
-            ON CONFLICT (artistic_name) DO UPDATE
-              SET slug = 'test-dj',
-                  profile_id = NULL,
-                  status = 'approved',
-                  location = EXCLUDED.location,
-                  genre_primary = EXCLUDED.genre_primary,
-                  bio = EXCLUDED.bio,
-                  privacy_settings = ${sql.json(DEFAULT_PRIVACY)}
         `;
 
         // 'Already Claimed DJ' — owned by claimer profile
+        await sql`DELETE FROM artists WHERE artistic_name = ${'Already Claimed DJ'}`;
         await sql`
             INSERT INTO artists (artistic_name, slug, location, genre_primary, profile_id, status, is_verified, privacy_settings)
             VALUES (${'Already Claimed DJ'}, ${'already-claimed-dj'}, ${'Rio de Janeiro, RJ'}, ${'House'}, ${claimerProfileId}, ${'approved'}, true, ${sql.json(DEFAULT_PRIVACY)})
-            ON CONFLICT (artistic_name) DO UPDATE
-              SET slug = 'already-claimed-dj',
-                  profile_id = ${claimerProfileId},
-                  status = 'approved',
-                  location = EXCLUDED.location,
-                  genre_primary = EXCLUDED.genre_primary
         `;
 
         // 'Ghost DJ' — approved but ghost mode → 404 for public
+        await sql`DELETE FROM artists WHERE artistic_name = ${'Ghost DJ'}`;
         await sql`
             INSERT INTO artists (artistic_name, slug, location, genre_primary, profile_id, status, is_verified, privacy_settings)
             VALUES (${'Ghost DJ'}, ${'ghost-dj'}, ${'Fortaleza, CE'}, ${'Techno'}, NULL, ${'approved'}, false, ${sql.json(GHOST_PRIVACY)})
-            ON CONFLICT (artistic_name) DO UPDATE
-              SET slug = 'ghost-dj',
-                  status = 'approved',
-                  privacy_settings = ${sql.json(GHOST_PRIVACY)}
         `;
 
         // 'Pending DJ' — pending_approval → 404 for everyone
+        await sql`DELETE FROM artists WHERE artistic_name = ${'Pending DJ'}`;
         await sql`
             INSERT INTO artists (artistic_name, slug, location, genre_primary, profile_id, status, is_verified, privacy_settings)
             VALUES (${'Pending DJ'}, ${'pending-dj'}, ${'Fortaleza, CE'}, ${'House'}, NULL, ${'pending_approval'}, false, ${sql.json(DEFAULT_PRIVACY)})
-            ON CONFLICT (artistic_name) DO UPDATE
-              SET slug = 'pending-dj',
-                  status = 'pending_approval',
-                  privacy_settings = ${sql.json(DEFAULT_PRIVACY)}
         `;
 
         // 'Collectives DJ' — collectives_only mode → produtor sees bio, anon does not
+        await sql`DELETE FROM artists WHERE artistic_name = ${'Collectives DJ'}`;
         await sql`
             INSERT INTO artists (artistic_name, slug, location, genre_primary, profile_id, status, is_verified, privacy_settings, bio)
             VALUES (${'Collectives DJ'}, ${'collectives-dj'}, ${'Recife, PE'}, ${'Drum and Bass'}, NULL, ${'approved'}, false, ${sql.json(COLLECTIVES_ONLY_PRIVACY)}, ${'Bio secreta do Collectives DJ'})
-            ON CONFLICT (artistic_name) DO UPDATE
-              SET slug = 'collectives-dj',
-                  status = 'approved',
-                  bio = EXCLUDED.bio,
-                  privacy_settings = ${sql.json(COLLECTIVES_ONLY_PRIVACY)}
         `;
 
         // ── 4. Sign in artist user ───────────────────────────────────────────────
@@ -368,7 +348,7 @@ async function assertAuthUserVisible(
     }
 }
 
-async function upsertProfile(
+async function insertProfile(
     sql: ReturnType<typeof postgres>,
     userId: string,
     nickname: string,
@@ -377,9 +357,6 @@ async function upsertProfile(
     const rows = await sql<{ id: string }[]>`
         INSERT INTO profiles (user_id, nickname, role)
         VALUES (${userId}, ${nickname}, ${role})
-        ON CONFLICT (user_id) DO UPDATE
-          SET nickname = EXCLUDED.nickname,
-              role = EXCLUDED.role
         RETURNING id
     `;
     return rows[0].id;
