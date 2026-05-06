@@ -129,31 +129,27 @@ export async function fetchCrossCollectiveEvents(
     return getCrossCollectiveEventsForRange(dates);
 }
 
-export async function updateEvent(
-    eventId: string,
-    input: UpdateEventInput
-): Promise<ActionResult<unknown>> {
+export async function authorizeAndFetchEvent(eventId: string) {
     const viewer = await getViewerContext();
     if (viewer.kind !== 'authenticated') {
         return { data: null, error: { message: 'Não autorizado', code: 'UNAUTHORIZED' } };
     }
 
-    const existing = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
-    if (!existing.length) {
+    const [existing] = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!existing) {
         return { data: null, error: { message: 'Evento não encontrado', code: 'NOT_FOUND' } };
     }
 
-    if (existing[0].createdBy !== viewer.profileId) {
+    if (existing.createdBy !== viewer.profileId) {
         return { data: null, error: { message: 'Sem permissão para editar', code: 'FORBIDDEN' } };
     }
 
-    const parsed = updateEventSchema.safeParse(input);
-    if (!parsed.success) {
-        return { data: null, error: { message: parsed.error.issues[0]?.message ?? 'Dados inválidos', code: 'VALIDATION_ERROR' } };
-    }
+    return { data: { existing, viewer }, error: null };
+}
 
+export async function buildUpdateData(input: UpdateEventInput, existing: typeof events.$inferSelect): Promise<UpdateData> {
     const updateData: UpdateData = {};
-    const { name, eventDate, location, genre, lineup, isNamePublic, isLocationPublic, isLineupPublic, status } = parsed.data;
+    const { name, eventDate, location, genre, lineup, isNamePublic, isLocationPublic, isLineupPublic, status } = input;
 
     if (name !== undefined) updateData.name = name;
     if (eventDate !== undefined) updateData.eventDate = eventDate;
@@ -164,7 +160,7 @@ export async function updateEvent(
     if (isLineupPublic !== undefined) updateData.isLineupPublic = isLineupPublic;
     if (status !== undefined) updateData.status = status;
 
-    if (location !== undefined && location !== existing[0].locationName) {
+    if (location !== undefined && location !== existing.locationName) {
         updateData.locationName = location;
         const place = await geocode(location);
         if (place) {
@@ -172,25 +168,20 @@ export async function updateEvent(
             updateData.longitude = String(place.lng);
             const tz = await resolveTimezone(place.lat, place.lng);
             updateData.timezone = tz;
-            updateData.eventDateUtc = calculateEventDateUtc(eventDate ?? existing[0].eventDate, tz);
+            updateData.eventDateUtc = calculateEventDateUtc(eventDate ?? existing.eventDate, tz);
         }
     } else if (eventDate !== undefined) {
-        const tz = existing[0].timezone || 'America/Sao_Paulo';
+        const tz = existing.timezone || 'America/Sao_Paulo';
         updateData.eventDateUtc = calculateEventDateUtc(eventDate, tz);
     }
 
-    if (Object.keys(updateData).length === 0) {
-        return { data: existing[0], error: null };
-    }
+    return updateData;
+}
 
-    const [updated] = await db.update(events)
-        .set(updateData)
-        .where(eq(events.id, eventId))
-        .returning();
-
+export async function recomputeConflicts(eventId: string, oldDate: string, newDate: string) {
     try {
-        if (eventDate !== undefined && eventDate !== existing[0].eventDate) {
-            const oldNeighborIds = await getNeighborIds(eventId, existing[0].eventDate, db);
+        if (oldDate !== newDate) {
+            const oldNeighborIds = await getNeighborIds(eventId, oldDate, db);
             for (const neighborId of oldNeighborIds) {
                 try {
                     await evaluateAndPersist(neighborId, db);
@@ -202,13 +193,12 @@ export async function updateEvent(
 
         await evaluateAndPersist(eventId, db);
 
-        const newDate = eventDate ?? existing[0].eventDate;
         const newNeighborIds = await getNeighborIds(eventId, newDate, db);
         for (const neighborId of newNeighborIds) {
             try {
                 await evaluateAndPersist(neighborId, db);
             } catch (e) {
-                console.error(`[ConflictEngine] Failed to recompute new-neighbor ${neighborId}:`, e);
+                    console.error(`[ConflictEngine] Failed to recompute new-neighbor ${neighborId}:`, e);
             }
         }
     } catch (e) {
@@ -220,6 +210,34 @@ export async function updateEvent(
             })
             .where(eq(events.id, eventId));
     }
+}
+
+export async function updateEvent(
+    eventId: string,
+    input: UpdateEventInput
+): Promise<ActionResult<unknown>> {
+    const auth = await authorizeAndFetchEvent(eventId);
+    if (auth.error) return auth;
+
+    const { existing } = auth.data;
+
+    const parsed = updateEventSchema.safeParse(input);
+    if (!parsed.success) {
+        return { data: null, error: { message: parsed.error.issues[0]?.message ?? 'Dados inválidos', code: 'VALIDATION_ERROR' } };
+    }
+
+    const updateData = await buildUpdateData(parsed.data, existing);
+    if (Object.keys(updateData).length === 0) {
+        return { data: existing, error: null };
+    }
+
+    const [updated] = await db.update(events)
+        .set(updateData)
+        .where(eq(events.id, eventId))
+        .returning();
+
+    const newDate = parsed.data.eventDate ?? existing.eventDate;
+    await recomputeConflicts(eventId, existing.eventDate, newDate);
 
     revalidatePath('/dashboard/collective');
 
@@ -230,22 +248,13 @@ export async function updateEventStatus(
     eventId: string,
     status: 'planning' | 'confirmed'
 ): Promise<ActionResult<unknown>> {
-    const viewer = await getViewerContext();
-    if (viewer.kind !== 'authenticated') {
-        return { data: null, error: { message: 'Não autorizado', code: 'UNAUTHORIZED' } };
-    }
+    const auth = await authorizeAndFetchEvent(eventId);
+    if (auth.error) return auth;
 
-    const existing = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
-    if (!existing.length) {
-        return { data: null, error: { message: 'Evento não encontrado', code: 'NOT_FOUND' } };
-    }
+    const { existing } = auth.data;
 
-    if (existing[0].createdBy !== viewer.profileId) {
-        return { data: null, error: { message: 'Sem permissão para editar', code: 'FORBIDDEN' } };
-    }
-
-    if (existing[0].status === status) {
-        return { data: existing[0], error: null };
+    if (existing.status === status) {
+        return { data: existing, error: null };
     }
 
     const updateData: UpdateData = {
@@ -266,7 +275,7 @@ export async function updateEventStatus(
     try {
         await evaluateAndPersist(eventId, db);
 
-        const neighborIds = await getNeighborIds(eventId, existing[0].eventDate, db);
+        const neighborIds = await getNeighborIds(eventId, existing.eventDate, db);
         for (const neighborId of neighborIds) {
             try {
                 await evaluateAndPersist(neighborId, db);

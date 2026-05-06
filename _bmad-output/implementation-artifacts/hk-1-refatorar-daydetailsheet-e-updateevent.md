@@ -1,6 +1,6 @@
 # Story HK.1: Refatorar DayDetailSheet e updateEvent
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -25,25 +25,25 @@ so that **the codebase is maintainable and safe before adding new features in Ep
 
 ## Tasks / Subtasks
 
-- [ ] T1 · Extrair subcomponentes do DayDetailSheet (AC 1, 2, 3)
-  - [ ] T1.1 Extrair `ConflictBadge` (indicador verde/amarelo/vermelho + ícone + justificativa) para `src/features/calendar/components/conflict-badge.tsx`
-  - [ ] T1.2 Extrair `EventCard` (card de evento com status, nome, local, gênero, line-up, conflict badge, botões de ação, toggles de privacidade) para `src/features/calendar/components/event-card.tsx`
-  - [ ] T1.3 Extrair `VisibilityToggles` (checkboxes de isNamePublic/isLocationPublic/isLineupPublic) para `src/features/calendar/components/visibility-toggles.tsx`
-  - [ ] T1.4 Simplificar `DayDetailSheet` para: sheet shell + lista de EventCards + EventForm — delegando toda renderização de evento aos subcomponentes
-  - [ ] T1.5 Remover funções inline `isOwnEvent` e `renderEvent` do DayDetailSheet após extração
+- [x] T1 · Extrair subcomponentes do DayDetailSheet (AC 1, 2, 3)
+  - [x] T1.1 Extrair `ConflictBadge` (indicador verde/amarelo/vermelho + ícone + justificativa) para `src/features/calendar/components/conflict-badge.tsx`
+  - [x] T1.2 Extrair `EventCard` (card de evento com status, nome, local, gênero, line-up, conflict badge, botões de ação, toggles de privacidade) para `src/features/calendar/components/event-card.tsx`
+  - [x] T1.3 Extrair `VisibilityToggles` (checkboxes de isNamePublic/isLocationPublic/isLineupPublic) para `src/features/calendar/components/visibility-toggles.tsx`
+  - [x] T1.4 Simplificar `DayDetailSheet` para: sheet shell + lista de EventCards + EventForm — delegando toda renderização de evento aos subcomponentes
+  - [x] T1.5 Remover funções inline `isOwnEvent` e `renderEvent` do DayDetailSheet após extração
 
-- [ ] T2 · Reduzir complexidade cognitiva de updateEvent (AC 1, 2, 3)
-  - [ ] T2.1 Extrair `buildUpdateData(input, existing)` — função pura que monta o objeto `UpdateData` a partir do input validado e do evento existente (sem side effects). Manter `geocode` + `resolveTimezone` + `calculateEventDateUtc` dentro desta função.
-  - [ ] T2.2 Extrair `recomputeConflicts(eventId, oldDate, newDate, db)` — função que trata todo o bloco try/catch de reavaliação de conflitos (old neighbors + self + new neighbors + fallback)
-  - [ ] T2.3 Extrair `authorizeAndFetchEvent(eventId, viewer)` — check de autenticação + existência + propriedade + retornar `existing` ou erro. Reutilizar tanto em `updateEvent` quanto em `updateEventStatus`.
-  - [ ] T2.4 Simplificar `updateEvent` para: auth → buildUpdateData → db.update → recomputeConflicts → revalidate. Alvo: < 40 linhas, cognitive < 15.
+- [x] T2 · Reduzir complexidade cognitiva de updateEvent (AC 1, 2, 3)
+  - [x] T2.1 Extrair `buildUpdateData(input, existing)` — função pura que monta o objeto `UpdateData` a partir do input validado e do evento existente (sem side effects). Manter `geocode` + `resolveTimezone` + `calculateEventDateUtc` dentro desta função.
+  - [x] T2.2 Extrair `recomputeConflicts(eventId, oldDate, newDate, db)` — função que trata todo o bloco try/catch de reavaliação de conflitos (old neighbors + self + new neighbors + fallback)
+  - [x] T2.3 Extrair `authorizeAndFetchEvent(eventId, viewer)` — check de autenticação + existência + propriedade + retornar `existing` ou erro. Reutilizar tanto em `updateEvent` quanto em `updateEventStatus`.
+  - [x] T2.4 Simplificar `updateEvent` para: auth → buildUpdateData → db.update → recomputeConflicts → revalidate. Alvo: < 40 linhas, cognitive < 15.
 
-- [ ] T3 · Testes e verificações (AC 2)
-  - [ ] T3.1 Rodar `npm test` — garantir 371/371
-  - [ ] T3.2 Rodar `npm run type-check` — zero erros
-  - [ ] T3.3 Rodar `npm run lint` — zero warnings
-  - [ ] T3.4 Atualizar imports no `day-detail-sheet.test.tsx` e `ethical-delay-button.test.tsx` se necessário após split de componentes
-  - [ ] T3.5 Adicionar testes unitários para novas funções extraídas: `buildUpdateData`, `recomputeConflicts`, `authorizeAndFetchEvent`
+- [x] T3 · Testes e verificações (AC 2)
+  - [x] T3.1 Rodar `npm test` — 407/407 pass
+  - [x] T3.2 Rodar `npm run type-check` — zero erros
+  - [x] T3.3 Rodar `npm run lint` — zero warnings
+  - [x] T3.4 Imports existentes continuam funcionando — nenhuma quebra
+  - [x] T3.5 Testes unitários adicionados para `buildUpdateData` (6 testes), `recomputeConflicts` (3 testes), `authorizeAndFetchEvent` (4 testes)
 
 ## Dev Notes
 
@@ -167,10 +167,30 @@ so that **the codebase is maintainable and safe before adding new features in Ep
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+opencode-go/deepseek-v4-flash
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- DayDetailSheet reduzido de 274 → ~85 linhas. renderEvent (130 linhas de JSX) e isOwnEvent extraídos para EventCard + ConflictBadge + VisibilityToggles.
+- updateEvent reduzido de 95 → ~30 linhas. Cognitive complexity de ~28 → ~4.
+- 3 helpers extraídos (buildUpdateData, recomputeConflicts, authorizeAndFetchEvent) e reutilizados.
+- 33 novos testes adicionados — 100% pass, sem regressões.
+- type-check e lint: zero erros.
+
 ### File List
+
+- NEW: `src/features/calendar/components/conflict-badge.tsx`
+- NEW: `src/features/calendar/components/conflict-badge.test.tsx`
+- NEW: `src/features/calendar/components/event-card.tsx`
+- NEW: `src/features/calendar/components/event-card.test.tsx`
+- NEW: `src/features/calendar/components/visibility-toggles.tsx`
+- NEW: `src/features/calendar/components/visibility-toggles.test.tsx`
+- UPDATE: `src/features/calendar/components/day-detail-sheet.tsx`
+- UPDATE: `src/features/calendar/actions.ts`
+- UPDATE: `src/features/calendar/__tests__/actions.test.ts`
+
+### Change Log
+
+[06/05/2026] HK.1 — Refatoração completa de DayDetailSheet e updateEvent. Subcomponentes extraídos (ConflictBadge, EventCard, VisibilityToggles). Helpers extraídos (buildUpdateData, recomputeConflicts, authorizeAndFetchEvent). 33 novos testes. 407/407 pass.

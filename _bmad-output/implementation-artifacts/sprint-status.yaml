@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: terça-feira, 14 de abril de 2026
-last_updated: terça-feira, 6 de maio de 2026 (hk-1 ready-for-dev, epic-housekeeping → in-progress)
+last_updated: terça-feira, 6 de maio de 2026 (hk-1 → review)
 project: Agenda Clubber
 project_key: NOKEY
 tracking_system: file-system
@@ -78,7 +78,7 @@ development_status:
   # Épico Housekeeping — inserido após a retrospectiva do Épico 3 (05/05/2026).
   # Bloqueador para o Épico 4 — não iniciar Épico 4 antes deste concluído.
   epic-housekeeping: in-progress
-  hk-1-refatorar-daydetailsheet-e-updateevent: ready-for-dev
+  hk-1-refatorar-daydetailsheet-e-updateevent: review
   hk-2-corrigir-divergencia-rls-e-race-condition: backlog
   hk-3-limpeza-de-dead-code: backlog
   hk-4-pipeline-ci-2-0-e-unificacao-db: backlog
