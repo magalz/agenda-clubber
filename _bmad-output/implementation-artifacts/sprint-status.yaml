@@ -1,5 +1,5 @@
 # generated: terça-feira, 14 de abril de 2026
-# last_updated: quarta-feira, 6 de maio de 2026 (hk-2 → done)
+# last_updated: quarta-feira, 6 de maio de 2026 (hk-3 → done)
 # project: Agenda Clubber
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: terça-feira, 14 de abril de 2026
-last_updated: quarta-feira, 6 de maio de 2026 (hk-2 → done)
+last_updated: quarta-feira, 6 de maio de 2026 (hk-3 → done)
 project: Agenda Clubber
 project_key: NOKEY
 tracking_system: file-system
@@ -80,7 +80,7 @@ development_status:
   epic-housekeeping: in-progress
   hk-1-refatorar-daydetailsheet-e-updateevent: done
   hk-2-corrigir-divergencia-rls-e-race-condition: done
-  hk-3-limpeza-de-dead-code: backlog
+  hk-3-limpeza-de-dead-code: done
   hk-4-pipeline-ci-2-0-e-unificacao-db: backlog
   hk-5-gate-de-qa-automatizado: backlog
   hk-6-migrar-tracking-para-github-issues: backlog
