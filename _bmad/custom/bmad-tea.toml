@@ -2,8 +2,11 @@
 # Quantitative test coverage analysis driven by execution flows and graph structure.
 # Override file: survives `bmad update`. Delete this file to remove.
 #
-# TWO sections: [agent] (resolved by framework) + [workflow] (loaded by agent via SKILL.md).
-# Split rationale: methodology rules in [agent], execution steps in [workflow].
+# NOTE: activation_steps_prepend goes INSIDE [agent], not [workflow].
+# The SKILL.md calls resolve_customization.py --key agent, which only
+# resolves the [agent] section. Arrays are concatenated during merge,
+# so adding prepends here appends to the base customization.toml's
+# empty activation_steps_prepend = [].
 
 [agent]
 persistent_facts = [
@@ -13,8 +16,6 @@ persistent_facts = [
     "Coverage-gap report format: a table — Process | Flow Steps | Covered Steps | Uncovered Steps | Suggested Test Files. No prose-only summaries.",
     "Acceptance trace: when a story has acceptance criteria, map each AC to one or more flow steps from get_process_flow. ACs not mapped to a flow step = ambiguous AC, push back.",
 ]
-
-[workflow]
 activation_steps_prepend = [
     "Memtrace: execute list_processes — enumerate all detected execution flows in the codebase.",
     "Memtrace: cross-reference list_processes output with files under e2e/*.spec.ts — list flows WITHOUT E2E coverage as priority gaps.",

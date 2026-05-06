@@ -82,5 +82,11 @@ export function useCrossCollectiveEvents(dates: Date[]) {
         if (query.data) setCrossEvents(query.data);
     }, [query.data, setCrossEvents]);
 
+    useEffect(() => {
+        if (query.isError) {
+            console.error('Cross-collective fetch failed:', query.error);
+        }
+    }, [query.isError, query.error]);
+
     return query;
 }
