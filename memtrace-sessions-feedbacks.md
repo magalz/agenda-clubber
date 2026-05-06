@@ -240,3 +240,83 @@ When `create-story` produces a story file, registering it as an `agent_intent` e
 ---
 
 **Filed:** 2026-05-06
+
+---
+
+# Memtrace Session Log — Story HK.2 (Implementation + Code Review + QA)
+
+**Epic:** epic-housekeeping
+**Process:** implementação de story hk-2 + code review + QA analysis (Murat)
+**Session:** 2026-05-06 · RLS divergence, race condition fix, code review, Murat QA
+**Agent:** opencode-go/deepseek-v4-flash
+**Commits:** `f81a9db` `eab9d6d` `eb9aa30`
+
+---
+
+## 1. Memtrace Utilization
+
+| Phase | Tool Call | Purpose |
+|-------|-----------|---------|
+| Pre-dev (activation) | `get_codebase_briefing` | Repo scale (574 symbols), modules, high-risk symbols |
+| Pre-dev (activation) | `find_code` (events_select_policy, RLS, cross-collective) | Locate exact files without grepping |
+| Pre-dev (activation) | `get_changes_since` | Recent changes in the repo |
+| Post-impl check | `get_evolution` (compound) | Detect scope creep after implementation |
+| Post-impl check | `find_dead_code` | Verify no new symbols without callers |
+| Post-commit reindex | `index_directory` (incremental) | Graph update after final commit (worked on retry) |
+| Post-reindex | `get_evolution` (compound) | Final check — no unintended changes |
+| Post-reindex | `find_dead_code` | Final check — all symbols have callers |
+| Code review prep | `get_evolution` (compound, wider window) | Baseline for code review context |
+| QA analysis (Murat) | `list_processes` | Enumerate execution flows for test gap analysis |
+| QA analysis (Murat) | `find_symbol(useCrossCollectiveEvents)` | Verify callers and complexity |
+
+---
+
+## 2. Counterfactual Analysis
+
+- **RLS SQL files**: Without `find_code`, would have manually grepped `events_select_policy` across migrations — 2 SQL files instead of 1 call
+- **Race condition analysis**: Manual reading of `hooks.ts` to identify the `setCrossEvents` in `queryFn` — `get_changes_since` confirmed it was the only change needed
+- **Post-impl safety**: `get_evolution` after each commit would require manual diff review — 3 commits × multi-file diffs vs. 1 compound query
+- **Dead code verification**: `find_dead_code` would require reading every test file to check for orphaned test references — 0 new dead symbols confirmed in 1 call
+- **Code review context**: Without Memtrace, the code review prompts for Gemini would have no graph-backed evidence (blast radius, evolution impact)
+- **QA gap analysis**: `list_processes` + `find_symbol` would require manually reading all hook files and tracing flow membership — 2 calls vs. 30+ file reads
+
+---
+
+## 3. Measurable Gains
+
+| Metric | With Memtrace | Without (estimate) |
+|--------|---------------|-------------------|
+| Time to find RLS target | 1 call (`find_code`) | Grepping `010_events_rls.sql` + reading 38 lines |
+| Time to find race condition target | 1 call (`get_changes_since`) | Manual review of `hooks.ts` history |
+| Post-impl regression detection | `get_evolution` after each commit | Manual diff-by-diff review |
+| Dead code confidence | `find_dead_code` — 0 new | Optimism bias |
+| Code review prompt quality | `get_evolution` backed 10 dismissed findings with evidence | Subjective opinion in prompts |
+| QA flow enumeration | `list_processes` — 50 processes listed | Manual review of `src/features/calendar/` |
+
+---
+
+## 4. Usage Optimization
+
+### 4.1. Missed activation prepends for code review
+
+The `bmad-code-review` skill's `activation_steps_prepend` specifies `find_most_complex_functions(top_n=15)`, `find_dead_code(limit=30)`, and `find_bridge_symbols` as prep steps. Because the user requested prompt creation (not full workflow execution), these were skipped. **Insight**: even when generating prompts for external execution, running the prep steps adds real data to the prompt payload that the external model can use.
+
+### 4.2. `get_process_flow` not called for QA
+
+`list_processes` was called (50 processes), but `get_process_flow` on `CollectiveDashboardPageProcess` was not — that would have revealed exactly which flow steps the race condition fix (step 13 of 82) and RLS change participate in. **Insight**: pair `list_processes` → `get_process_flow` for any QA analysis that needs step‑level traceability.
+
+### 4.3. `get_impact` skipped for code review prompts
+
+When generating the Acceptance Auditor prompt, `get_impact(useCrossCollectiveEvents)` would have provided blast‑radius evidence to include in the prompt — showing exactly which files the hooks change touches. **Insight**: for any prompt that claims to be "self‑contained", include Memtrace graph evidence (blast radius, symbol context) to match what an online reviewer would query.
+
+---
+
+## 5. Feature Recommendation
+
+### 5.1. Multi‑session code review artifact tracking
+
+Currently, when generating prompts for external execution (Gemini), there's no way to link the results back as episodes in the Memtrace timeline. If `record_external_episode` accepted a `findings_summary` metadata field and an optional `source_type: external_review`, the code review results could appear in `get_evolution` alongside the implementation timeline.
+
+### 5.2. Git‑aware file lock reindex
+
+On Windows, `index_directory` (incremental) fails with `os error 1224` when a memory‑mapped section is open. Workaround: retry after 1s. A built‑in retry (exponential backoff, 3 attempts) would eliminate the manual retry friction entirely.
