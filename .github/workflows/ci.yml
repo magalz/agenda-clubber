@@ -64,7 +64,7 @@ jobs:
           cache: "npm"
       - run: npm ci --prefer-offline
       - name: Apply Drizzle migrations to CI database
-        run: npx drizzle-kit migrate
+        run: npx drizzle-kit migrate 2>&1 | cat
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
