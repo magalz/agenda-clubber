@@ -1,4 +1,4 @@
-# Session Analysis Protocol - Memtrace
+﻿# Session Analysis Protocol - Memtrace
 
 **Scope Instruction:** Analyze only the actions and data generated within the current session (present execution context). Include interactions from other agents only if they occurred within this specific flow. Do not evaluate historical data from previous sessions.
 
