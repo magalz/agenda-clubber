@@ -568,3 +568,100 @@ O HK.4 confirmou o que o create-story log já havia registrado: Memtrace é cego
 ---
 
 **Filed:** 2026-05-07
+
+---
+
+# Memtrace Session Log — Story HK.5 (Implementation + QA + CR)
+
+**Epic:** epic-housekeeping
+**Process:** implementação de story hk-5 + QA-Design (Murat) + QA-Verify (Murat) + Code Review 3-layer
+**Session:** 2026-05-07 — Gate de QA Automatizado, dual-entry Murat, CI qa-gate job, JUnit parser
+**Agent:** opencode-go/deepseek-v4-flash
+**Commits:** `76b7ae3` (merged → `916b7a7`)
+
+---
+
+## 1. Memtrace Utilization
+
+| Phase | Tool Call | Purpose |
+|-------|-----------|---------|
+| Onboarding | `list_indexed_repositories` | Verify repo indexed — 0 nodes (reset needed) |
+| Onboarding | `index_directory(incremental, skip_embed)` | Reindex after changes: 2956 nodes, 8703 edges, 1207 symbols, 3 API endpoints |
+| Post-commit | `get_evolution(compound)` | Detect unintended changes after commit |
+| Post-commit | `get_evolution(compound, narrower window)` | Confirm 3 episodes (reindex + working_tree + commit), no scope creep |
+| Post-commit | `find_dead_code` (2×) | Verify no new dead symbols from HK.5 changes (all 15 results were pre-existing) |
+
+**Memtrace calls prescribed but skipped:**
+- `get_codebase_briefing` — not called at activation (hk.5 is infra/docs story, briefing adds less value for YAML/JSON/config targets)
+- `find_code` — not called for existing JUnit XML parsing patterns (project has no existing XML utilities in JS)
+- `get_changes_since` — not called (recent CI changes already known from HK.4 context)
+- `get_impact` on any target — not applicable (all hk.5 targets are infra files: ci.yml, package.json, vitest.config.ts, templates — none are TS symbols)
+
+---
+
+## 2. Counterfactual Analysis
+
+- **Post-impl safety**: `get_evolution` confirmed 3 episodes with 1209 nodes — all top changed files were pre-existing project code (actions.test.ts, evaluate-conflict.ts, components). No HK.5 files appeared in top-10, confirming zero unintended changes. Without this, would need manual diff review across 15 files.
+- **Dead code verification**: `find_dead_code` returned 15 pre-existing symbols (Next.js route handlers, shadcn components, justifications helpers). All confirmed unrelated to HK.5. Without Memtrace, no systematic way to verify.
+- **CI pipeline + YAML/JSON targets**: Like HK.4, the primary analysis effort (~70%) was direct file reading (`ci.yml`, `package.json`, `vitest.config.ts`, templates) + domain knowledge. Memtrace contributed post-impl safety checks.
+- **Code review prompts**: 3-layer Gemini review (Blind Hunter, Edge Case Hunter, Acceptance Auditor) used raw diffs, not Memtrace graph data. The JUnit parser bug (only first `<testsuite>`) was caught by Gemini, not Memtrace — MJS files are outside the AST index.
+- **JUnit parser development**: The `scripts/qa-gate.mjs` (151 lines, ESM) has 5 internal functions (`parseJUnit`, `generateReport`, `countChildFailures`, `attrValue`, `evaluateGate`). Memtrace did not index these (`.mjs` in `/scripts` directory) — dead-code detection could not verify internal call graph.
+
+---
+
+## 3. Measurable Gains
+
+| Metric | With Memtrace | Without (estimate) |
+|--------|---------------|-------------------|
+| Post-commit regression detection | `get_evolution` — 1 call, 0 unintended changes | Manual diff-by-diff review across 15 files |
+| Dead code confidence | `find_dead_code` — 0 new dead symbols verified | Optimism bias — "probably fine" |
+| Repo reindex after commit | 1 call (`index_directory`, 5.7s) | Would need manual count or script |
+| Code review context | Pre-populated prompts with full diff + ACs | Same — Gemini prompts used raw diffs |
+| QA analysis (Murat) | 0 Memtrace calls in QA phases | Same — ATDD + test-design + review + trace all use internal templates |
+
+**Note for infra/docs stories (HK.5):** ~70% of analysis effort was file reading + domain knowledge (QA workflows, CI patterns, JUnit XML format, BMad skill structure). Memtrace contributed ~30% (post-impl checks + brief onboarding). This matches the HK.4 pattern — Memtrace value is highest for stories with runtime TS code changes (HK.1, HK.2) where `get_impact`, `get_symbol_context`, `get_process_flow` provide graph-backed intelligence.
+
+---
+
+## 4. Usage Optimization
+
+### 4.1. `get_codebase_briefing` pulado na ativação
+
+Mesmo para uma story de infra/docs como HK.5, `get_codebase_briefing` teria fornecido o baseline: 1207 symbols, 3 API endpoints, 5 high-risk functions. Isso daria contexto para saber quantos testes existem (422+ baseline threshold) antes de escrever o script `qa-gate.mjs`. **Insight**: chamar `get_codebase_briefing(summary)` em TODAS as sessões, não só stories de runtime.
+
+### 4.2. `get_changes_since` não chamado para contexto temporal
+
+HK.4 alterou o CI pipeline na sessão anterior (`c5c2882`). `get_changes_since(since='2026-05-07T00:00:00Z')` teria revelado exatamente o que mudou no `ci.yml` — útil para saber onde inserir o job `qa-gate` sem precisar reler o arquivo inteiro. **Insight**: sempre parear `get_changes_since` com o primeiro `Read` do arquivo target.
+
+### 4.3. `find_code` não usado para busca de padrões XML/JUnit
+
+Antes de escrever `parseJUnit` regex-based, `find_code("junit" OR "xml" OR "parse" OR "fast-xml")` teria verificado se o projeto já tinha alguma dependência de parsing XML. Não teria encontrado nada (projeto não tem `fast-xml-parser`), mas teria confirmado a ausência com 1 call em vez de 0. **Insight**: para scripts novos, buscar padrões existentes antes de implementar — mesmo que o resultado seja "nada encontrado".
+
+### 4.4. `get_impact` chamado zero vezes — justificado
+
+Diferente das sessões HK.1/HK.2 (onde `get_impact` era chamado antes de cada edit), HK.5 não tocou em nenhum símbolo TS. Arquivos modificados foram YAML (ci.yml), JSON (package.json), TS-config (vitest.config.ts), MD (templates, docs), MJS (qa-gate.mjs). Nenhum destes é indexado como símbolo no grafo — `get_impact` retornaria vazio. **Insight**: o customization `activation_steps_prepend` prescreve `get_impact` antes de cada edit — isso deve ser condicionado ao tipo de arquivo. Se o target é non-TS, pular.
+
+### 4.5. Prep steps do ATDD não aplicáveis por tipo de story
+
+O skill `bmad-testarch-atdd` prescreve `get_process_flow`, `get_symbol_context`, `get_impact`, `find_api_endpoints` como prep steps. Para HK.5, nenhum destes faz sentido (não há feature flow, não há runtime symbols, não há API endpoints). O ATDD foi executado mesmo assim, gerando scaffolds de validação de documentação (file-content assertions) — úteis, mas sem os prep steps do Memtrace. **Insight**: o customization do ATDD deve detectar se a story é infra/docs e oferecer um caminho alternativo de prep steps (ex: `find_code` nos arquivos de config target, `get_changes_since` para o CI pipeline).
+
+---
+
+## 5. Feature Recommendation
+
+### 5.1. Indexação de `.mjs` em `/scripts`
+
+Memtrace indexou 190 arquivos e 1207 symbols, mas `scripts/qa-gate.mjs` (151 linhas, 5 funções) não aparece em `find_dead_code` — as funções internas (`parseJUnit`, `generateReport`, `countChildFailures`, `evaluateGate`, `attrValue`) não estão no grafo. Se Memtrace indexasse `.mjs` (que é JavaScript com extensão diferente), o código de script seria visível:
+- `find_dead_code` poderia detectar funções internas não utilizadas
+- `get_impact` poderia mostrar que `generateReport` → `parseJUnit` (dependência interna)
+- `find_code("parseJUnit")` encontraria o script diretamente
+
+Isso é tecnicamente viável (Tree-sitter já suporta JavaScript) e requer mudanças no Memtrace (extensão de arquivo `.mjs` nos padrões de scan).
+
+### 5.2. Episódio `external_review` para code review do Gemini
+
+Os 3 prompts de code review foram gerados aqui e executados no Gemini. Os resultados voltaram como arquivos `*-report.md` no disco, mas não como episódios na timeline do Memtrace. Se `record_external_episode(source_type='external_review')` fosse chamado com os findings no campo `metadata`, o code review apareceria em `get_evolution` junto com os commits de implementação — criando uma timeline completa: "story created → implemented → reviewed (Gemini findings) → fixed → merged".
+
+---
+
+**Filed:** 2026-05-07
