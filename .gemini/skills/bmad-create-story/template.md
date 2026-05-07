@@ -36,6 +36,21 @@ so that {{benefit}}.
 
 - Cite all technical details with source paths and sections, e.g. [Source: docs/<file>.md#Section]
 
+## QA Maturity Checklist
+
+### QA-Design (pré-DS)
+- [ ] Acceptance test scaffolds gerados (bmad-testarch-atdd)
+- [ ] Estratégia de teste definida (bmad-testarch-test-design)
+
+### QA-Verify (pós-DS)
+- [ ] Testes unitários passam
+- [ ] Testes E2E passam
+- [ ] Test-review aprovado (bmad-testarch-test-review)
+- [ ] Rastreabilidade ACs → testes verificada (bmad-testarch-trace)
+- [ ] Cobertura mínima: 80% linhas, 100% ACs
+- [ ] Zero regressões nos testes existentes
+- [ ] QA Gate Report emitido e anexado ao story file
+
 ## Dev Agent Record
 
 ### Agent Model Used

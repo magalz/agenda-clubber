@@ -11,7 +11,8 @@
     "db:migrate": "drizzle-kit migrate",
     "test:e2e": "playwright test",
     "test:e2e:ci": "playwright test",
-    "lint:ci": "eslint . --max-warnings=0"
+    "lint:ci": "eslint . --max-warnings=0",
+    "qa:gate": "node scripts/qa-gate.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",

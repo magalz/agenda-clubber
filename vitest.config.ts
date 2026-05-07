@@ -8,6 +8,7 @@ export default defineConfig({
         environment: 'jsdom',
         exclude: ['node_modules', 'e2e', '.next', '.claude', '**/*.spec.ts'],
         setupFiles: ['./vitest.setup.ts'],
+        reporters: process.env.CI ? [['junit', { outputFile: 'test-results/vitest-junit.xml' }], 'verbose'] : 'default',
     },
     resolve: {
         alias: {
