@@ -69,7 +69,9 @@ async function globalSetup() {
         await assertAuthUserVisible(sql, supabaseUrl, databaseUrl, otherProducerUserId);
 
         // ── 2. Clean up all E2E data deterministically (FK-safe order) ────────
-        // Delete artists first (FK safety: artists.profile_id → profiles.id)
+        // Delete events first (FK: events.created_by → profiles.id ON DELETE SET NULL + NOT NULL)
+        await sql`DELETE FROM events WHERE created_by IN (SELECT id FROM profiles WHERE user_id IN (${mainUserId}, ${claimerUserId}, ${producerUserId}, ${otherProducerUserId}))`;
+        // Delete artists next (FK: artists.profile_id → profiles.id)
         await sql`DELETE FROM artists WHERE artistic_name = ${'Test DJ'}`;
         await sql`DELETE FROM artists WHERE artistic_name = ${'Already Claimed DJ'}`;
         await sql`DELETE FROM artists WHERE artistic_name = ${'Ghost DJ'}`;
