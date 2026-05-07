@@ -66,11 +66,13 @@ jobs:
       - name: Reset drizzle tracking schema
         run: |
           npx tsx -e "
-            const postgres = require('postgres');
-            const sql = postgres(process.env.DATABASE_URL, { max: 1, prepare: false, onnotice: (n) => {} });
-            await sql.unsafe('DROP SCHEMA IF EXISTS drizzle CASCADE');
-            console.log('drizzle schema dropped');
-            await sql.end();
+            (async () => {
+              const postgres = require('postgres');
+              const sql = postgres(process.env.DATABASE_URL, { max: 1, prepare: false, onnotice: (n) => {} });
+              await sql.unsafe('DROP SCHEMA IF EXISTS drizzle CASCADE');
+              console.log('drizzle schema dropped');
+              await sql.end();
+            })();
           "
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -81,20 +83,22 @@ jobs:
       - name: Verify public tables
         run: |
           npx tsx -e "
-            const postgres = require('postgres');
-            const sql = postgres(process.env.DATABASE_URL, { max: 1, prepare: false, onnotice: (n) => {} });
-            const tables = await sql\`
-              SELECT table_name FROM information_schema.tables
-              WHERE table_schema = 'public' ORDER BY table_name
-            \`;
-            const applied = await sql\`SELECT hash FROM drizzle.__drizzle_migrations ORDER BY id\`;
-            console.log('Public tables:', tables.length);
-            for (const t of tables) console.log(' -', t.table_name);
-            console.log('Applied migrations:', applied.length);
-            if (tables.length === 0) { console.error('ERROR: no public tables created'); process.exit(1); }
-            if (applied.length === 0) { console.error('ERROR: no migrations recorded'); process.exit(1); }
-            await sql.end();
-            console.log('Migration verification: PASS');
+            (async () => {
+              const postgres = require('postgres');
+              const sql = postgres(process.env.DATABASE_URL, { max: 1, prepare: false, onnotice: (n) => {} });
+              const tables = await sql\`
+                SELECT table_name FROM information_schema.tables
+                WHERE table_schema = 'public' ORDER BY table_name
+              \`;
+              const applied = await sql\`SELECT hash FROM drizzle.__drizzle_migrations ORDER BY id\`;
+              console.log('Public tables:', tables.length);
+              for (const t of tables) console.log(' -', t.table_name);
+              console.log('Applied migrations:', applied.length);
+              if (tables.length === 0) { console.error('ERROR: no public tables created'); process.exit(1); }
+              if (applied.length === 0) { console.error('ERROR: no migrations recorded'); process.exit(1); }
+              await sql.end();
+              console.log('Migration verification: PASS');
+            })();
           "
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
