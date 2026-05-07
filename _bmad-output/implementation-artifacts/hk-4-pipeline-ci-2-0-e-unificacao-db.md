@@ -1,6 +1,6 @@
 # Story HK.4: Pipeline CI 2.0 e Unificação de Migração DB
 
-Status: review
+Status: done
 
 ## Story
 
