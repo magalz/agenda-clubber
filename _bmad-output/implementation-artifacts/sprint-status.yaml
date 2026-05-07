@@ -82,7 +82,7 @@ development_status:
   hk-2-corrigir-divergencia-rls-e-race-condition: done
   hk-3-limpeza-de-dead-code: done
   hk-4-pipeline-ci-2-0-e-unificacao-db: done
-  hk-5-gate-de-qa-automatizado: ready-for-dev
+  hk-5-gate-de-qa-automatizado: review
   hk-6-migrar-tracking-para-github-issues: backlog
   hk-7-resolver-test-fixme: backlog
   epic-housekeeping-retrospective: optional

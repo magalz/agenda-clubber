@@ -121,6 +121,14 @@ jobs:
       - run: npm ci --prefer-offline
       - run: npm run test
 
+      - name: Upload vitest JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-junit
+          path: test-results/vitest-junit.xml
+          retention-days: 3
+
   e2e-tests:
     name: E2E Tests
     needs: [db-migrate, build]
@@ -184,6 +192,14 @@ jobs:
       - name: E2E tests (CI)
         run: npm run test:e2e:ci
 
+      - name: Upload Playwright JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-junit
+          path: test-results/junit.xml
+          retention-days: 3
+
       - name: Upload E2E report on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -197,3 +213,49 @@ jobs:
         uses: daun/playwright-report-summary@v3
         with:
           report-file: playwright-report/results.json
+
+  qa-gate:
+    name: QA Gate
+    needs: [unit-tests, e2e-tests]
+    if: always() && !cancelled()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - run: npm ci --prefer-offline
+
+      - name: Download vitest JUnit report
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: vitest-junit
+          path: test-results
+
+      - name: Download Playwright JUnit report
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-junit
+          path: test-results
+
+      - name: Run QA Gate
+        id: qa-gate
+        run: npm run qa:gate
+        continue-on-error: true
+
+      - name: Upload QA Gate Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-gate-report
+          path: qa-reports/
+          retention-days: 30
+
+      - name: Fail job if QA Gate failed
+        if: steps.qa-gate.outcome != 'success'
+        run: exit 1

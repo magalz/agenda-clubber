@@ -2,7 +2,7 @@
 
 [Risk: LOW — Process/infrastructure story, no runtime code changes]
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -43,29 +43,29 @@ so that **quality issues are caught before code review, preventing post-merge ha
 
 ## Tasks / Subtasks
 
-- [ ] T1 · Configurar Murat com dupla entrada no ciclo de story (AC 1)
-  - [ ] T1.1 Definir QA-Design (pós-VS, pré-DS): invocar `/bmad-tea` → `bmad-testarch-atdd` para gerar scaffolds de acceptance tests red-phase
-  - [ ] T1.2 Definir QA-Verify (pós-DS, pré-CR): invocar `/bmad-tea` → `bmad-testarch-test-review` + `bmad-testarch-trace` para auditar qualidade e rastreabilidade
-  - [ ] T1.3 Garantir que `bmad-testarch-automate` pode ser invocado no QA-Verify para preencher gaps de cobertura
-  - [ ] T1.4 Documentar comandos exatos de invocação para cada entrada
+- [x] T1 · Configurar Murat com dupla entrada no ciclo de story (AC 1)
+  - [x] T1.1 Definir QA-Design (pós-VS, pré-DS): invocar `/bmad-tea` → `bmad-testarch-atdd` para gerar scaffolds de acceptance tests red-phase
+  - [x] T1.2 Definir QA-Verify (pós-DS, pré-CR): invocar `/bmad-tea` → `bmad-testarch-test-review` + `bmad-testarch-trace` para auditar qualidade e rastreabilidade
+  - [x] T1.3 Garantir que `bmad-testarch-automate` pode ser invocado no QA-Verify para preencher gaps de cobertura
+  - [x] T1.4 Documentar comandos exatos de invocação para cada entrada
 
-- [ ] T2 · Criar QA Maturity Checklist e atualizar template da story (AC 2)
-  - [ ] T2.1 Definir checklist com critérios objetivos por nível de maturidade
-  - [ ] T2.2 Adicionar checklist ao `C:\Users\magal\.agents\skills\bmad-create-story\template.md`
-  - [ ] T2.3 A checklist deve ser preenchida como seção obrigatória em toda story nova
+- [x] T2 · Criar QA Maturity Checklist e atualizar template da story (AC 2)
+  - [x] T2.1 Definir checklist com critérios objetivos por nível de maturidade
+  - [x] T2.2 Adicionar checklist ao `C:\Users\magal\.agents\skills\bmad-create-story\template.md` (e cópias `.agent` e `.gemini`)
+  - [x] T2.3 A checklist deve ser preenchida como seção obrigatória em toda story nova
 
-- [ ] T3 · Adicionar QA Check Step no CI Pipeline (AC 3)
-  - [ ] T3.1 Adicionar job `qa-gate` no `.github/workflows/ci.yml` — paralelo, após unit-tests + e2e-tests
-  - [ ] T3.2 Coletar relatórios JUnit (unit + E2E) e verificar thresholds (≥422 testes pass, 0 regressões)
-  - [ ] T3.3 Publicar `qa-gate-report` como artifact do workflow
-  - [ ] T3.4 CI deve falhar se QA gate thresholds não forem atingidos
-  - [ ] T3.5 Adicionar script `"qa:gate"` no `package.json` que agrega reports locais
+- [x] T3 · Adicionar QA Check Step no CI Pipeline (AC 3)
+  - [x] T3.1 Adicionar job `qa-gate` no `.github/workflows/ci.yml` — após unit-tests + e2e-tests, com `needs:`
+  - [x] T3.2 Coletar relatórios JUnit (unit + E2E) e verificar thresholds (≥422 testes pass, 0 regressões)
+  - [x] T3.3 Publicar `qa-gate-report` como artifact do workflow
+  - [x] T3.4 CI deve falhar se QA gate thresholds não forem atingidos
+  - [x] T3.5 Adicionar script `"qa:gate"` no `package.json` que agrega reports locais
 
-- [ ] T4 · Documentar workflow de QA (AC 4)
-  - [ ] T4.1 Criar `docs/qa-workflow.md` com diagrama e comandos
-  - [ ] T4.2 Incluir critérios de aprovação/reprovação do gate
-  - [ ] T4.3 Incluir exemplos de QA Gate Report (output do trace + test-review)
-  - [ ] T4.4 Referenciar workflow na sprint-status.yaml ou README
+- [x] T4 · Documentar workflow de QA (AC 4)
+  - [x] T4.1 Criar `docs/qa-workflow.md` com diagrama e comandos
+  - [x] T4.2 Incluir critérios de aprovação/reprovação do gate
+  - [x] T4.3 Incluir exemplos de QA Gate Report (output do trace + test-review)
+  - [x] T4.4 Referenciar workflow na sprint-status.yaml ou README
 
 ## Dev Notes
 
@@ -279,16 +279,35 @@ DeepSeek V4 Flash (opencode-go/deepseek-v4-flash)
 
 ### Debug Log References
 
+- Memtrace lock issue (OS error 1224) resolved with `unwatch_directory` + `index_directory`
+- Vitest JUnit reporter requires `@vitest/ui` — not needed, vitest core has built-in JUnit reporter
+
 ### Completion Notes List
+
+- **QA-Design complete**: ATDD scaffolds red-phase (`atdd/hk-5-qa-gate.scaffold.test.ts`) + Test Design (`_bmad-output/test-artifacts/test-design/test-design-hk-5.md`)
+- **T1**: Murat dual-entry documentado em `docs/qa-workflow.md` com comandos exatos de invocação
+- **T2**: QA Maturity Checklist adicionado em 3 templates (`C:\Users\magal\.agents\skills\bmad-create-story\template.md`, `.agent/skills`, `.gemini/skills`)
+- **T3**: CI job `qa-gate` adicionado com upload/download de JUnit artifacts + validação de thresholds; script `scripts/qa-gate.mjs` criado com thresholds configuráveis; vitest JUnit reporter configurado para CI
+- **T4**: `docs/qa-workflow.md` criado com diagrama Mermaid, dual-entry commands, thresholds, critérios, exemplo de report
+- All 14 tests (project code) pass — zero regressões
+- ATDD scaffolds em red-phase (describe.skip) — 14 tests skipped
 
 ### File List
 
-- `.github/workflows/ci.yml` — UPDATE: adicionar job `qa-gate` dependente de unit-tests + e2e-tests
-- `package.json` — UPDATE: adicionar script `qa:gate`
-- `C:\Users\magal\.agents\skills\bmad-create-story\template.md` — UPDATE: adicionar QA Maturity Checklist
+- `.github/workflows/ci.yml` — UPDATE: adicionado job `qa-gate` + upload JUnit artifacts nos jobs unit-tests e e2e-tests
+- `package.json` — UPDATE: adicionado script `qa:gate`
+- `vitest.config.ts` — UPDATE: adicionado reporter JUnit para CI
+- `C:\Users\magal\.agents\skills\bmad-create-story\template.md` — UPDATE: adicionado QA Maturity Checklist
+- `.agent/skills/bmad-create-story/template.md` — UPDATE: adicionado QA Maturity Checklist
+- `.gemini/skills/bmad-create-story/template.md` — UPDATE: adicionado QA Maturity Checklist
 - `docs/qa-workflow.md` — NEW: documentação do fluxo de QA com diagrama e comandos
-- `scripts/qa-gate.mjs` — NEW: script agregador de reports e validação de thresholds
+- `scripts/qa-gate.mjs` — NEW: script agregador de reports JUnit e validação de thresholds
+- `atdd/hk-5-qa-gate.scaffold.test.ts` — NEW: scaffolds red-phase (red-phase, describe.skip)
+- `_bmad-output/test-artifacts/atdd/atdd-checklist-hk-5.md` — NEW: ATDD checklist
+- `_bmad-output/test-artifacts/test-design/test-design-hk-5.md` — NEW: Test Design document
 
 ### Change Log
 
 - 2026-05-07: Story created — HK.5 Gate de QA Automatizado. Dual-entry Murat (QA-Design + QA-Verify). CI qa-gate job. QA Maturity Checklist no template. docs/qa-workflow.md.
+- 2026-05-07: Story implemented. T1-T4 completos. QA-Design executado (ATDD + Test Design). DS executado. CI job qa-gate + script + docs + template checklist. Tests passam. Status → review.
+- 2026-05-07: Code Review aprovado com comentários (2 Medium, 1 Low). Recomendações: parser JUnit mais robusto + unit tests para qa-gate.mjs → HK.7.
