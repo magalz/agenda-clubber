@@ -8,7 +8,7 @@ export default defineConfig({
     workers: process.env.CI ? 1 : undefined,
     globalSetup: require.resolve('./e2e/global-setup'),
     globalTimeout: 10 * 60 * 1000,
-    reporter: process.env.CI ? [['junit', { outputFile: 'test-results/junit.xml' }], ['html']] : 'html',
+    reporter: process.env.CI ? [['junit', { outputFile: 'test-results/junit.xml' }], ['html'], ['json', { outputFile: 'playwright-report/results.json' }]] : 'html',
     webServer: {
         command: 'npm run start',
         port: 3000,

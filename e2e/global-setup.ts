@@ -68,19 +68,27 @@ async function globalSetup() {
         await assertAuthUserVisible(sql, supabaseUrl, databaseUrl, producerUserId);
         await assertAuthUserVisible(sql, supabaseUrl, databaseUrl, otherProducerUserId);
 
-        // ── 2. Ensure profiles exist ────────────────────────────────────────────
-        // Clean up all E2E profiles first for deterministic state
+        // ── 2. Clean up all E2E data deterministically (FK-safe order) ────────
+        // Delete artists first (FK safety: artists.profile_id → profiles.id)
+        await sql`DELETE FROM artists WHERE artistic_name = ${'Test DJ'}`;
+        await sql`DELETE FROM artists WHERE artistic_name = ${'Already Claimed DJ'}`;
+        await sql`DELETE FROM artists WHERE artistic_name = ${'Ghost DJ'}`;
+        await sql`DELETE FROM artists WHERE artistic_name = ${'Pending DJ'}`;
+        await sql`DELETE FROM artists WHERE artistic_name = ${'Collectives DJ'}`;
+        await sql`DELETE FROM artists WHERE artistic_name ILIKE ${'Artista Ghost XYZ'}`;
+        await sql`DELETE FROM artists WHERE artistic_name ILIKE ${'Artista Inexistente XYZ'}`;
+        // Main user's artist: delete by old profile_id before profile is removed
+        await sql`DELETE FROM artists WHERE profile_id = (SELECT id FROM profiles WHERE user_id = ${mainUserId})`;
+        // Now delete profiles (safe: no artists reference them anymore)
         await sql`DELETE FROM profiles WHERE user_id IN (${mainUserId}, ${claimerUserId}, ${producerUserId}, ${otherProducerUserId})`;
-        const mainProfileId = await insertProfile(sql, mainUserId, 'E2E Artist', 'artista');
+
+        // ── 3. Recreate profiles ────────────────────────────────────────────────
+        const _mainProfileId = await insertProfile(sql, mainUserId, 'E2E Artist', 'artista');
         const claimerProfileId = await insertProfile(sql, claimerUserId, 'E2E Claimer', 'artista');
         const producerProfileId = await insertProfile(sql, producerUserId, 'E2E Producer', 'produtor');
         const otherProducerProfileId = await insertProfile(sql, otherProducerUserId, 'E2E Other Producer', 'produtor');
 
-        // ── 3. Seed test artists ─────────────────────────────────────────────────
-        await sql`DELETE FROM artists WHERE artistic_name ILIKE ${'Artista Ghost XYZ'}`;
-        await sql`DELETE FROM artists WHERE artistic_name ILIKE ${'Artista Inexistente XYZ'}`;
-        // Reset main user's artist so they can onboard fresh each run
-        await sql`DELETE FROM artists WHERE profile_id = ${mainProfileId}`;
+        // ── 4. Seed test artists ─────────────────────────────────────────────────
 
         // 'Test DJ' — orphan artist (profile_id IS NULL), claimable, public mode
         await sql`DELETE FROM artists WHERE artistic_name = ${'Test DJ'}`;

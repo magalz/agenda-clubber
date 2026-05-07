@@ -270,6 +270,10 @@ Claude (DeepSeek v4 Pro via OpenCode)
 ✅ T3 — Seed E2E determinístico: Todos os 6 `ON CONFLICT DO UPDATE` substituídos por `DELETE` + `INSERT`. Perfis dos 4 usuários E2E recebem DELETE bulk antes de INSERT.
 ✅ T4 — CI paralelizado: 5 jobs (lint-and-typecheck, build, db-migrate, unit-tests, e2e-tests). Cache de `.next`, `wait-on` health check, PR comment, timeouts otimizados.
 ✅ T5 — Playwright hardened: `forbidOnly`, `retries=1` em CI, `workers=1` em CI, `globalTimeout=10min`. Scripts `test:e2e:ci` e `lint:ci` adicionados.
+✅ Code Review Fixes (3 patches da análise adversarial):
+  - P1: Build do Next.js no job e2e-tests (`.next` não é compartilhado entre jobs)
+  - P2: JSON reporter adicionado ao Playwright para PR comment funcionar
+  - P3: Ordem de DELETE corrigida (artists → profiles) para evitar violação de FK
 
 **Resultados de validação:**
 - Type-check: ✅ limpo
@@ -278,10 +282,10 @@ Claude (DeepSeek v4 Pro via OpenCode)
 
 ### File List
 
-- `.github/workflows/ci.yml` — UPDATE: reestruturado com 5 jobs paralelos, cache .next, wait-on, PR comment
-- `playwright.config.ts` — UPDATE: adicionado forbidOnly, retries, workers, globalTimeout, JUnit reporter para CI
-- `e2e/global-setup.ts` — UPDATE: 6 ON CONFLICT DO UPDATE → DELETE + INSERT; upsertProfile → insertProfile com DELETE bulk
-- `package.json` — UPDATE: adicionado scripts db:migrate, test:e2e:ci, lint:ci; engines.node >=22
+- `.github/workflows/ci.yml` — UPDATE: reestruturado com 5 jobs paralelos, cache .next, wait-on, PR comment; build step no e2e-tests; timeout reduzido para 10min
+- `playwright.config.ts` — UPDATE: adicionado forbidOnly, retries, workers, globalTimeout, JUnit+JSON reporter para CI
+- `e2e/global-setup.ts` — UPDATE: 6 ON CONFLICT DO UPDATE → DELETE + INSERT; upsertProfile → insertProfile com DELETE bulk; ordem corrigida (artists antes de profiles); query subconsulta para evitar profile_id stale
+- `package.json` — UPDATE: adicionado scripts db:migrate, test:e2e:ci, lint:ci; engines.node >=22; JSON reporter no test:e2e:ci
 - `.nvmrc` — NEW: conteúdo `22`
 - `scripts/migrate.mjs` — DELETE: substituído por drizzle-kit migrate
 - `supabase/migrations/meta/_journal.json` — UPDATE: expandido para 12 entradas (todas as migrações)
@@ -289,3 +293,4 @@ Claude (DeepSeek v4 Pro via OpenCode)
 ### Change Log
 
 - 2026-05-06: Implementação completa HK.4 — Pipeline CI 2.0 e Unificação de Migração DB
+- 2026-05-07: Code Review patches: build E2E fix, JSON reporter, DELETE order FK-safe

@@ -10,7 +10,7 @@
     "type-check": "tsc --noEmit",
     "db:migrate": "drizzle-kit migrate",
     "test:e2e": "playwright test",
-    "test:e2e:ci": "playwright test --retries=1 --reporter=junit,html",
+    "test:e2e:ci": "playwright test --retries=1 --reporter=junit,html,json",
     "lint:ci": "eslint . --max-warnings=0"
   },
   "dependencies": {
