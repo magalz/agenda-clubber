@@ -1,4 +1,4 @@
-﻿# Session Analysis Protocol - Memtrace
+# Session Analysis Protocol - Memtrace
 
 **Scope Instruction:** Analyze only the actions and data generated within the current session (present execution context). Include interactions from other agents only if they occurred within this specific flow. Do not evaluate historical data from previous sessions.
 
@@ -27,8 +27,8 @@ Record the findings strictly following the formatting pattern and structure esta
 
 ```yaml
 session:
-  epic: "[epic tag ��� e.g. epic-housekeeping, epic-3]"
-  process: "[process tag ��� e.g. cria+�ao de epico, cria+�ao de story x-x, implementa+�ao de story hk-1, revisao pos-dev, etc.]"
+  epic: "[epic tag – e.g. epic-housekeeping, epic-3]"
+  process: "[process tag – e.g. criação de epico, criação de story x-x, implementação de story hk-1, revisao pos-dev, etc.]"
   date: "[YYYY-MM-DD]"
   agent: "[model name]"
   commits: "[sha1] [sha2] ..."
@@ -36,11 +36,11 @@ session:
 
 ---
 
-# Memtrace Session Log ��� Story HK.1
+# Memtrace Session Log – Story HK.1
 
 **Epic:** epic-housekeeping
-**Process:** implementa+�+�o de story hk-1
-**Session:** 2026-05-06 -� Refactor DayDetailSheet and updateEvent
+**Process:** implementação de story hk-1
+**Session:** 2026-05-06 – Refactor DayDetailSheet and updateEvent
 **Agent:** opencode-go/deepseek-v4-flash
 **Commits:** `9f75341` `0ef7f98` `87fe22a`
 
@@ -53,7 +53,7 @@ session:
 | Pre-dev | `get_codebase_briefing` | Discover repo scale, modules, high-risk symbols before writing anything |
 | Pre-dev | `find_code` (calendar-related) | Locate exact symbol positions without grepping |
 | Pre-dev | `get_changes_since` | See what was touched recently in the same files |
-| Before each edit | `get_impact(updateEvent)` | Blast-radius check: LOW risk ��� safe to refactor |
+| Before each edit | `get_impact(updateEvent)` | Blast-radius check: LOW risk – safe to refactor |
 | Before each edit | `get_impact(DayDetailSheet)` | Same check for the component |
 | Post-impl | `get_evolution` | Detect unintended changes outside story scope |
 | Post-impl | `find_dead_code` | Ensure no new symbol was introduced without a caller |
@@ -64,8 +64,8 @@ session:
 
 ## 2. Counterfactual Analysis
 
-- **Onboarding**: Read 10���15 files manually to understand architecture before touching anything
-- **Refactoring risk**: Manual grep for imports of `DayDetailSheet` and `updateEvent` ��� easy to miss a consumer
+- **Onboarding**: Read 10–15 files manually to understand architecture before touching anything
+- **Refactoring risk**: Manual grep for imports of `DayDetailSheet` and `updateEvent` – easy to miss a consumer
 - **Dead code**: No systematic way to catch orphaned symbols; would only surface at runtime or never
 - **Complexity validation**: Would need a linter rule or manual review; no pre/post comparison
 - **Post-commit safety**: No way to detect scope creep / unintended changes without reading every diff manually
@@ -78,8 +78,8 @@ session:
 | Metric | With Memtrace | Without (estimate) |
 |--------|---------------|-------------------|
 | Time to understand the target area | 2 calls (`briefing` + `find_code`) | Reading 10+ files, cross-referencing imports |
-| Confidence to refactor monolithic functions | `get_impact ��� LOW` eliminated fear | "Hope it doesn't break" |
-| Dead symbols caught | 0 new dead symbols (verified) | Unknown ��� optimism bias |
+| Confidence to refactor monolithic functions | `get_impact – LOW` eliminated fear | "Hope it doesn't break" |
+| Dead symbols caught | 0 new dead symbols (verified) | Unknown – optimism bias |
 | Scope creep detected | `get_evolution` after each commit | Manual diff review, easy to miss |
 | Code review evidence | Graph-backed triage (MUST-FIX, SHOULD-FIX) | Subjective opinion |
 | File lock issue on Windows | Cost ~5 min to diagnose + workaround | Doesn't apply |
@@ -88,25 +88,25 @@ session:
 
 ## 4. Feature Recommendation
 
-### 4.1. Before the first edit ��� deeper blast radius
+### 4.1. Before the first edit – deeper blast radius
 
 I called `get_impact` before editing `updateEvent` and `DayDetailSheet`, but I didn't call `get_symbol_context` on the inline functions (`renderEvent`, `isOwnEvent`) before removing them. **Insight**: when deleting code, call `find_symbol` on every deleted function to rule out external references (even when they look internal).
 
 ### 4.2. For test coverage mapping
 
-`list_processes` + `get_process_flow` would have helped identify which execution flows lack test coverage before writing new tests. Instead, I discovered gaps only during the QA audit. **Insight**: run `list_processes` as a test���planning step, not a post���mortem.
+`list_processes` + `get_process_flow` would have helped identify which execution flows lack test coverage before writing new tests. Instead, I discovered gaps only during the QA audit. **Insight**: run `list_processes` as a test-planning step, not a post-mortem.
 
 ### 4.3. Bridge-symbol check for extracted helpers
 
 When I moved `authorizeAndFetchEvent`, `buildUpdateData`, `recomputeConflicts` to `helpers.ts`, I should have run `find_bridge_symbols` on the new file. If any of those helpers become widely imported, they become chokepoints. **Insight**: run bridge check on new shared modules early, not after they accumulate callers.
 
-### 4.4. Auto���index on commit
+### 4.4. Auto-index on commit
 
-The manual `replay_history` ��� `index_directory` dance after every commit is friction. If `watch_directory` also watched `.git/refs/heads/*` and triggered the indexing chain on commit, the post���commit `get_evolution` and `find_dead_code` checks would be instant. This was requested as a feature.
+The manual `replay_history` – `index_directory` dance after every commit is friction. If `watch_directory` also watched `.git/refs/heads/*` and triggered the indexing chain on commit, the post-commit `get_evolution` and `find_dead_code` checks would be instant. This was requested as a feature.
 
-### 4.5. Windows file���lock handling
+### 4.5. Windows file-lock handling
 
-`index_directory` fails when `watch_directory` holds an ArcadeDB handle. Workaround: `unwatch` ��� `index` ��� `watch`. A proper fix (retry with backoff, or auto���detach the mapped section) would remove the friction entirely. Bug report filed with Memtrace team.
+`index_directory` fails when `watch_directory` holds an ArcadeDB handle. Workaround: `unwatch` – `index` – `watch`. A proper fix (retry with backoff, or auto-detach the mapped section) would remove the friction entirely. Bug report filed with Memtrace team.
 
 ---
 
@@ -114,11 +114,11 @@ The manual `replay_history` ��� `index_directory` dance after every commit
 
 ---
 
-# Memtrace Session Log ��� Create Story HK.1
+# Memtrace Session Log – Create Story HK.1
 
 **Epic:** epic-housekeeping
-**Process:** cria+�+�o de story hk-1 (create-story workflow)
-**Session:** 2026-05-06 -� Context engine ��� an+�lise para story file HK.1
+**Process:** criação de story hk-1 (create-story workflow)
+**Session:** 2026-05-06 – Context engine – análise para story file HK.1
 **Agent:** opencode-go/deepseek-v4-flash
 **Commits:** `6ed328d`
 
@@ -130,21 +130,21 @@ The manual `replay_history` ��� `index_directory` dance after every commit
 |-------|-----------|---------|
 | Activation | `get_codebase_briefing` | Repo scale, modules, high-risk symbols before creating story |
 | Dep. intelligence | `get_symbol_context(updateEvent)` | Callers (1), callees (6), processo (CollectiveDashboardPageProcess) |
-| Dep. intelligence | `get_symbol_context(DayDetailSheet)` | Callers (1), callees (10), fun+�+�es inline (isOwnEvent, renderEvent) |
-| Risk flagging | `get_impact(updateEvent)` | Blast radius: LOW ��� sem bloqueio arquitetural |
-| Risk flagging | `get_impact(DayDetailSheet)` | Blast radius: LOW ��� sem bloqueio arquitetural |
-| Source reading | `find_symbol(updateEvent)` | Localizar posi+�+�o exata no c+�digo |
-| Source reading | `find_symbol(DayDetailSheet)` | Localizar posi+�+�o exata no c+�digo |
-| Hidden deps | `find_dependency_path(DayDetailSheet���getViewerContext)` | Caminho indireto: DayDetailSheet ��� updateEvent ��� getViewerContext (depth 2) |
+| Dep. intelligence | `get_symbol_context(DayDetailSheet)` | Callers (1), callees (10), funções inline (isOwnEvent, renderEvent) |
+| Risk flagging | `get_impact(updateEvent)` | Blast radius: LOW – sem bloqueio arquitetural |
+| Risk flagging | `get_impact(DayDetailSheet)` | Blast radius: LOW – sem bloqueio arquitetural |
+| Source reading | `find_symbol(updateEvent)` | Localizar posição exata no código |
+| Source reading | `find_symbol(DayDetailSheet)` | Localizar posição exata no código |
+| Hidden deps | `find_dependency_path(DayDetailSheet – getViewerContext)` | Caminho indireto: DayDetailSheet – updateEvent – getViewerContext (depth 2) |
 | AC traceability | `get_process_flow(CollectiveDashboardPageProcess)` | 82 steps. updateEvent=step 20, DayDetailSheet=step 16. AC1 (subcomponentes) e AC2 (complexidade) mapeiam para steps distintos. |
-| Story ordering | `find_dependency_path(updateEvent���fetchCrossCollectiveEvents)` | SEM caminho ��� HK.1 e HK.2 s+�o independentes, ordena+�+�o v+�lida |
+| Story ordering | `find_dependency_path(updateEvent – fetchCrossCollectiveEvents)` | SEM caminho – HK.1 e HK.2 são independentes, ordenação válida |
 
 ## 2. What It Would Look Like Without Memtrace
 
 - **Dependency intelligence**: Read both `.ts` files + cross-reference imports manually to find all callers/callees of updateEvent
-- **Risk assessment**: No blast-radius data ��� would guess whether refactoring is safe
-- **Hidden deps**: Would not know that DayDetailSheet ��� updateEvent ��� getViewerContext is the auth chain; might extract only the obvious callers
-- **Process/AC mapping**: Would manually trace the 82-step dashboard flow ��� error-prone, easy to miss steps
+- **Risk assessment**: No blast-radius data – would guess whether refactoring is safe
+- **Hidden deps**: Would not know that DayDetailSheet – updateEvent – getViewerContext is the auth chain; might extract only the obvious callers
+- **Process/AC mapping**: Would manually trace the 82-step dashboard flow – error-prone, easy to miss steps
 - **Story ordering**: Would assume HK.1 before HK.2 is correct based on intuition; no graph evidence
 
 ## 3. Measurable Gains
@@ -152,30 +152,30 @@ The manual `replay_history` ��� `index_directory` dance after every commit
 | Metric | With Memtrace | Without (estimate) |
 |--------|---------------|-------------------|
 | Time to map dependencies | 2 calls (`symbol_context`) | Reading 2 source files + grepping imports (~15 min) |
-| Hidden dependency chain discovered | DayDetailSheet ��� updateEvent ��� getViewerContext (load-bearing) | Would require reading all 3 files and tracing manually |
+| Hidden dependency chain discovered | DayDetailSheet – updateEvent – getViewerContext (load-bearing) | Would require reading all 3 files and tracing manually |
 | Process step mapping | 82 steps in 1 call | Manual tracing through 82+ function calls |
-| AC ��� flow mapping confidence | updateEvent (step 20) + DayDetailSheet (step 16) | "Parece que cobre" ��� sem evid+�ncia |
-| Story ordering validation | No path between HK.1 and HK.2 ��� independentes | Intui+�+�o sem dados |
+| AC – flow mapping confidence | updateEvent (step 20) + DayDetailSheet (step 16) | "Parece que cobre" – sem evidência |
+| Story ordering validation | No path between HK.1 and HK.2 – independentes | Intuição sem dados |
 
 ## 4. How It Could Be Used Better
 
 ### 4.1. Process flow analysis antes do create-story
 
-`get_process_flow` foi chamado, mas apenas depois do story file criado. **Insight**: chamar `get_process_flow` ANTES de escrever o story file, para que os steps do fluxo j+� alimentem as ACs diretamente.
+`get_process_flow` foi chamado, mas apenas depois do story file criado. **Insight**: chamar `get_process_flow` ANTES de escrever o story file, para que os steps do fluxo já alimentem as ACs diretamente.
 
 ### 4.2. find_central_symbols como input de hidden deps
 
-Os load-bearing symbols (`getViewerContext`, PageRank top-10) foram descobertos apenas no segundo round. **Insight**: rodar `find_central_symbols` no in+�cio e cross-referenciar com os targets da story ��� se um target depende de um s+�mbolo central, isso +� hidden risk n+�o documentado.
+Os load-bearing symbols (`getViewerContext`, PageRank top-10) foram descobertos apenas no segundo round. **Insight**: rodar `find_central_symbols` no início e cross-referenciar com os targets da story – se um target depende de um símbolo central, isso é hidden risk não documentado.
 
 ## 5. What is a good feature Memtrace could have to help me better?
 
 ---
 
-# Memtrace Session Log ��� Story HK.2 (Create)
+# Memtrace Session Log – Story HK.2 (Create)
 
 **Epic:** epic-housekeeping
-**Process:** cria+�+�o de story hk-2
-**Session:** 2026-05-06 -� Create Story HK.2 ��� RLS divergence + race condition
+**Process:** criação de story hk-2
+**Session:** 2026-05-06 – Create Story HK.2 – RLS divergence + race condition
 **Agent:** opencode-go/deepseek-v4-flash
 **Commits:** (story file created, not yet committed)
 
@@ -185,12 +185,12 @@ Os load-bearing symbols (`getViewerContext`, PageRank top-10) foram descobertos 
 
 | Phase | Tool Call | Purpose |
 |-------|-----------|---------|
-| Prep (customization) | `get_codebase_briefing` | Briefing loaded via activation_steps_prepend ��� repo scale, modules, 585 symbols |
+| Prep (customization) | `get_codebase_briefing` | Briefing loaded via activation_steps_prepend – repo scale, modules, 585 symbols |
 | Prep (customization) | `find_symbol(fetchCrossCollectiveEvents)` | Caller/callee map for the race-condition target (D5) |
 | Prep (customization) | `find_symbol(filterEventForViewer)` | Caller map for the RLS divergence target (D3) |
-| Prep (customization) | `get_symbol_context(useCrossCollectiveEvents)` | Full 360-� view: callers (CalendarGridClient), callees (fetchCrossCollectiveEvents), process membership |
-| Prep (customization) | `get_impact(filterEventForViewer)` | Blast-radius: LOW ��� RLS fix touches only SQL, not app-layer |
-| Pre-write | Explore subagent | Discovered 21 files via grep/glob/read ��� RLS SQL, visibility.ts, hooks.ts, store.ts, events-queries.ts, types.ts, tests |
+| Prep (customization) | `get_symbol_context(useCrossCollectiveEvents)` | Full 360° view: callers (CalendarGridClient), callees (fetchCrossCollectiveEvents), process membership |
+| Prep (customization) | `get_impact(filterEventForViewer)` | Blast-radius: LOW – RLS fix touches only SQL, not app-layer |
+| Pre-write | Explore subagent | Discovered 21 files via grep/glob/read – RLS SQL, visibility.ts, hooks.ts, store.ts, events-queries.ts, types.ts, tests |
 
 **Note:** The `activation_steps_prepend` customization configured Memtrace tools for story creation, but the heavy code discovery was delegated to the explore subagent (grep/glob), not direct Memtrace calls. The subagent returned complete file contents for all 21 relevant files.
 
@@ -198,10 +198,10 @@ Os load-bearing symbols (`getViewerContext`, PageRank top-10) foram descobertos 
 
 ## 2. Counterfactual Analysis
 
-- **Scope definition**: Without Memtrace's `get_impact`, would not have known `filterEventForViewer` has zero blast radius (RISK LOW, 0 affected files) ��� confidence to leave it untouched
-- **Symbol discovery**: Manual grep for `events_select_policy` would have found the SQL file but Memtrace's `find_symbol` confirmed `filterEventForViewer` is isolated ��� no need to touch visibility.ts
+- **Scope definition**: Without Memtrace's `get_impact`, would not have known `filterEventForViewer` has zero blast radius (RISK LOW, 0 affected files) – confidence to leave it untouched
+- **Symbol discovery**: Manual grep for `events_select_policy` would have found the SQL file but Memtrace's `find_symbol` confirmed `filterEventForViewer` is isolated – no need to touch visibility.ts
 - **Race condition analysis**: `get_symbol_context(useCrossCollectiveEvents)` revealed the exact inline code still has `setCrossEvents(result)` in `queryFn` (confirmed by indexed graph)
-- **Process membership**: `useCrossCollectiveEvents` belongs to `CollectiveDashboardPageProcess` at step 13 ��� useful for understanding where in the render cycle the fix sits
+- **Process membership**: `useCrossCollectiveEvents` belongs to `CollectiveDashboardPageProcess` at step 13 – useful for understanding where in the render cycle the fix sits
 
 ---
 
@@ -209,17 +209,17 @@ Os load-bearing symbols (`getViewerContext`, PageRank top-10) foram descobertos 
 
 | Metric | With Memtrace | Without (estimate) |
 |--------|---------------|-------------------|
-| Time to verify filterEventForViewer is safe to leave alone | 1 call (`get_impact ��� LOW`) | Manual review of 32-line function + cross-reference callers |
+| Time to verify filterEventForViewer is safe to leave alone | 1 call (`get_impact – LOW`) | Manual review of 32-line function + cross-reference callers |
 | Confidence in RLS-only scope | `get_impact = 0 affected files` | "Hope it doesn't affect visibility.ts" |
 | Understanding race condition location | `get_symbol_context` showed exact code inline | Read hooks.ts manually |
-| Story file quality | 21 file contents from subagent + Memtrace metrics ��� precise dev notes | Surface-level from epic only |
+| Story file quality | 21 file contents from subagent + Memtrace metrics – precise dev notes | Surface-level from epic only |
 
 ---
 
 ## 4. Usage Optimization
 
 - **Use Memtrace FIRST, not subagent**: The explore subagent used grep/glob/read instead of Memtrace `find_code`/`find_symbol`, which would have been faster and more precise. Next time: call Memtrace tools directly before delegating to a subagent.
-- **`get_evolution` post story creation**: Not called after writing the story file ��� would catch if any unintended artifacts were modified. Add as a checklist step.
+- **`get_evolution` post story creation**: Not called after writing the story file – would catch if any unintended artifacts were modified. Add as a checklist step.
 - **`find_dead_code` for SQL migrations**: Not applicable since no new TS symbols were introduced, but worth noting for future stories that create Server Actions.
 
 ---
@@ -235,7 +235,7 @@ Memtrace currently indexes only source-code symbols (TypeScript, Rust, etc.). RL
 
 ### 5.2. Story creation as an indexed episode
 
-When `create-story` produces a story file, registering it as an `agent_intent` episode (via `record_external_episode`) would make the story creation appear in `get_evolution` timelines ��� so downstream agents can see "story hk-2 was created at T, then implemented at T+1".
+When `create-story` produces a story file, registering it as an `agent_intent` episode (via `record_external_episode`) would make the story creation appear in `get_evolution` timelines – so downstream agents can see "story hk-2 was created at T, then implemented at T+1".
 
 ---
 
@@ -243,11 +243,11 @@ When `create-story` produces a story file, registering it as an `agent_intent` e
 
 ---
 
-# Memtrace Session Log ��� Story HK.2 (Implementation + Code Review + QA)
+# Memtrace Session Log – Story HK.2 (Implementation + Code Review + QA)
 
 **Epic:** epic-housekeeping
-**Process:** implementa+�+�o de story hk-2 + code review + QA analysis (Murat)
-**Session:** 2026-05-06 -� RLS divergence, race condition fix, code review, Murat QA
+**Process:** implementação de story hk-2 + code review + QA analysis (Murat)
+**Session:** 2026-05-06 – RLS divergence, race condition fix, code review, Murat QA
 **Agent:** opencode-go/deepseek-v4-flash
 **Commits:** `f81a9db` `eab9d6d` `eb9aa30`
 
@@ -263,8 +263,8 @@ When `create-story` produces a story file, registering it as an `agent_intent` e
 | Post-impl check | `get_evolution` (compound) | Detect scope creep after implementation |
 | Post-impl check | `find_dead_code` | Verify no new symbols without callers |
 | Post-commit reindex | `index_directory` (incremental) | Graph update after final commit (worked on retry) |
-| Post-reindex | `get_evolution` (compound) | Final check ��� no unintended changes |
-| Post-reindex | `find_dead_code` | Final check ��� all symbols have callers |
+| Post-reindex | `get_evolution` (compound) | Final check – no unintended changes |
+| Post-reindex | `find_dead_code` | Final check – all symbols have callers |
 | Code review prep | `get_evolution` (compound, wider window) | Baseline for code review context |
 | QA analysis (Murat) | `list_processes` | Enumerate execution flows for test gap analysis |
 | QA analysis (Murat) | `find_symbol(useCrossCollectiveEvents)` | Verify callers and complexity |
@@ -273,12 +273,12 @@ When `create-story` produces a story file, registering it as an `agent_intent` e
 
 ## 2. Counterfactual Analysis
 
-- **RLS SQL files**: Without `find_code`, would have manually grepped `events_select_policy` across migrations ��� 2 SQL files instead of 1 call
-- **Race condition analysis**: Manual reading of `hooks.ts` to identify the `setCrossEvents` in `queryFn` ��� `get_changes_since` confirmed it was the only change needed
-- **Post-impl safety**: `get_evolution` after each commit would require manual diff review ��� 3 commits +� multi-file diffs vs. 1 compound query
-- **Dead code verification**: `find_dead_code` would require reading every test file to check for orphaned test references ��� 0 new dead symbols confirmed in 1 call
+- **RLS SQL files**: Without `find_code`, would have manually grepped `events_select_policy` across migrations – 2 SQL files em vez de 1 call
+- **Race condition analysis**: Manual reading of `hooks.ts` to identify the `setCrossEvents` in `queryFn` – `get_changes_since` confirmed it was the only change needed
+- **Post-impl safety**: `get_evolution` after each commit would require manual diff review – 3 commits + multi-file diffs vs. 1 compound query
+- **Dead code verification**: `find_dead_code` would require reading every test file to check for orphaned test references – 0 new dead symbols confirmed in 1 call
 - **Code review context**: Without Memtrace, the code review prompts for Gemini would have no graph-backed evidence (blast radius, evolution impact)
-- **QA gap analysis**: `list_processes` + `find_symbol` would require manually reading all hook files and tracing flow membership ��� 2 calls vs. 30+ file reads
+- **QA gap analysis**: `list_processes` + `find_symbol` would require manually reading all hook files and tracing flow membership – 2 calls vs. 30+ file reads
 
 ---
 
@@ -289,9 +289,9 @@ When `create-story` produces a story file, registering it as an `agent_intent` e
 | Time to find RLS target | 1 call (`find_code`) | Grepping `010_events_rls.sql` + reading 38 lines |
 | Time to find race condition target | 1 call (`get_changes_since`) | Manual review of `hooks.ts` history |
 | Post-impl regression detection | `get_evolution` after each commit | Manual diff-by-diff review |
-| Dead code confidence | `find_dead_code` ��� 0 new | Optimism bias |
+| Dead code confidence | `find_dead_code` – 0 new | Optimism bias |
 | Code review prompt quality | `get_evolution` backed 10 dismissed findings with evidence | Subjective opinion in prompts |
-| QA flow enumeration | `list_processes` ��� 50 processes listed | Manual review of `src/features/calendar/` |
+| QA flow enumeration | `list_processes` – 50 processes listed | Manual review of `src/features/calendar/` |
 
 ---
 
@@ -303,31 +303,31 @@ The `bmad-code-review` skill's `activation_steps_prepend` specifies `find_most_c
 
 ### 4.2. `get_process_flow` not called for QA
 
-`list_processes` was called (50 processes), but `get_process_flow` on `CollectiveDashboardPageProcess` was not ��� that would have revealed exactly which flow steps the race condition fix (step 13 of 82) and RLS change participate in. **Insight**: pair `list_processes` ��� `get_process_flow` for any QA analysis that needs step���level traceability.
+`list_processes` was called (50 processes), but `get_process_flow` on `CollectiveDashboardPageProcess` was not – that would have revealed exactly which flow steps the race condition fix (step 13 of 82) and RLS change participate in. **Insight**: pair `list_processes` – `get_process_flow` for any QA analysis that needs step-level traceability.
 
 ### 4.3. `get_impact` skipped for code review prompts
 
-When generating the Acceptance Auditor prompt, `get_impact(useCrossCollectiveEvents)` would have provided blast���radius evidence to include in the prompt ��� showing exactly which files the hooks change touches. **Insight**: for any prompt that claims to be "self���contained", include Memtrace graph evidence (blast radius, symbol context) to match what an online reviewer would query.
+When generating the Acceptance Auditor prompt, `get_impact(useCrossCollectiveEvents)` would have provided blast-radius evidence to include in the prompt – showing exactly which files the hooks change touches. **Insight**: for any prompt that claims to be "self-contained", include Memtrace graph evidence (blast radius, symbol context) to match what an online reviewer would query.
 
 ---
 
 ## 5. Feature Recommendation
 
-### 5.1. Multi���session code review artifact tracking
+### 5.1. Multi-session code review artifact tracking
 
 Currently, when generating prompts for external execution (Gemini), there's no way to link the results back as episodes in the Memtrace timeline. If `record_external_episode` accepted a `findings_summary` metadata field and an optional `source_type: external_review`, the code review results could appear in `get_evolution` alongside the implementation timeline.
 
-### 5.2. Git���aware file lock reindex
+### 5.2. Git-aware file lock reindex
 
-On Windows, `index_directory` (incremental) fails with `os error 1224` when a memory���mapped section is open. Workaround: retry after 1s. A built���in retry (exponential backoff, 3 attempts) would eliminate the manual retry friction entirely.
+On Windows, `index_directory` (incremental) fails with `os error 1224` when a memory-mapped section is open. Workaround: retry after 1s. A built-in retry (exponential backoff, 3 attempts) would eliminate the manual retry friction entirely.
 
 ---
 
-# Memtrace Session Log ��� Story HK.4 (Create)
+# Memtrace Session Log – Story HK.4 (Create)
 
 **Epic:** epic-housekeeping
-**Process:** cria+�+�o de story hk-4 (create-story workflow)
-**Session:** 2026-05-06 -� Pipeline CI 2.0 + Unifica+�+�o DB
+**Process:** criação de story hk-4 (create-story workflow)
+**Session:** 2026-05-06 – Pipeline CI 2.0 + Unificação DB
 **Agent:** opencode-go/deepseek-v4-flash
 **Commits:** `9257e18`
 
@@ -338,23 +338,23 @@ On Windows, `index_directory` (incremental) fails with `os error 1224` when a me
 | Phase | Tool Call | Purpose |
 |-------|-----------|---------|
 | Activation (prepend) | `get_codebase_briefing(summary)` | Repo scale (585 symbols), 5 high-risk, 80 dead-code candidates |
-| Post-hoc (follow-up) | `find_code` (CI, global-setup) | Confirm CI pipeline symbols not indexed (YAML ��� opaque to graph) |
+| Post-hoc (follow-up) | `find_code` (CI, global-setup) | Confirm CI pipeline symbols not indexed (YAML – opaque to graph) |
 | Post-hoc (follow-up) | `find_code` (global-setup seed) | Found `seedDatabase` function + process node for globalSetup |
 
 **Missing calls (customization prescribed but skipped):**
-- `get_symbol_context` on targets ��� not called (hk.4 targets are YAML/JS config files, not TS symbols)
-- `get_impact` on CI pipeline ��� not applicable (no TS symbol to trace)
-- `find_dependency_path` between hk���4 and hk���5 ��� not called
-- `get_process_flow` ��� not called (no TS flow to trace for infra pipeline)
+- `get_symbol_context` on targets – not called (hk.4 targets are YAML/JS config files, not TS symbols)
+- `get_impact` on CI pipeline – not applicable (no TS symbol to trace)
+- `find_dependency_path` between hk-4 and hk-5 – not called
+- `get_process_flow` – not called (no TS flow to trace for infra pipeline)
 
 ---
 
 ## 2. Counterfactual Analysis
 
-- **File analysis**: Without direct file reads, I would have no way to understand the CI pipeline (YAML, not TS). Memtrace doesn't index `.yml`/`.mjs`/config files ��� the entire story foundation was built from `Read` + `grep` on raw files
+- **File analysis**: Without direct file reads, I would have no way to understand the CI pipeline (YAML, not TS). Memtrace doesn't index `.yml`/`.mjs`/config files – the entire story foundation was built from `Read` + `grep` on raw files
 - **Previous story intelligence**: HK.3 story file was read directly (markdown), not via Memtrace
 - **Symbol verification**: `find_code` confirmed `globalSetup` has a process node, but for infrastructure stories, the graph adds minimal value
-- **Web research**: All version/API research was done via web search ��� Memtrace doesn't track npm package versions
+- **Web research**: All version/API research was done via web search – Memtrace doesn't track npm package versions
 
 ---
 
@@ -362,9 +362,9 @@ On Windows, `index_directory` (incremental) fails with `os error 1224` when a me
 
 | Metric | With Memtrace | Without (estimate) |
 |--------|---------------|-------------------|
-| Repo scale awareness | `get_codebase_briefing` ��� 585 symbols | Manual directory traversal |
-| Infrastructure files discovered | Via `Read` (not Memtrace) | Same ��� YAML/index not indexed |
-| Dependency mapping | Not applicable ��� hk.4 targets are infra files | Same ��� no TS symbols to trace |
+| Repo scale awareness | `get_codebase_briefing` – 585 symbols | Manual directory traversal |
+| Infrastructure files discovered | Via `Read` (not Memtrace) | Same – YAML/infra not indexed |
+| Dependency mapping | Not applicable – hk.4 targets are infra files | Same – no TS symbols to trace |
 
 **Note:** This story targets infrastructure files (`.github/workflows/ci.yml`, `scripts/migrate.mjs`, `playwright.config.ts`, `package.json`, `.nvmrc`). Memtrace's value was limited to the codebase briefing since these files are outside the TS/JS AST index.
 
@@ -382,7 +382,7 @@ Running `find_code` after the story was written confirmed the graph doesn't inde
 
 ### 4.3. `get_codebase_briefing` remains useful
 
-Even for infra stories, knowing the codebase scale (585 symbols) and high-risk functions provides context ��� e.g., "422 tests must pass" is actionable for CI changes.
+Even for infra stories, knowing the codebase scale (585 symbols) and high-risk functions provides context – e.g., "422 tests must pass" is actionable for CI changes.
 
 ---
 
@@ -397,7 +397,7 @@ Memtrace currently indexes only source-code AST symbols. For stories that modify
 
 ### 5.2. Process flow for non-TS execution graphs
 
-`get_process_flow` is limited to TS call chains. A CI pipeline is also an execution graph (job ��� step ��� action). If Memtrace could parse GitHub Actions workflow files into process nodes, infra stories like HK.4 would benefit from flow tracing: "step `db-migrate` feeds into `lint-and-test` ��� removing the dependency affects 2 jobs."
+`get_process_flow` is limited to TS call chains. A CI pipeline is also an execution graph (job – step – action). If Memtrace could parse GitHub Actions workflow files into process nodes, infra stories like HK.4 would benefit from flow tracing: "step `db-migrate` feeds into `lint-and-test` – removing the dependency affects 2 jobs."
 
 ---
 
@@ -405,13 +405,13 @@ Memtrace currently indexes only source-code AST symbols. For stories that modify
 
 ---
 
-# Memtrace Session Log ��� Murat QA Review for HK.4
+# Memtrace Session Log – Murat QA Review for HK.4
 
 **Epic:** epic-housekeeping
-**Process:** QA analysis ��� Murat review of story HK.4 (Pipeline CI 2.0 + Unifica+�+�o DB)
-**Session:** 2026-05-06 -� Murat QA: risk analysis, Playwright hardening, CI best practices
+**Process:** QA analysis – Murat review of story HK.4 (Pipeline CI 2.0 + Unificação DB)
+**Session:** 2026-05-06 – Murat QA: risk analysis, Playwright hardening, CI best practices
 **Agent:** opencode-go/deepseek-v4-flash
-**Commits:** (review only ��� story file updated, no code changes)
+**Commits:** (review only – story file updated, no code changes)
 
 ---
 
@@ -420,22 +420,22 @@ Memtrace currently indexes only source-code AST symbols. For stories that modify
 | Phase | Tool Call | Purpose |
 |-------|-----------|---------|
 | Activation (prepend) | `list_indexed_repositories` | Verify repo is indexed before analysis |
-| Activation (prepend) | `list_processes` | Enumerate execution flows (50 processes) ��� prep step 1 |
-| Activation (prepend) | Glob `e2e/*.spec.ts` | Cross-reference flows with E2E coverage ��� prep step 2 (12 specs found) |
-| Source reading | `Read` (ci.yml, playwright.config.ts, global-setup.ts, package.json) | State analysis for 4 target files (infra/config ��� n+�o indexados) |
+| Activation (prepend) | `list_processes` | Enumerate execution flows (50 processes) – prep step 1 |
+| Activation (prepend) | Glob `e2e/*.spec.ts` | Cross-reference flows with E2E coverage – prep step 2 (12 specs found) |
+| Source reading | `Read` (ci.yml, playwright.config.ts, global-setup.ts, package.json) | State analysis for 4 target files (infra/config – não indexados) |
 | Knowledge loading | `Read` (ci-burn-in.md, test-quality.md, test-priorities-matrix.md) | TEA knowledge fragments for CI recommendations |
 
-**Prepend step 3 (find_symbol on modified files) skipped:** n+�o h+� arquivos modificados ��� sess+�o +� pr+�-dev review, n+�o implementa+�+�o.
+**Prepend step 3 (find_symbol on modified files) skipped:** não há arquivos modificados – sessão é pré-dev review, não implementação.
 
 ---
 
 ## 2. Counterfactual Analysis
 
-- **CI workflow analysis**: Sem Memtrace, leria `ci.yml` da mesma forma (YAML n+�o +� indexado). Sem ganho ��� arquivo lido com `Read` igual.
-- **E2E test discovery**: Glob nativa achou 12 specs ��� `find_code` do Memtrace n+�o adicionaria valor (specs est+�o em disco, n+�o no grafo de s+�mbolos).
-- **Playwright config gap detection**: `forbidOnly` ausente, `retries: 0`, `workers` default ��� descobertos por leitura direta do config, n+�o por Memtrace. S+�o quebras de boas pr+�ticas, n+�o de refer+�ncia de s+�mbolo.
-- **Seed determinismo**: `ON CONFLICT` identificado por leitura do `global-setup.ts`, n+�o por an+�lise de grafo.
-- **Valor do Memtrace**: Para stories de infra/config, `list_processes` e `list_indexed_repositories` s+�o os +�nicos calls relevantes ��� o core da an+�lise +� leitura de arquivos e conhecimento de dom+�nio (CI/CD, Playwright, TEA fragments).
+- **CI workflow analysis**: Sem Memtrace, leria `ci.yml` da mesma forma (YAML não é indexado). Sem ganho – arquivo lido com `Read` igual.
+- **E2E test discovery**: Glob nativa achou 12 specs – `find_code` do Memtrace não adicionaria valor (specs estão em disco, não no grafo de símbolos).
+- **Playwright config gap detection**: `forbidOnly` ausente, `retries: 0`, `workers` default – descobertos por leitura direta do config, não por Memtrace. São quebras de boas práticas, não de referência de símbolo.
+- **Seed determinismo**: `ON CONFLICT` identificado por leitura do `global-setup.ts`, não por análise de grafo.
+- **Valor do Memtrace**: Para stories de infra/config, `list_processes` e `list_indexed_repositories` são os únicos calls relevantes – o core da análise é leitura de arquivos e conhecimento de domínio (CI/CD, Playwright, TEA fragments).
 
 ---
 
@@ -443,10 +443,10 @@ Memtrace currently indexes only source-code AST symbols. For stories that modify
 
 | Metric | With Memtrace | Without (estimate) |
 |--------|---------------|-------------------|
-| Activation flow enumeration | 1 call (`list_processes` ��� 50 flows) | Manual catalog of `src/features/` directories |
-| E2E spec list | 1 glob (12 specs) | Same ��� glob is same cost |
-| CI quality diagnostics | Manual read of 94-line YAML | Same ��� file not indexable |
-| Playwright guardrail audit | Read of 23-line config | Same ��� file not indexable |
+| Activation flow enumeration | 1 call (`list_processes` – 50 flows) | Manual catalog of `src/features/` directories |
+| E2E spec list | 1 glob (12 specs) | Same – glob is same cost |
+| CI quality diagnostics | Manual read of 94-line YAML | Same – file not indexable |
+| Playwright guardrail audit | Read of 23-line config | Same – file not indexable |
 | Story file update | 6 edits covering 16 new recommendations | Would need manual cross-reference with best practices |
 
 **Note for infra stories:** ~80% of the analysis effort was file reading (config/YAML/JSON) + domain knowledge (TEA fragments). Memtrace contributed ~20% (process enumeration + repo status verification). This is the inverse of code-indexed stories (HK.1, HK.2) where Memtrace contributed ~80%.
@@ -455,40 +455,40 @@ Memtrace currently indexes only source-code AST symbols. For stories that modify
 
 ## 4. Usage Optimization
 
-### 4.1. `get_evolution` n+�o chamado
+### 4.1. `get_evolution` não chamado
 
-Diferente das sess+�es HK.1/HK.2, `get_evolution(mode=compound)` n+�o foi executado na ativa+�+�o. Para uma story que modifica o pipeline CI, `get_evolution` poderia ter revelado:
-- Se o `ci.yml` foi alterado recentemente (mudan+�as nos steps de E2E)
-- Se `playwright.config.ts` ou `global-setup.ts` tiveram modifica+�+�es nas +�ltimas sprints
-- Se h+� working-tree n+�o commitado que impacta a an+�lise
+Diferente das sessões HK.1/HK.2, `get_evolution(mode=compound)` não foi executado na ativação. Para uma story que modifica o pipeline CI, `get_evolution` poderia ter revelado:
+- Se o `ci.yml` foi alterado recentemente (mudanças nos steps de E2E)
+- Se `playwright.config.ts` ou `global-setup.ts` tiveram modificações nas últimas sprints
+- Se há working-tree não commitado que impacta a análise
 
-**Insight**: adicionar `get_evolution` como prep step obrigat+�rio para TODAS as sess+�es, inclusive QA review ��� mesmo que os targets sejam infra, as depend+�ncias de c+�digo podem ter mudado.
+**Insight**: adicionar `get_evolution` como prep step obrigatório para TODAS as sessões, inclusive QA review – mesmo que os targets sejam infra, as dependências de código podem ter mudado.
 
-### 4.2. Prep step 3 ignorado sem substitui+�+�o
+### 4.2. Prep step 3 ignorado sem substituição
 
-O prep step 3 (`find_symbol` em exported functions de modified files) foi ignorado porque "n+�o h+� arquivos modificados". Mas para uma sess+�o de QA review, `find_most_complex_functions(top_n=15)` ou `find_bridge_symbols` teriam identificado hotspots arquiteturais que poderiam influenciar a prioriza+�+�o de testes.
+O prep step 3 (`find_symbol` em exported functions de modified files) foi ignorado porque "não há arquivos modificados". Mas para uma sessão de QA review, `find_most_complex_functions(top_n=15)` ou `find_bridge_symbols` teriam identificado hotspots arquiteturais que poderiam influenciar a priorização de testes.
 
-**Insight**: prep steps de sess+�es de dev n+�o se aplicam diretamente a sess+�es de QA. Customizar `activation_steps_prepend` por tipo de sess+�o (dev vs. review vs. QA) evitaria gaps.
+**Insight**: prep steps de sessões de dev não se aplicam diretamente a sessões de QA. Customizar `activation_steps_prepend` por tipo de sessão (dev vs. review vs. QA) evitaria gaps.
 
-### 4.3. `find_code` para Playwright utils n+�o chamado
+### 4.3. `find_code` para Playwright utils não chamado
 
-A an+�lise recomendou padr+�es como `forbidOnly`, `retries`, `workers`, mas n+�o verificou se o projeto j+� utiliza `@playwright/test` utilities espec+�ficas (mergeReports, sharding, etc.). `find_code(@playwright/test)` teria mostrado o padr+�o de importa+�+�o atual.
+A análise recomendou padrões como `forbidOnly`, `retries`, `workers`, mas não verificou se o projeto já utiliza `@playwright/test` utilities específicas (mergeReports, sharding, etc.). `find_code(@playwright/test)` teria mostrado o padrão de importação atual.
 
-**Insight**: mesmo para stories de infra, `find_code` com palavras-chave do framework (ex: `playwright`, `drizzle-kit`) pode revelar o padr+�o de uso atual antes de recomendar mudan+�as.
+**Insight**: mesmo para stories de infra, `find_code` com palavras-chave do framework (ex: `playwright`, `drizzle-kit`) pode revelar o padrão de uso atual antes de recomendar mudanças.
 
-### 4.4. `get_process_flow` n+�o pareado com `list_processes`
+### 4.4. `get_process_flow` não pareado com `list_processes`
 
-`list_processes` retornou 50 processos, mas nenhum `get_process_flow` foi executado. O CI pipeline em si n+�o +� um processo do Memtrace (YAML n+�o indexado), mas processos como `GlobalSetup` (entry point do seed E2E) poderiam ter sido tra+�ados para verificar se o seed cobre todos os steps neces+�rios para os E2E existentes.
+`list_processes` retornou 50 processos, mas nenhum `get_process_flow` foi executado. O CI pipeline em si não é um processo do Memtrace (YAML não indexado), mas processos como `GlobalSetup` (entry point do seed E2E) poderiam ter sido traçados para verificar se o seed cobre todos os steps necessários para os E2E existentes.
 
-**Insight**: ap+�s `list_processes`, executar `get_process_flow` no processo `GlobalSetup` ��� isso revelaria a cadeia de chamadas do seed, validando se o determinismo proposto (DELETE + INSERT) cobre todas as tabelas tocadas.
+**Insight**: após `list_processes`, executar `get_process_flow` no processo `GlobalSetup` – isso revelaria a cadeia de chamadas do seed, validando se o determinismo proposto (DELETE + INSERT) cobre todas as tabelas tocadas.
 
 ---
 
 ## 5. Feature Recommendation
 
-### 5.1. An+�lise de qualidade de config como servi+�o
+### 5.1. Análise de qualidade de config como serviço
 
-As ferramentas atuais de an+�lise de config (playwright.config, CI YAML) exigem leitura manual + conhecimento de dom+�nio. Se o Memtrace indexasse arquivos de config como n+�s `ConfigFile` com valida+�+�es conhecidas (ex: "playwright.config sem forbidOnly = viola+�+�o de boas pr+�ticas"), a an+�lise de QA para stories de infra seria automatizada ��� reduzindo os 80% de leitura manual para consultas ao grafo.
+As ferramentas atuais de análise de config (playwright.config, CI YAML) exigem leitura manual + conhecimento de domínio. Se o Memtrace indexasse arquivos de config como nós `ConfigFile` com validações conhecidas (ex: "playwright.config sem forbidOnly = violação de boas práticas"), a análise de QA para stories de infra seria automatizada – reduzindo os 80% de leitura manual para consultas ao grafo.
 
 ---
 
