@@ -196,4 +196,4 @@ jobs:
         if: github.event_name == 'pull_request' && (success() || failure())
         uses: daun/playwright-report-summary@v3
         with:
-          report-file: playwright-report/results.json
+          report-file: test-results/results.json
