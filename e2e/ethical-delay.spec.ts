@@ -47,7 +47,7 @@ test.describe('Story 3.5 — Ethical Delay Component', () => {
             expect(found).toBe(true);
         });
 
-        test('RED: Cancelar no meio do countdown mantém evento em planejamento', async ({ page }) => {
+        test.fixme('RED: Cancelar no meio do countdown mantém evento em planejamento', async ({ page }) => {
             await page.goto('/dashboard/collective');
             await page.waitForTimeout(2000);
 

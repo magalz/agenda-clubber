@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { profiles } from './auth';
-import { collectives } from './collectives';
-import { collectiveMembers } from './collective-members';
-import { artists } from './artists';
-import { events } from './events';
+import { profiles } from '../schema/auth';
+import { collectives } from '../schema/collectives';
+import { collectiveMembers } from '../schema/collective-members';
+import { artists } from '../schema/artists';
+import { events } from '../schema/events';
 
 describe('Database Schema', () => {
     it('profiles table should have correct columns', () => {
