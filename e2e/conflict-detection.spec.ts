@@ -24,12 +24,11 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
             await page.goto('/dashboard/collective');
 
             // Grid: 30 days starting today. Seed event at today+1 (cell index 1).
-            // Click today+4 (cell index 4) → 3-day diff → genre RED.
-            // Cell index 2 avoided: same day as seed "Evento Nome Visivel" used by privacy test.
+            // Click today+2 (cell index 2) → 1-day diff → genre RED.
             const cells = page.getByTestId('day-cell');
             await expect(cells).toHaveCount(30);
 
-            await cells.nth(4).click();
+            await cells.nth(2).click();
 
             const dialog = page.getByRole('dialog');
             await expect(dialog).toBeVisible();
@@ -58,8 +57,8 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
             const updatedCells = page.getByTestId('day-cell');
             await expect(updatedCells).toHaveCount(30);
 
-            // Cell index 4 should now show RED (genre conflict, 3-day window)
-            await expect(updatedCells.nth(4)).toHaveAttribute('aria-label', /alto risco de conflito/);
+            // Cell index 2 should now show RED (genre conflict, 1-day window)
+            await expect(updatedCells.nth(2)).toHaveAttribute('aria-label', /alto risco de conflito/);
         });
 
         test('YELLOW: criar evento Techno em 6 dias gera conflito amarelo', async ({ page }) => {

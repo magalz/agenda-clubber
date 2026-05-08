@@ -25,7 +25,7 @@ test.describe('Story 3.5 — Ethical Delay Component', () => {
                     if (content?.includes('Evento Delay Ético')) {
                         found = true;
 
-                        const confirmBtn = sheet.getByRole('button', { name: /confirmar evento/i });
+                        const confirmBtn = sheet.getByRole('button', { name: /confirmar evento/i }).first();
                         await expect(confirmBtn).toBeVisible();
 
                         await confirmBtn.click();
