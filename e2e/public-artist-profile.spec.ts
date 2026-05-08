@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import postgres from 'postgres';
 import { PRODUCER_STORAGE_STATE } from './global-setup';
 
 /**
@@ -15,13 +16,29 @@ test.describe('Public Artist Profile — anon visitor', () => {
     test('renders public profile with name, location, bio and genre', async ({ page }) => {
         await page.goto('/artists/test-dj');
 
-        // DIAGNÓSTICO DEBT-3.2-A — lê data attributes do DOM
+        // DIAGNÓSTICO DEBT-3.2-A — lê data attributes do DOM + query direta no DB
         await test.step('diagnostic', async () => {
             const privacyMode = await page.getByTestId('diagnostic-privacy').getAttribute('data-privacy-mode');
             const fieldsBio = await page.getByTestId('diagnostic-privacy').getAttribute('data-fields-bio');
             const bioValue = await page.getByTestId('bio-section').getAttribute('data-bio-value');
             const bioTruthy = await page.getByTestId('bio-section').getAttribute('data-bio-truthy');
-            console.log(`[DEBT-3.2-A] privacy-mode=${privacyMode} fields-bio=${fieldsBio} bio-value=${bioValue} bio-truthy=${bioTruthy}`);
+            console.log(`[DEBT-3.2-A] DOM: privacy-mode=${privacyMode} fields-bio=${fieldsBio} bio-value=${bioValue} bio-truthy=${bioTruthy}`);
+
+            if (process.env.DATABASE_URL) {
+                const sql = postgres(process.env.DATABASE_URL, { max: 1, prepare: false, onnotice: () => {} });
+                try {
+                    const rows = await sql<{ bio: string | null; artistic_name: string }[]>`
+                        SELECT bio, artistic_name FROM artists WHERE slug = 'test-dj' LIMIT 1
+                    `;
+                    if (rows.length > 0) {
+                        console.log(`[DEBT-3.2-A] DB: artistic_name=${rows[0].artistic_name} bio=${JSON.stringify(rows[0].bio)}`);
+                    } else {
+                        console.log('[DEBT-3.2-A] DB: NO ROW FOUND for slug=test-dj');
+                    }
+                } finally {
+                    await sql.end({ timeout: 3 });
+                }
+            }
         });
 
         await expect(page).not.toHaveURL(/404/);
