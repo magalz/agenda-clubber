@@ -734,3 +734,101 @@ O story file foi criado e commitado, mas não registrado como `agent_intent` no 
 Nenhuma nova. Todos os gaps identificados nesta sessão (infra/documentation blind spot, `.mjs` non-indexing, story creation as episode) já foram registrados em sessões anteriores (HK.4 Create 5.1, HK.5 Implementation 5.1, HK.2 Create 5.2).
 
 ---
+
+# Memtrace Session Log — Story HK.6 (Implementation + Code Review)
+
+**Epic:** epic-housekeeping
+**Process:** implementação de story hk-6 — Migrar Tracking de Débito para GitHub Issues + Code Review adversarial + Murat QA
+**Session:** 2026-05-08 — YAML index, Octokit script, GitHub Issues creation, code review patches, lint fix
+**Agent:** opencode-go/deepseek-v4-flash
+**Commits:** `593e0cd` `7b82447` `cb2dff6` `89ebdde`
+
+---
+
+## 1. Memtrace Utilization
+
+| Phase | Tool Call | Purpose |
+|-------|-----------|---------|
+| Pre-dev (activation) | `get_codebase_briefing(summary)` | Repo scale (1207 symbols, 5 modules, 80 dead-code) — `activation_steps_prepend` |
+| Pre-dev (activation) | `find_code` (create-tech-debt, Octokit) | Search for existing Octokit patterns — found only in `my-bmad/`, not project |
+| Index check | `list_indexed_repositories` | Discovered 3 indexed repos, but main had 0 nodes (stale index) |
+| Index repair | `index_directory(incremental)` | Failed with Windows file lock (os error 1224) |
+| Index repair | `delete_repository` + re-index | Failed — DB corruption. Waited for user restart |
+| Post-restart | `get_repository_stats` | Confirmed index updated: 3232 nodes, 9828 edges, 832 episodes |
+| Post-restart | `get_codebase_briefing(summary)` | Updated scale: 1065 functions, 709 communities (+371) |
+| Post-restart | `get_changes_since` | Now sees hk-6 commits in timeline |
+| Post-restart | `get_evolution(compound)` | 32 episodes, 3485 nodes added, 10053 edges added (full history replay) |
+| Post-restart | `find_symbol(parseYaml)` | Found at `scripts/create-tech-debt-issues.mjs:39` — .mjs now indexed |
+| Post-restart | `find_central_symbols(top=15)` | load-bearing: `cn` (70), `Button` (748), `DayDetailSheet` |
+| Post-restart | `find_bridge_symbols(limit=10)` | DayDetailSheet betweenness 1641 — highest chokepoint |
+| Post-restart | `find_dead_code(limit=15)` | 15 pre-existing dead symbols (justifications, shadcn, handler) |
+| Watcher setup | `watch_directory` | Activated watcher on main (200ms debounce) |
+| Watcher verify | `list_watched_paths` | Confirmed 1 active watch |
+
+**Skipped (prescribed but not applicable):**
+- `get_impact` / `get_symbol_context` — no runtime TS symbols modified
+- `get_process_flow` — no execution flow to trace for infra/process story
+- `find_dependency_path` — no code dependencies
+
+---
+
+## 2. Counterfactual Analysis
+
+- **Post-impl regression detection**: `get_evolution` confirmed all changes infra-only — zero runtime symbols touched. Without Memtrace, manual diff review across 8 files.
+- **Dead code verification**: `find_dead_code` returned 15 pre-existing dead symbols — none from HK.6.
+- **Watcher diagnosis**: Without `list_watched_paths`, wouldn't have known the watcher was missing after restart.
+- **Bridge symbol awareness**: `DayDetailSheet` with 1641 betweenness confirms HK.1 was justified — context for Epic 4.
+- **Code review prompts**: 4 external agents ran on Gemini — no Memtrace graph data embedded in prompts.
+
+---
+
+## 3. Measurable Gains
+
+| Metric | With Memtrace | Without (estimate) |
+|--------|---------------|-------------------|
+| Post-commit verification | `get_evolution` — 0 runtime changes | Manual diff review across 8 files |
+| Dead code confidence | `find_dead_code` — 0 new dead symbols | Optimism bias |
+| Watcher state diagnosis | `list_watched_paths` — found missing immediately | Would only notice at next commit |
+| Bridge symbol awareness | `find_bridge_symbols` — DayDetailSheet = 1641 | Would not know inter-community risk |
+| Runtime impact confirmation | `get_evolution` — 0 nodes in src/ | Manual inspection |
+| Script existence | `find_symbol(parseYaml)` found .mjs after reindex | .mjs invisible before reindex |
+
+---
+
+## 4. Usage Optimization
+
+### 4.1. Activation prepends não deviam ser pulados para infra stories
+
+Inicialmente pulei `get_codebase_briefing`, `find_code`, `get_changes_since` porque "HK.6 é infra". O briefing e `find_code` são úteis mesmo para infra: revelam 422+ testes (baseline), mostram padrões existentes (`my-bmad` GitHub client). **Insight**: rodar OS 3 prepends em TODAS as sessões — custo baixo e diagnóstico precoce.
+
+### 4.2. `find_dead_code` só rodou após restart do cliente
+
+Índice congelado (0 nós em main). `find_dead_code` não foi chamado antes porque retornaria vazio. **Insight**: após qualquer `index_directory`, confirmar com `get_repository_stats` que `total_nodes > 0` e `last_episode` está no branch correto antes de chamar `find_dead_code`.
+
+### 4.3. `get_evolution` devia ser par obrigatório pós-reindex
+
+Após restart, rodei `list_watched_paths` e stats, mas demorei a rodar `get_evolution(compound)` — que é o diagnóstico mais rico. **Insight**: `get_repository_stats` + `get_evolution(compound)` como par obrigatório após qualquer reindex.
+
+### 4.4. Dados do grafo não embedados nos prompts de code review
+
+Assim como HK.5, os 4 prompts não incluíram `get_impact` ou `get_symbol_context`. O Acceptance Auditor teria se beneficiado de saber que `parseYaml` tem zero callers externos. **Insight**: incluir evidência de grafo em prompts autossuficientes — mesmo para revisores externos sem acesso ao Memtrace.
+
+### 4.5. Watcher perdido após restart do cliente
+
+`watch_directory` ativou, mas o wather morre na desconexão MCP. **Insight**: adicionar verificação de watcher como activation prepend — se count === 0, ativar automaticamente.
+
+---
+
+## 5. Feature Recommendation
+
+### 5.1. Indexação de `.mjs` em scripts/ (reiterado HK.5)
+
+`parseYaml` só apareceu após reindex completo. Tree-sitter JS reconhece `.mjs`, mas scan path exclui `scripts/`. **Solução**: configurar scan paths ou extensões.
+
+### 5.2. Persistência de watchers entre sessões
+
+Watcher morre na desconexão MCP. Se o server salvasse `watches.json` em disco, o watch seria restaurado automaticamente na reconexão.
+
+---
+
+**Filed:** 2026-05-08
