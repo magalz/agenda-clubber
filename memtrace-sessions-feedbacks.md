@@ -920,3 +920,105 @@ Tecnicamente viável (AST pattern + node property), e resolveria o gap desta ses
 ---
 
 **Filed:** 2026-05-08
+
+---
+
+# Memtrace Session Log — Story HK.7 (Implementation)
+
+**Epic:** epic-housekeeping
+**Process:** implementação de story hk-7 — Resolver todos os test.fixme
+**Session:** 2026-05-08 — 8 CI runs, pooler diagnostic, 39/42 E2E passing
+**Agent:** opencode-go/deepseek-v4-flash
+**Commits:** `08e0f84` `fdaef53` `b20c7c4` `5c2f3e5` `c597e32` `5161908` `1d83c5b` `424c574` `80cfc98` `1235e4c`
+
+---
+
+## 1. Memtrace Utilization
+
+| Phase | Tool Call | Purpose |
+|-------|-----------|---------|
+| Activation (prepend) | `get_codebase_briefing(summary)` | Repo scale (3232 nodes, 9828 edges) via customization prepend |
+| CI diagnostic | `find_code` (conflict rules) | Understand genre-window, non-local-artist, local-saturation thresholds |
+| CI diagnostic | `get_symbol_context(evaluateConflictCore)` | Map how conflict engine gathers other events within ±15 days |
+| CI diagnostic | `find_symbol(diffCalendarDays)` | Verify date calculation logic |
+| CI diagnostic | `find_symbol(evaluateAndPersist)` | Understand neighbor re-evaluation chain |
+| CI diagnostic | `find_dead_code` (explore subagent) | Verify actual rule thresholds (genre-window 3/7, non-local 7/15) |
+| Pooler diagnosis | Explore subagent (grep + Read) | Full investigation of DATABASE_URL format, postgres-js config in src/db/index.ts, pooler URL, CI env vars |
+| Post-impl | `get_evolution(compound)` | 13 episodes — only story-scope files changed. No unintended changes. |
+| Post-impl | `find_dead_code(limit=50)` | 50 pre-existing dead symbols — 0 new from this story |
+| Post-merge | `replay_history(days=1)` | Indexed 13 git_commit episodes after merge to main |
+| Watcher | `watch_directory` | Restarted watch after stop/kill-stale-process cycle |
+| Watcher | `list_watched_paths` | Confirmed 1 active watch |
+| Watcher | `get_changes_since` | Confirmed all 13 episodes visible in timeline after replay |
+
+---
+
+## 2. Counterfactual Analysis
+
+- **CI failure diagnosis**: Without Memtrace `find_symbol` on conflict rules, would need to manually read all 3 rule files + evaluate-conflict.ts + evaluate-conflict.test.ts to understand why YELLOW gets RED. Memtrace saved ~15 min of file reading by directly locating the relevant rules and thresholds.
+- **Pooler root cause**: The `index.ts` connection config (postgres-js without `max`, `idle_timeout`, `max_lifetime`) was found via direct `Read` — Memtrace doesn't index Node.js connection options. The diagnosis relied on domain knowledge (Supavisor pooler behavior) + Supabase logs (user-provided). Without Memtrace's `get_symbol_context(evaluateAndPersist)` and `find_symbol`, the conflict rule analysis would have taken longer.
+- **Post-impl safety**: `get_evolution` confirmed 13 episodes with no unintended changes across 10 commits + story updates. Without this, manual diff review across 10 commits × 7 files.
+- **Dead code verification**: `find_dead_code` confirmed 0 new dead symbols — all 50 results were pre-existing (test helpers, shadcn components, justifications). Without Memtrace, optimism bias.
+
+---
+
+## 3. Measurable Gains
+
+| Metric | With Memtrace | Without (estimate) |
+|--------|---------------|-------------------|
+| Conflict rule understanding | 3 calls (`find_code` + `get_symbol_context` + rule files via subagent) | Reading 4 rule files + evaluate-conflict.ts manually (~20 min) |
+| Pooler config discovery | `Read` on db/index.ts + subagent on project config (same) | Same — file content is outside graph |
+| Post-impl regression detection | `get_evolution` — 1 call, 0 unintended changes | Manual diff review across 10 commits × 7 files |
+| Dead code confidence | `find_dead_code` — 0 new dead symbols | Optimism bias |
+| Git history indexing | `replay_history(1d)` — 17 commits, 13 relevant | Would need manual git log |
+| Watcher diagnosis | `list_watched_paths` + `get_changes_since` — found stale state | Would not notice until next commit |
+
+---
+
+## 4. Usage Optimization
+
+### 4.1. `find_code` nas rules antes de CI diagnostic
+
+Ao ver os resultados da CI run 1, comecei debugando regras de conflito via `find_symbol` + `get_symbol_context`. Isso funcionou, mas eu poderia ter chamado `find_code("genre-window OR non-local-artist OR local-saturation")` ANTES de ler os arquivos — isso teria me dado os thresholds sem precisar da subagent explore. **Insight**: para diagnosticar engines de regras, `find_code` com o nome da regra é mais rápido que subagent.
+
+### 4.2. `get_evolution` não chamado entre CI runs
+
+A cada nova CI run (8 ao total), eu verificava os resultados manualmente no output do `gh pr checks` e `gh run view`. `get_evolution(since=<CI-run-start-time>, mode=summary)` teria mostrado quais arquivos foram afetados por cada commit de fix — confirmando que cada commit só tocava o que devia. **Insight**: parear cada correção de CI com `get_evolution` para validar que não houve regressão acidental.
+
+### 4.3. `find_dead_code` não chamado antes de editar `src/db/index.ts`
+
+O fix do pooler modificou `src/db/index.ts` — um arquivo importado por todos os Server Actions (`import { db } from '@/db'`). `get_impact(db)` teria mostrado quantos Server Actions dependem do pool e qual o blast radius da mudança (LOW — só muda config, não API). **Insight**: antes de modificar qualquer arquivo no caminho crítico da aplicação, chamar `get_impact`.
+
+### 4.4. Supabase logs usados externamente
+
+O diagnóstico do pooler usou logs do Supabase (Postgres, API, Pooler) fornecidos pelo usuário via navegador. Memtrace não tem integração com Supabase logs — essa informação veio de fora do grafo. **Insight**: para futuros problemas de conectividade com Supabase, estabelecer um fluxo de coleta de logs (Supabase dashboard → Memtrace timeline) seria uma integração útil.
+
+### 4.5. `replay_history` pós-merge idealmente seria automático
+
+Após o merge em main, precisei rodar `replay_history(days=1)` manualmente para indexar os commits. O watch não detectou o merge (filesystem watch não reage a `git merge`). **Insight**: o watch poderia monitorar `.git/refs/heads/main` e acionar `replay_history` automaticamente após mudanças de ref.
+
+---
+
+## 5. Feature Recommendation
+
+### 5.1. Postgres-js connection pool pattern detection
+
+O diagnóstico do pooler levou à descoberta de que `postgres(connectionString)` sem parâmetros usa defaults (max=10) que conflitam com limits do Supabase free tier. Se Memtrace indexasse chamadas de `postgres()` com seus parâmetros como nós de config, `find_code("postgres")` retornaria `max=10 (default)` destacado como risco — sem precisar ler arquivo. Isso aplica-se a qualquer framework de pool de conexão.
+
+### 5.2. Integration with Supabase dashboard logs
+
+Para problemas de conectividade com Supabase, os logs do dashboard (Postgres, API, Pooler) são frequentemente a fonte de verdade que o grafo do código não captura. Uma integração que permitisse `memtrace_query("supabase:logs", { project: "otftkmphuultbwqcsqwd", from: "...", to: "..." })` — consumindo a API do Supabase Logs — unificaria diagnóstico de código + infra no mesmo grafo.
+
+### 5.3. Playwright CI run diagnostics
+
+Debugging CI foi o processo mais custoso desta sessão (8 runs, 1h+ de análise). Se Memtrace pudesse ingerir JUnit XML output do Playwright (já gerado em `test-results/junit.xml`), cada teste falho seria um nó no grafo com:
+- Nome do teste, arquivo, linha
+- Mensagem de erro (stack)
+- Timestamp da execução
+- Flaky vs. Failed
+
+`get_evolution` então mostraria "test YELLOW started passing in run 8 after pooler fix" — rastreabilidade direta entre mudança de código e mudança de comportamento de teste CI. Isso seria um salto qualitativo em relação ao diagnóstico manual de logs.
+
+---
+
+**Filed:** 2026-05-08
