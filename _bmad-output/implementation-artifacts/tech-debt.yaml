@@ -117,6 +117,7 @@ items:
     title: "Unsafe `as` casts nos mutations de eventos"
     severity: high
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       Mutações no Zustand usam type assertions (`as`) inseguras que podem mascarar incompatibilidades de schema quando o DB evolui.
@@ -128,6 +129,7 @@ items:
     title: "Erros engolidos em recompute de neighbors"
     severity: high
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       O recompute de vizinhos no Conflict Engine (`evaluate-conflict.ts`) engole exceções silenciosamente, podendo deixar conflitos não calculados sem notificação.
@@ -139,6 +141,7 @@ items:
     title: "TODO: webhook stub QStash → Resend não implementado"
     severity: high
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       Webhook de notificação por e-mail está com stub — QStash configurado mas sem integração real com Resend (ou provedor de e-mail).
@@ -150,6 +153,7 @@ items:
     title: "@ts-expect-error em isPlatformAdmin — enum role sem admin"
     severity: high
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       `@ts-expect-error` em `isPlatformAdmin` porque o enum `role` não inclui o valor `admin`. O enum precisa ser atualizado para refletir todos os roles do sistema.
@@ -161,6 +165,7 @@ items:
     title: "Zod v4 breaking changes parcialmente resolvidas"
     severity: high
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       Zod v4 introduziu breaking changes (`.errors` → `.issues`, `errorMap` → `message`) que cascatearam por artists, auth e calendar. Algumas correções foram aplicadas pontualmente, mas o padrão não foi uniformizado.
@@ -172,6 +177,7 @@ items:
     title: "searchTalents sem escapeLikePattern"
     severity: high
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       `searchTalents` em artist search usa `ILIKE` sem escape de padrões LIKE (`%`, `_`), permitindo que um input como "50%" retorne resultados inesperados.
@@ -202,6 +208,7 @@ items:
     title: "Índice pg_trgm para ILIKE em buscas textuais"
     severity: medium
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       Buscas textuais com `ILIKE` na busca de artistas e coletivos não têm índice `pg_trgm`. Performance pode degradar com crescimento da base.
@@ -213,6 +220,7 @@ items:
     title: "Normalizar lineup de jsonb para tabela relacional com FK artists.id"
     severity: medium
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       O campo `lineup` nos eventos é `jsonb` com array de strings. Para habilitar matching determinístico e rastreabilidade até o perfil do artista, deve-se migrar para tabela relacional `lineup_items` com FK → `artists.id`.
@@ -224,6 +232,7 @@ items:
     title: "Adicionar campos city/uf separados em collectives e artists"
     severity: medium
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       Localidade atualmente é um campo único de texto. Para buscas geográficas precisas e futura funcionalidade de mapa, extrair `city` e `uf` como colunas separadas.
@@ -235,6 +244,7 @@ items:
     title: "Implementar event_logs (Audit Log) para Server Actions de eventos"
     severity: medium
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       NFR6 (Security) requer "Registro de criação e edições de eventos (Audit Log)". Não implementado no Épico 3. Toda criação/edição de evento deve registrar: usuário, ação, timestamp, diff.
@@ -246,6 +256,7 @@ items:
     title: "Tornar code review adversarial 3 camadas obrigatório com gate de CI"
     severity: medium
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       Story 3.5 foi para main sem code review adversarial. O padrão #4 da retrospectiva identificou que "12 patches críticos capturados em 3.1+3.4" pela revisão 3 camadas. Deve-se criar gate de CI que bloqueie merges sem review adversarial.
@@ -257,6 +268,7 @@ items:
     title: "UI granular de privacidade por campo (artists)"
     severity: medium
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       Perfil de artista não tem toggle granular de privacidade por campo (diferente de eventos que já tem). Artistas só têm opções predefinidas (Público / Coletivos / Privado / Ghost).
@@ -268,6 +280,7 @@ items:
     title: "CHECK constraint DB em privacy_settings jsonb"
     severity: medium
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       `privacy_settings` em `artists` é `jsonb` sem CHECK constraint no DB. Schemas inválidos podem ser persistidos.
@@ -279,6 +292,7 @@ items:
     title: "Promise.all falha parcial em searchRestrictedArtistByName"
     severity: medium
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       `searchRestrictedArtistByName` usa `Promise.all` em queries que podem falhar individualmente. Uma falha parcial derruba toda a busca.
@@ -290,6 +304,7 @@ items:
     title: "supabase db reset não validado localmente"
     severity: low
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       `supabase db reset` não foi testado/validado no ambiente local dos desenvolvedores. Pode quebrar migrations ou perder dados de seed.
@@ -301,6 +316,7 @@ items:
     title: "Health Pulse cross-collective deferido"
     severity: low
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       Health Pulse no calendário reflete apenas eventos do próprio coletivo. Health Pulse cross-collective (agregando TODOS os coletivos visíveis) foi deferido para reavaliação de UX e performance.
@@ -312,6 +328,7 @@ items:
     title: "Realtime cross-collective deferido"
     severity: low
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       Atualizações Realtime via Supabase Subscription só funcionam para eventos do próprio coletivo. Atualizações cross-collective (ex: outro coletivo cria evento conflitante) não aparecem sem refresh.
@@ -323,6 +340,7 @@ items:
     title: "Navegação Cmd+K → /artists/[slug] TODO aberto"
     severity: low
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       O Command Menu (Cmd+K) tem um TODO para navegar diretamente ao perfil do artista (`/artists/[slug]`). Atualmente só filtra resultados no modal.
@@ -333,29 +351,11 @@ items:
   # ──────────────────────────────────────────────
   # DEFERRED-WORK.MD
   # ──────────────────────────────────────────────
-  - id: DEBT-3.2-A
-    title: "Bio do Test DJ não visível em E2E (CI-only)"
-    severity: high
-    label: tech-debt
-    body: |
-      ## Descrição
-      O texto "Bio do Test DJ" não encontrado pelo Playwright em CI no perfil `/artists/test-dj`.
-      
-      ## Hipóteses
-      1. Seed corrompido por runs CI anteriores
-      2. Race condition Suspense + cacheComponents
-      3. ON CONFLICT DO UPDATE zerando bio
-      
-      ## Origem
-      Story 3.2, CI run 2026-05-01.
-      
-      ## Referência
-      `deferred-work.md` (deprecado).
-
   - id: BH-7
     title: "Missing schema qualifier ON public.events em migrations"
     severity: low
     label: tech-debt
+    status: open
     body: |
       ## Descrição
       Migrations 010 e 011 usam `ON events` sem qualificador de schema `public.`. Risco: search_path diferente em ambientes complexos de CI.
@@ -370,6 +370,7 @@ items:
     title: "[Decisão] Eventos públicos cross-visible? Mostrar eventos de outros coletivos no grid?"
     severity: medium
     label: decision-pending
+    status: open
     body: |
       ## Decisão Pendente
       Eventos de outros coletivos devem aparecer no grid do calendário? Se sim, com qual nível de detalhe?
@@ -381,6 +382,7 @@ items:
     title: "[Decisão] Engine deve ignorar eventos 100% privados?"
     severity: medium
     label: decision-pending
+    status: open
     body: |
       ## Decisão Pendente
       O Conflict Engine hoje lê TODOS os eventos independente de privacidade. Um evento completamente privado ainda gera conflito. Trade-off: utilidade do alerta vs direito de planejar em segredo.
@@ -392,6 +394,7 @@ items:
     title: "[Decisão] Gênero do coletivo como proxy de conflito?"
     severity: medium
     label: decision-pending
+    status: open
     body: |
       ## Decisão Pendente
       Quando um evento não tem `genrePrimary` definido, o engine deve usar o gênero principal do coletivo como proxy?
@@ -403,6 +406,7 @@ items:
     title: "[Decisão] Visibilidade da fonte do conflito nas justificativas"
     severity: low
     label: decision-pending
+    status: open
     body: |
       ## Decisão Pendente
       A justificativa de conflito deve revelar progressivamente mais informação (nome do coletivo, evento, data) conforme as flags de privacidade do evento conflitante?
@@ -414,6 +418,7 @@ items:
     title: "[Decisão] Justificativa deve revelar progressivamente conforme flags de privacidade?"
     severity: low
     label: decision-pending
+    status: open
     body: |
       ## Decisão Pendente
       Mesmo contexto do DP4 — precisa definir a política de revelação progressiva de dados na justificativa de conflito.

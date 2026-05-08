@@ -1,6 +1,10 @@
 # Session Analysis Protocol - Memtrace
 
-**Scope Instruction:** Analyze only the actions and data generated within the current session (present execution context). Include interactions from other agents only if they occurred within this specific flow. Do not evaluate historical data from previous sessions.
+**Scope Instruction:** Analyze only the actions and data generated within the current session (present execution context). Include interactions from other agents only if they occurred within this specific flow. Do not evaluate historical data from previous sessions. You can use the Memtrace documentation if you need.
+
+**Should you create a entry?** Edit this file ONLY if:
+- You used memtrace in the session
+- You could have use it to improve your actions but didn't for some reason (ex: customization didn't have the right tools, customization loaded too late, you didn't have access to memtrace, etc).
 
 ### 1. Analysis Dimensions
 Evaluate the session based on the following criteria:
@@ -665,3 +669,68 @@ Os 3 prompts de code review foram gerados aqui e executados no Gemini. Os result
 ---
 
 **Filed:** 2026-05-07
+
+---
+
+# Memtrace Session Log — Story HK.6 (Create)
+
+**Epic:** epic-housekeeping
+**Process:** criação de story hk-6 (create-story workflow)
+**Session:** 2026-05-08 — Migrar Tracking de Débito para GitHub Issues
+**Agent:** opencode-go/deepseek-v4-flash
+**Commits:** `c28b3de`
+
+---
+
+## 1. Memtrace Utilization
+
+| Phase | Tool Call | Purpose |
+|-------|-----------|---------|
+| Activation (prepend) | `get_codebase_briefing(summary)` | Repo scale (1207 symbols, 5 modules, 80 dead-code candidates) |
+
+**Skipped (prescribed by customization but not applicable):**
+- `get_symbol_context` — no TS symbol target (hk.6 creates YAML index + MJS script + markdown story)
+- `get_impact` — no runtime code to trace
+- `find_dependency_path` — no code dependencies between hk.6 and hk.5
+- `get_process_flow` — no execution flow to trace for process/infra story
+
+---
+
+## 2. Counterfactual Analysis
+
+- **Story creation**: Without Memtrace, the same `Read` + `grep` + `gh` workflow would have been used — epics file, retrospective, story files, GitHub labels — none of which are in the AST graph
+- **D15-D18 reconstruction**: Required reading `epic-3-retro-2026-05-05.md` + 3 story files from Epic 3 (`3-3`, `3-4`, `deferred-work.md`) — `find_code` cannot retroactively recover data that wasn't written down
+- **Octokit version research**: Used web search (Exa/Google), not Memtrace — Memtrace doesn't track npm package versions
+- **GitHub labels audit**: Used `gh label list` — no Memtrace equivalent for GitHub metadata
+
+---
+
+## 3. Measurable Gains
+
+| Metric | With Memtrace | Without (estimate) |
+|--------|---------------|-------------------|
+| Repo scale awareness | 1 call (`get_codebase_briefing`) | Manual directory traversal |
+| File analysis | Via `Read` (not Memtrace) | Same — YAML/MD target files not indexed |
+| Tech debt inventory | Manual extraction from retrospective markdown | Same — no Memtrace value for unstructured text |
+
+**Note:** This story targets markdown (story file, deferred-work.md), YAML (tech-debt.yaml), MJS (script), and JSON (package.json). Memtrace's value was limited to the codebase briefing — consistent with the infra/docs pattern observed in HK.4 and HK.5 where ~70% of analysis is file reading + domain knowledge, and Memtrace contributes ~30%.
+
+---
+
+## 4. Usage Optimization
+
+### 4.1. `get_codebase_briefing` chamado corretamente
+
+Diferente das sessões HK.4 e HK.5 (onde o briefing foi pulado na ativação), `get_codebase_briefing(summary)` foi executado como prep step. Forneceu baseline: 1207 symbols, 5 módulos, 80 dead-code candidates.
+
+### 4.2. `record_external_episode` não chamado
+
+O story file foi criado e commitado, mas não registrado como `agent_intent` no Memtrace via `record_external_episode`. Conforme recomendado no log HK.2 (Create) seção 5.2, registrar story creation como episódio faria a criação aparecer em `get_evolution` — downstream agents veriam "hk-6 created at T, implemented at T+1".
+
+---
+
+## 5. Feature Recommendation
+
+Nenhuma nova. Todos os gaps identificados nesta sessão (infra/documentation blind spot, `.mjs` non-indexing, story creation as episode) já foram registrados em sessões anteriores (HK.4 Create 5.1, HK.5 Implementation 5.1, HK.2 Create 5.2).
+
+---

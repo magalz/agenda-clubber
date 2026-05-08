@@ -2,7 +2,7 @@
 
 [Risk: LOW — Process/infrastructure story, no runtime code changes]
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -12,9 +12,9 @@ so that **the team has a single source of truth with proper labeling, prioritiza
 
 ## Acceptance Criteria
 
-1. **Given** the 21 tech debt items (D1-D25), 4 reconstructed items (D15-D18), 5 product decisions (DP1-DP5), and 2 items from `deferred-work.md`
+1. **Given** the 21 tech debt items (D1-D25), 4 reconstructed items (D15-D18), 5 product decisions (DP1-DP5), and 2 items from `deferred-work.md` (note: D6 covers the DEBT-3.2-A from deferred-work.md — total único = 31)
    **When** this story is executed
-   **Then** all 32 items must be created as GitHub Issues with appropriate labels (`tech-debt`, `decision-pending`, severity: `critical`/`high`/`medium`/`low`)
+   **Then** all 31 items must be created as GitHub Issues with appropriate labels (`tech-debt`, `decision-pending`, severity: `critical`/`high`/`medium`/`low`)
    **And** labels must be created in the repository before issues
 
 2. **Given** the created GitHub Issues
@@ -36,30 +36,30 @@ so that **the team has a single source of truth with proper labeling, prioritiza
 
 ## Tasks / Subtasks
 
-- [ ] T1 · Criar labels no repositório GitHub (AC 1)
-  - [ ] T1.1 Criar label `tech-debt` (cor `#B60205`) para débitos técnicos
-  - [ ] T1.2 Criar label `decision-pending` (cor `#FBCA04`) para decisões de produto
-  - [ ] T1.3 Criar labels de severidade: `critical` (`#E99695`), `high` (`#FF9F1C`), `medium` (`#168700`), `low` (`#CFD3D7`)
-  - [ ] T1.4 Verificar se labels já existem antes de criar (idempotência)
+- [x] T1 · Criar labels no repositório GitHub (AC 1)
+  - [x] T1.1 Criar label `tech-debt` (cor `#B60205`) para débitos técnicos
+  - [x] T1.2 Criar label `decision-pending` (cor `#FBCA04`) para decisões de produto
+  - [x] T1.3 Criar labels de severidade: `critical` (`#E99695`), `high` (`#FF9F1C`), `medium` (`#168700`), `low` (`#CFD3D7`)
+  - [x] T1.4 Verificar se labels já existem antes de criar (idempotência)
 
-- [ ] T2 · Criar script de automação `scripts/create-tech-debt-issues.mjs` (AC 4)
-  - [ ] T2.1 Ler `tech-debt.yaml` como fonte de dados
-  - [ ] T2.2 Autenticar via `GITHUB_TOKEN` (environment variable)
-  - [ ] T2.3 Criar labels via Octokit is hepens (verificar existência antes)
-  - [ ] T2.4 Criar issues via `octokit.rest.issues.create()` com title, body, labels
-  - [ ] T2.5 Verificar duplicatas por título antes de criar (idempotência)
-  - [ ] T2.6 Gerar relatório JSON com URLs das issues criadas
-  - [ ] T2.7 Adicionar script `"create:tech-debt-issues"` no `package.json`
+- [x] T2 · Criar script de automação `scripts/create-tech-debt-issues.mjs` (AC 4)
+  - [x] T2.1 Ler `tech-debt.yaml` como fonte de dados
+  - [x] T2.2 Autenticar via `GITHUB_TOKEN` (environment variable)
+  - [x] T2.3 Criar labels via Octokit is hepens (verificar existência antes)
+  - [x] T2.4 Criar issues via `octokit.rest.issues.create()` com title, body, labels
+  - [x] T2.5 Verificar duplicatas por título antes de criar (idempotência)
+  - [x] T2.6 Gerar relatório JSON com URLs das issues criadas
+  - [x] T2.7 Adicionar script `"create:tech-debt-issues"` no `package.json`
 
-- [ ] T3 · Criar `tech-debt.yaml` como índice programático (AC 2)
-  - [ ] T3.1 Listar todos os 32 itens de débito (D1-D25, DEBT-3.2-A, BH-7, DP1-DP5)
-  - [ ] T3.2 Mapear severidade para cada item
-  - [ ] T3.3 Incluir campo `status` (`open`/`resolved`) para itens já endereçados
-  - [ ] T3.4 Incluir campo `resolution` com referência à story que resolveu
+- [x] T3 · Criar `tech-debt.yaml` como índice programático (AC 2)
+  - [x] T3.1 Listar todos os 31 itens de débito (D1-D25, BH-7, DP1-DP5) *(corrigido: AC 1 listava 32, mas D6 = DEBT-3.2-A — contagem real 31)*
+  - [x] T3.2 Mapear severidade para cada item
+  - [x] T3.3 Incluir campo `status` (`open`/`resolved`) para itens já endereçados
+  - [x] T3.4 Incluir campo `resolution` com referência à story que resolveu
 
-- [ ] T4 · Deprecar `deferred-work.md` (AC 3)
-  - [ ] T4.1 Adicionar deprecation notice no topo de `deferred-work.md`
-  - [ ] T4.2 Referenciar GitHub Issues + `tech-debt.yaml` como substitutos
+- [x] T4 · Deprecar `deferred-work.md` (AC 3)
+  - [x] T4.1 Adicionar deprecation notice no topo de `deferred-work.md`
+  - [x] T4.2 Referenciar GitHub Issues + `tech-debt.yaml` como substitutos
 
 ## Dev Notes
 
@@ -206,21 +206,58 @@ DeepSeek V4 Flash (opencode-go/deepseek-v4-flash)
 
 ### Completion Notes List
 
-- **Story analysis completed:** 32 itens mapeados (21 originais + 4 reconstruídos + 5 decisões + 2 deferred)
+- **Story analysis completed:** 31 itens mapeados (25 D# items + 5 decisões produto + 1 deferred BH-7). D6 = DEBT-3.2-A → contagem corrigida de 32 para 31.
 - **D15-D18 reconstruídos:** D15 (lineup→FK), D16 (city/uf), D17 (audit log), D18 (CR adversarial gate)
 - **5 itens já resolvidos** pelo housekeeping (D1, D2, D3, D5, D13) → marcados como `status: resolved`
-- **tech-debt.yaml** criado como índice programático com schema YAML completo
-- **Octokit** instalado como devDependency
+- **6 labels GitHub criadas:** `tech-debt`, `decision-pending`, `critical`, `high`, `medium`, `low`
+- **31 GitHub Issues criadas** (#39 a #69) com labels apropriadas
+- **tech-debt.yaml corrigido:** removida duplicata DEBT-3.2-A (já coberta por D6), adicionados campos `status: open` faltantes
+- **Bugfix no script:** `parseYaml` corrigido para indentação + `\r\n` + aspas em titles; `extractLabels` corrigido para regex lazy
+- **Idempotência verificada:** re-run = 31 skipped, 0 criadas
+- **Regressão zero:** 422/422 testes passam, lint limpo (excluindo erro pré-existente no preflight)
 
 ### File List
 
-- `_bmad-output/implementation-artifacts/hk-6-migrar-tracking-para-github-issues.md` — NEW: story file
-- `_bmad-output/implementation-artifacts/tech-debt.yaml` — NEW: índice programático de 32 itens
-- `scripts/create-tech-debt-issues.mjs` — NEW: script de automação Octokit
-- `_bmad-output/implementation-artifacts/deferred-work.md` — UPDATE: deprecation notice
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — UPDATE: hk-6 → ready-for-dev
-- `package.json` — UPDATE: script `create:tech-debt-issues`
+- `_bmad-output/implementation-artifacts/hk-6-migrar-tracking-para-github-issues.md` — UPDATE: story file (checkboxes, status → review)
+- `_bmad-output/implementation-artifacts/tech-debt.yaml` — FIX: removida duplicata DEBT-3.2-A, adicionados `status: open` em 20 itens
+- `_bmad-output/implementation-artifacts/deferred-work.md` — Deprecado (pré-existente)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — UPDATE: hk-6 → done
+- `scripts/create-tech-debt-issues.mjs` — FIX: parseYaml reestruturado (body guard antes de propriedades), extractLabels corrigido (regex)
+- `package.json` — UPDATE: script `create:tech-debt-issues` (pré-existente no merge)
 
 ### Change Log
 
 - 2026-05-08: Story created — HK.6 Migrar Tracking de Débito para GitHub Issues. 32 itens inventariados. D15-D18 reconstruídos do contexto. Octokit como ferramenta de automação. tech-debt.yaml como índice programático.
+- 2026-05-08: Implementação HK.6 — tech-debt.yaml corrigido (31 itens, status consistentes). Script create-tech-debt-issues.mjs com bugfixes de parse. 6 labels e 31 issues criadas no GitHub. Idempotência verificada. Regressão zero.
+- 2026-05-08: Code review findings corrigidos — parseYaml reestruturado (body guard + line re-evaluation), D10 status adicionado, AC 1 corrigido para 31.
+
+## Review Findings (AI)
+
+**Review date:** 2026-05-08
+**Review outcome:** Changes Required (addressed in same session)
+
+### Action Items
+
+| Severity | Description | AC/File | Status |
+|----------|-------------|---------|--------|
+| High | Body content lines with property keywords (title:, label:) override item properties — property parsing should not run in body mode | `scripts/create-tech-debt-issues.mjs` | [x] Resolved — parseYaml reestruturado: `inBody` check antes do parse de propriedades |
+| Medium | Line that exits body mode is discarded without re-evaluation — could lose data | `scripts/create-tech-debt-issues.mjs` | [x] Resolved — após `inBody = false`, linha cai no parse de propriedades da mesma iteração |
+| Low | D10 missing `status` field in tech-debt.yaml | `tech-debt.yaml` | [x] Resolved — `status: open` adicionado |
+| Low | AC 1 states "32 items" but actual unique count is 31 (D6 = DEBT-3.2-A) | Story file | [x] Resolved — AC 1 corrigido para 31 com nota explicativa |
+
+### Deferred Items
+
+| Finding | Justificativa |
+|---------|---------------|
+| Title regex doesn't support single-quoted/unquoted | YAML atual sempre usa aspas duplas — sem risco |
+| `issueExists` sem paginação (>100 issues) | Repo tem 69 issues — sem risco imediato |
+| Sem retry em erro de API (rate limit, 500) | Script manual de baixa frequência |
+
+### Execution Log
+
+| Layer | Model | Status |
+|-------|-------|--------|
+| Blind Hunter | Externo | Findings: 5 (3 resolvidos, 2 deferidos) |
+| Edge Case Hunter | Externo | Findings: 8 (0 resolvidos, 5 deferidos, 3 false positives) |
+| Acceptance Auditor | Externo | Findings: 4 (1 resolvido, 1 AC corrigido, 2 false positives) |
+| Structural Review (YAML) | Externo | Findings: 1 (resolvido) |
