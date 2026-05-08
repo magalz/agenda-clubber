@@ -35,11 +35,6 @@ function run(cmd) {
   }
 }
 
-function _bail(message) {
-  console.log(`  ⚠ ${message}`);
-  return true;
-}
-
 function header(text) {
   console.log(`\n── ${text} ─${'─'.repeat(Math.max(0, 60 - text.length - 4))}`);
 }
