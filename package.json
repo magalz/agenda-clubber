@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ci": "playwright test",
     "lint:ci": "eslint . --max-warnings=0",
+    "preflight": "node _bmad/scripts/preflight.mjs",
     "qa:gate": "node scripts/qa-gate.mjs"
   },
   "dependencies": {
