@@ -35,7 +35,7 @@ function run(cmd) {
   }
 }
 
-function bail(message) {
+function _bail(message) {
   console.log(`  ⚠ ${message}`);
   return true;
 }
