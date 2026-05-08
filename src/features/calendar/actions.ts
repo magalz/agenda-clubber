@@ -73,7 +73,16 @@ export async function createEvent(input: EventFormInput): Promise<ActionResult<u
                 await evaluateAndPersist(neighborId, db);
             } catch (e) {
                 console.error(`[ConflictEngine] Failed to recompute neighbor ${neighborId}:`, e);
+            }
         }
+    } catch (e) {
+        console.error(`[ConflictEngine] Failed to evaluate event ${event.id}:`, e);
+        await db.update(events)
+            .set({
+                conflictLevel: null,
+                conflictJustification: 'Falha ao avaliar — verificar logs',
+            })
+            .where(eq(events.id, event.id));
     }
 
     revalidatePath('/dashboard/collective');
@@ -169,7 +178,6 @@ export async function updateEventStatus(
             .where(eq(events.id, eventId));
     }
 
-    console.log('[updateEventStatus] DONE');
     revalidatePath('/dashboard/collective');
 
     return { data: updated, error: null };
