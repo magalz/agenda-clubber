@@ -17,7 +17,6 @@ import type { CalendarEvent } from './types';
 type ActionResult<T> = { data: T | null; error: { message: string; code: string } | null };
 
 export async function createEvent(input: EventFormInput): Promise<ActionResult<unknown>> {
-    console.log('[createEvent] START', { name: input.name, genre: input.genre, date: input.eventDate });
     const viewer = await getViewerContext();
     if (viewer.kind !== 'authenticated') {
         return { data: null, error: { message: 'Não autorizado', code: 'UNAUTHORIZED' } };
@@ -48,7 +47,6 @@ export async function createEvent(input: EventFormInput): Promise<ActionResult<u
 
     const eventDateUtc = calculateEventDateUtc(eventDate, timezone);
 
-    console.log('[createEvent] DB insert start', { name: input.name, date: eventDate });
     const [event] = await db.insert(events).values({
         collectiveId,
         name,
@@ -65,33 +63,19 @@ export async function createEvent(input: EventFormInput): Promise<ActionResult<u
         isLineupPublic,
         createdBy: viewer.profileId,
     }).returning();
-    console.log('[createEvent] DB insert OK', { eventId: event.id });
 
     try {
-        console.log('[createEvent] evaluateAndPersist start', { eventId: event.id });
         await evaluateAndPersist(event.id, db);
-        console.log('[createEvent] evaluateAndPersist OK');
 
         const neighborIds = await getNeighborIds(event.id, event.eventDate, db);
-        console.log('[createEvent] neighbors found', { count: neighborIds.length });
         for (const neighborId of neighborIds) {
             try {
                 await evaluateAndPersist(neighborId, db);
             } catch (e) {
                 console.error(`[ConflictEngine] Failed to recompute neighbor ${neighborId}:`, e);
-            }
         }
-    } catch (e) {
-        console.error(`[ConflictEngine] Failed to evaluate event ${event.id}:`, e);
-        await db.update(events)
-            .set({
-                conflictLevel: null,
-                conflictJustification: 'Falha ao avaliar — verificar logs',
-            })
-            .where(eq(events.id, event.id));
     }
 
-    console.log('[createEvent] DONE', { eventId: event.id });
     revalidatePath('/dashboard/collective');
 
     return { data: event, error: null };
@@ -140,17 +124,12 @@ export async function updateEventStatus(
     eventId: string,
     status: 'planning' | 'confirmed'
 ): Promise<ActionResult<unknown>> {
-    console.log('[updateEventStatus] START', { eventId, status });
     const auth = await authorizeAndFetchEvent(eventId);
-    if (auth.error) {
-        console.log('[updateEventStatus] AUTH_ERROR', auth.error);
-        return auth;
-    }
+    if (auth.error) return auth;
 
     const { existing } = auth.data;
 
     if (existing.status === status) {
-        console.log('[updateEventStatus] SKIP (same status)');
         return { data: existing, error: null };
     }
 
@@ -164,20 +143,15 @@ export async function updateEventStatus(
         updateData.isLineupPublic = true;
     }
 
-    console.log('[updateEventStatus] DB update start');
     const [updated] = await db.update(events)
         .set(updateData)
         .where(eq(events.id, eventId))
         .returning();
-    console.log('[updateEventStatus] DB update OK');
 
     try {
-        console.log('[updateEventStatus] evaluateAndPersist start');
         await evaluateAndPersist(eventId, db);
-        console.log('[updateEventStatus] evaluateAndPersist OK');
 
         const neighborIds = await getNeighborIds(eventId, existing.eventDate, db);
-        console.log('[updateEventStatus] neighbors found', { count: neighborIds.length });
         for (const neighborId of neighborIds) {
             try {
                 await evaluateAndPersist(neighborId, db);

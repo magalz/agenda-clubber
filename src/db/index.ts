@@ -13,7 +13,11 @@ if (!process.env.DATABASE_URL && process.env.NODE_ENV === 'production') {
 const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:54322/postgres';
 
 const globalForDb = globalThis as unknown as { _pgClient?: ReturnType<typeof postgres> };
-const client = globalForDb._pgClient ?? postgres(connectionString);
+const client = globalForDb._pgClient ?? postgres(connectionString, {
+    max: 3,
+    idle_timeout: 20,
+    max_lifetime: 60 * 5,
+});
 if (process.env.NODE_ENV !== 'production') globalForDb._pgClient = client;
 
 export const db = drizzle(client, { schema: { ...auth, ...collectives, ...collectiveMembers, ...artists, ...events } });
