@@ -63,21 +63,8 @@ jobs:
           node-version: 22
           cache: "npm"
       - run: npm ci --prefer-offline
-      - name: Reset drizzle tracking schema
-        run: |
-          npx tsx -e "
-            (async () => {
-              const postgres = require('postgres');
-              const sql = postgres(process.env.DATABASE_URL, { max: 1, prepare: false, onnotice: (n) => {} });
-              await sql.unsafe('DROP SCHEMA IF EXISTS drizzle CASCADE');
-              console.log('drizzle schema dropped');
-              await sql.end();
-            })();
-          "
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - name: Apply Drizzle migrations to CI database
-        run: npx drizzle-kit push 2>&1 | cat
+        run: npx drizzle-kit migrate 2>&1 | cat
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - name: Verify public tables

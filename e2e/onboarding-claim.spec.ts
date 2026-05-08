@@ -44,12 +44,13 @@ test.describe('Onboarding Claim Flow', () => {
             await sql`DELETE FROM artists WHERE artistic_name IN (${'Artista Ghost XYZ'}, ${'Artista Inexistente XYZ'})`;
             // Reset the orphan seed in case a previous test claimed it.
             await sql`
-                INSERT INTO artists (artistic_name, slug, location, genre_primary, profile_id, status, is_verified, privacy_settings)
-                VALUES (${'Test DJ'}, ${'test-dj'}, ${'São Paulo, SP'}, ${'Techno'}, NULL, ${'approved'}, false, ${sql.json(DEFAULT_PRIVACY)})
+                INSERT INTO artists (artistic_name, slug, location, genre_primary, profile_id, status, is_verified, privacy_settings, bio)
+                VALUES (${'Test DJ'}, ${'test-dj'}, ${'São Paulo, SP'}, ${'Techno'}, NULL, ${'approved'}, false, ${sql.json(DEFAULT_PRIVACY)}, ${'Bio do Test DJ'})
                 ON CONFLICT (artistic_name) DO UPDATE
                   SET slug = 'test-dj',
                       profile_id = NULL,
-                      status = 'approved'
+                      status = 'approved',
+                      bio = 'Bio do Test DJ'
             `;
         } finally {
             await sql.end({ timeout: 5 });
