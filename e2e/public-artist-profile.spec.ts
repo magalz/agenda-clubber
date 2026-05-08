@@ -15,6 +15,15 @@ test.describe('Public Artist Profile — anon visitor', () => {
     test('renders public profile with name, location, bio and genre', async ({ page }) => {
         await page.goto('/artists/test-dj');
 
+        // DIAGNÓSTICO DEBT-3.2-A — lê data attributes do DOM
+        await test.step('diagnostic', async () => {
+            const privacyMode = await page.getByTestId('diagnostic-privacy').getAttribute('data-privacy-mode');
+            const fieldsBio = await page.getByTestId('diagnostic-privacy').getAttribute('data-fields-bio');
+            const bioValue = await page.getByTestId('bio-section').getAttribute('data-bio-value');
+            const bioTruthy = await page.getByTestId('bio-section').getAttribute('data-bio-truthy');
+            console.log(`[DEBT-3.2-A] privacy-mode=${privacyMode} fields-bio=${fieldsBio} bio-value=${bioValue} bio-truthy=${bioTruthy}`);
+        });
+
         await expect(page).not.toHaveURL(/404/);
         await expect(page.getByRole('heading', { name: 'Test DJ' })).toBeVisible();
         await expect(page.getByText('São Paulo, SP')).toBeVisible();

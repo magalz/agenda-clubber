@@ -60,7 +60,17 @@ async function ArtistContent({ params }: { params: Props["params"] }) {
 
     if (!filtered) notFound();
 
-    return <PublicProfile artist={filtered} />;
+    return (
+        <>
+            <div
+                data-testid="diagnostic-privacy"
+                data-privacy-mode={artist.privacySettings.mode}
+                data-fields-bio={artist.privacySettings.fields?.bio ?? 'undefined'}
+                style={{ display: 'none' }}
+            />
+            <PublicProfile artist={filtered} />
+        </>
+    );
 }
 
 export default function ArtistPublicPage({ params }: Props) {

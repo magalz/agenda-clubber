@@ -65,6 +65,7 @@ export function PublicProfile({ artist }: Props) {
             </div>
 
             {/* Bio */}
+            <div data-testid="bio-section" data-bio-value={artist.bio ?? 'null'} data-bio-truthy={String(!!artist.bio)} />
             {artist.bio && (
                 <section className="mt-8">
                     <h2 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
