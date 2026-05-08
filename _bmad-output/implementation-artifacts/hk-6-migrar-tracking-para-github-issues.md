@@ -12,9 +12,9 @@ so that **the team has a single source of truth with proper labeling, prioritiza
 
 ## Acceptance Criteria
 
-1. **Given** the 21 tech debt items (D1-D25), 4 reconstructed items (D15-D18), 5 product decisions (DP1-DP5), and 2 items from `deferred-work.md`
+1. **Given** the 21 tech debt items (D1-D25), 4 reconstructed items (D15-D18), 5 product decisions (DP1-DP5), and 2 items from `deferred-work.md` (note: D6 covers the DEBT-3.2-A from deferred-work.md — total único = 31)
    **When** this story is executed
-   **Then** all 32 items must be created as GitHub Issues with appropriate labels (`tech-debt`, `decision-pending`, severity: `critical`/`high`/`medium`/`low`)
+   **Then** all 31 items must be created as GitHub Issues with appropriate labels (`tech-debt`, `decision-pending`, severity: `critical`/`high`/`medium`/`low`)
    **And** labels must be created in the repository before issues
 
 2. **Given** the created GitHub Issues
@@ -52,7 +52,7 @@ so that **the team has a single source of truth with proper labeling, prioritiza
   - [x] T2.7 Adicionar script `"create:tech-debt-issues"` no `package.json`
 
 - [x] T3 · Criar `tech-debt.yaml` como índice programático (AC 2)
-  - [x] T3.1 Listar todos os 31 itens de débito (D1-D25, BH-7, DP1-DP5)
+  - [x] T3.1 Listar todos os 31 itens de débito (D1-D25, BH-7, DP1-DP5) *(corrigido: AC 1 listava 32, mas D6 = DEBT-3.2-A — contagem real 31)*
   - [x] T3.2 Mapear severidade para cada item
   - [x] T3.3 Incluir campo `status` (`open`/`resolved`) para itens já endereçados
   - [x] T3.4 Incluir campo `resolution` com referência à story que resolveu
@@ -221,11 +221,43 @@ DeepSeek V4 Flash (opencode-go/deepseek-v4-flash)
 - `_bmad-output/implementation-artifacts/hk-6-migrar-tracking-para-github-issues.md` — UPDATE: story file (checkboxes, status → review)
 - `_bmad-output/implementation-artifacts/tech-debt.yaml` — FIX: removida duplicata DEBT-3.2-A, adicionados `status: open` em 20 itens
 - `_bmad-output/implementation-artifacts/deferred-work.md` — Deprecado (pré-existente)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — UPDATE: hk-6 → review
-- `scripts/create-tech-debt-issues.mjs` — FIX: parseYaml corrigido (indentação, \r\n, aspas), extractLabels corrigido (regex)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — UPDATE: hk-6 → done
+- `scripts/create-tech-debt-issues.mjs` — FIX: parseYaml reestruturado (body guard antes de propriedades), extractLabels corrigido (regex)
 - `package.json` — UPDATE: script `create:tech-debt-issues` (pré-existente no merge)
 
 ### Change Log
 
 - 2026-05-08: Story created — HK.6 Migrar Tracking de Débito para GitHub Issues. 32 itens inventariados. D15-D18 reconstruídos do contexto. Octokit como ferramenta de automação. tech-debt.yaml como índice programático.
 - 2026-05-08: Implementação HK.6 — tech-debt.yaml corrigido (31 itens, status consistentes). Script create-tech-debt-issues.mjs com bugfixes de parse. 6 labels e 31 issues criadas no GitHub. Idempotência verificada. Regressão zero.
+- 2026-05-08: Code review findings corrigidos — parseYaml reestruturado (body guard + line re-evaluation), D10 status adicionado, AC 1 corrigido para 31.
+
+## Review Findings (AI)
+
+**Review date:** 2026-05-08
+**Review outcome:** Changes Required (addressed in same session)
+
+### Action Items
+
+| Severity | Description | AC/File | Status |
+|----------|-------------|---------|--------|
+| High | Body content lines with property keywords (title:, label:) override item properties — property parsing should not run in body mode | `scripts/create-tech-debt-issues.mjs` | [x] Resolved — parseYaml reestruturado: `inBody` check antes do parse de propriedades |
+| Medium | Line that exits body mode is discarded without re-evaluation — could lose data | `scripts/create-tech-debt-issues.mjs` | [x] Resolved — após `inBody = false`, linha cai no parse de propriedades da mesma iteração |
+| Low | D10 missing `status` field in tech-debt.yaml | `tech-debt.yaml` | [x] Resolved — `status: open` adicionado |
+| Low | AC 1 states "32 items" but actual unique count is 31 (D6 = DEBT-3.2-A) | Story file | [x] Resolved — AC 1 corrigido para 31 com nota explicativa |
+
+### Deferred Items
+
+| Finding | Justificativa |
+|---------|---------------|
+| Title regex doesn't support single-quoted/unquoted | YAML atual sempre usa aspas duplas — sem risco |
+| `issueExists` sem paginação (>100 issues) | Repo tem 69 issues — sem risco imediato |
+| Sem retry em erro de API (rate limit, 500) | Script manual de baixa frequência |
+
+### Execution Log
+
+| Layer | Model | Status |
+|-------|-------|--------|
+| Blind Hunter | Externo | Findings: 5 (3 resolvidos, 2 deferidos) |
+| Edge Case Hunter | Externo | Findings: 8 (0 resolvidos, 5 deferidos, 3 false positives) |
+| Acceptance Auditor | Externo | Findings: 4 (1 resolvido, 1 AC corrigido, 2 false positives) |
+| Structural Review (YAML) | Externo | Findings: 1 (resolvido) |

@@ -57,6 +57,14 @@ function parseYaml(yaml) {
       }
       currentItem = { id: itemMatch[1] };
     } else if (currentItem) {
+      if (inBody) {
+        if (line.startsWith('    ') || line.trim() === '') {
+          bodyLines.push(line);
+          continue;
+        }
+        inBody = false;
+      }
+
       const trimmed = line.trim();
       const titleM = trimmed.match(/^title:\s*"(.+)"$/);
       if (titleM) {
@@ -72,13 +80,6 @@ function parseYaml(yaml) {
       if (trimmed.match(/^body:\s*\|/)) {
         inBody = true;
         continue;
-      }
-      if (inBody) {
-        if (line.startsWith('    ') || line.trim() === '') {
-          bodyLines.push(line);
-          continue;
-        }
-        inBody = false;
       }
     }
   }
