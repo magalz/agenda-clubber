@@ -37,7 +37,7 @@ session:
   agent: "[model name]"
   commits: "[sha1] [sha2] ..."
 ```
-
+End the entry using the complete timestamp (Date and Time) instead of only the date.
 ---
 
 # Memtrace Session Log – Story HK.1
@@ -1017,7 +1017,98 @@ Debugging CI foi o processo mais custoso desta sessão (8 runs, 1h+ de análise)
 - Timestamp da execução
 - Flaky vs. Failed
 
-`get_evolution` então mostraria "test YELLOW started passing in run 8 after pooler fix" — rastreabilidade direta entre mudança de código e mudança de comportamento de teste CI. Isso seria um salto qualitativo em relação ao diagnóstico manual de logs.
+\`get_evolution\` então mostraria "test YELLOW started passing in run 8 after pooler fix" — rastreabilidade direta entre mudança de código e mudança de comportamento de teste CI. Isso seria um salto qualitativo em relação ao diagnóstico manual de logs.
+
+---
+
+**Filed:** 2026-05-08
+
+---
+
+# Memtrace Session Log — DEBT-3.2-A (Fix Bio do Test DJ)
+
+**Epic:** epic-housekeeping
+**Process:** fix tech-debt item D6 — Bio do Test DJ flake intermitente no CI
+**Session:** 2026-05-08 — Diagnóstico via data attributes, query direta no DB, partymode BMAD agents, root cause descoberto (onboarding-claim re-seed sem bio)
+**Agent:** opencode-go/deepseek-v4-flash
+**Commits:** `c41813f` `999ee9a` `17521fa` (PR #79, merged)
+
+---
+
+## 1. Memtrace Utilization
+
+| Phase | Tool Call | Purpose |
+|-------|-----------|---------|
+| Post-fix (activation) | `list_processes` | Enumerate 30 execution flows for cross-reference with E2E coverage |
+| Post-fix (activation) | `find_symbol(getPublicArtistBySlug)` | Verify modified query function has test coverage |
+| Post-fix (activation) | `find_symbol(filterArtistForViewer)` | Verify visibility function has test coverage |
+| Post-fix | `index_directory(clear_existing)` | Reindex after Memtrace crash (612 nodes, 1860 edges, 3 API endpoints) |
+
+**Memtrace NOT used during the investigation phase.** The entire root cause investigation was done via:
+- `Read` (global-setup.ts, page.tsx, public-profile.tsx, visibility.ts, queries.ts, actions.ts, spec files)
+- `grep` (UPDATE artists, DELETE artists, claim patterns across codebase)
+- Data attributes + console.log diagnostics embedded in the Playwright test (3 CI runs)
+- CI log analysis (\`gh run view --log-failed\`)
+- Party mode discussion (4 agents: Winston, Amelia, Mary, Murat)
+
+The decisive clue came from \`grep\` on \`onboarding-claim.spec.ts\` — a file that was NOT in the Memtrace graph (Playwright spec, not runtime code with meaningful edges).
+
+---
+
+## 2. Counterfactual Analysis
+
+- **Root cause discovery**: Without Memtrace, same workflow (grep + Read + CI diagnostics). The root cause was a test file (\`onboarding-claim.spec.ts\`) reseeding Test DJ without \`bio\` — a Playwright test, not runtime code. Memtrace's symbol graph doesn't index Playwright test semantics (\`beforeEach\`, \`test.describe.configure({ mode: 'serial' })\`) as meaningful relationships.
+- **CI diagnostics**: The key insight ("bio-value=null in DOM but privacy-mode=public") came from data attributes rendered to the DOM — no Memtrace involvement.
+- **Party mode value**: 4 agents in parallel discussion. Their consensus pointed to \`filterArtistForViewer\` as the most likely culprit, which was WRONG — but the discussion itself surfaced valuable analysis about Suspense, cacheComponents, and streaming that helped eliminate hypotheses. This was a collaboration pattern, not a Memtrace query.
+- **Without Memtrace entirely**: Would have been identical investigation path (data attributes → CI logs → grep for DELETE/UPDATE → reading onboarding-claim.spec.ts). The post-fix safety checks (list_processes, find_symbol) provided confidence after the merge.
+
+---
+
+## 3. Measurable Gains
+
+| Metric | With Memtrace | Without (estimate) |
+|--------|---------------|-------------------|
+| Post-fix coverage verification | \`list_processes\` + \`find_symbol\` (2 calls) | Manual review of test files |
+| Root cause discovery | Via \`grep\` + \`Read\` (same) | Same — Playwright spec not in graph |
+| CI diagnostic speed | Data attributes in DOM (self-built diagnostic) | Same — no Memtrace tool for CI test debugging |
+| Party mode hypothesis generation | 4 agents in parallel (diverse perspectives) | Single-agent reasoning (focused) |
+| Post-merge safety | \`index_directory\` after crash | Would need manual reindex verification |
+
+**Note:** This was an atypical session — the bug was in a test file's seeding logic, not in production runtime code. Memtrace's core value (symbol graph, blast radius, process flow) is optimized for production code analysis. For E2E test debugging, the most effective tools were DOM diagnostics (\`data-bio-value\`) + \`grep\` for data-flow patterns.
+
+---
+
+## 4. Usage Optimization
+
+### 4.1. \`grep\` was more effective than \`find_code\` for this bug
+
+The root cause was a missing column in an INSERT statement inside a \`beforeEach\` hook. \`find_code("INSERT INTO artists")\` in Memtrace would only find the one in \`global-setup.ts\` (which has the bio column). The \`onboarding-claim.spec.ts\` version was found via \`grep\` — it has the same pattern but without \`bio\`. **Insight**: for E2E test data flow debugging, \`grep\` on raw SQL patterns (INSERT, DELETE) is more precise than symbol search, because the semantic meaning is in the column list, not in the function name.
+
+### 4.2. \`get_evolution\` not called during CI cycles
+
+Multiple CI runs (3 branches: old dirty, clean with diagnostic, clean final fix). \`get_evolution(since=<CI-run-1-start>)\` would have shown the progression from diagnostic to fix across branches. **Insight**: for multi-commit debugging, \`get_evolution\` bridges the gap between CI runs — especially across branch resets.
+
+### 4.3. \`find_dead_code\` not called post-fix
+
+After the fix commit, \`find_dead_code\` was not executed. The fix only modified test/spec/config files — no new symbols introduced. **Insight**: for fixes that don't add new code, \`find_dead_code\` adds minimal value — skip.
+
+### 4.4. Session was 3 agents in practice (Murat stayed active)
+
+The user initially activated Murat (TEA), then switched to Party Mode with 4 agents. Murat was active across both modes. The investigation code changes were made under the bmad-quick-dev workflow. The Memtrace session log was captured at the end. **Insight**: when multiple skills are used in a single session, log Memtrace usage once at the end — not per-skill — to avoid duplicates.
+
+---
+
+## 5. Feature Recommendation
+
+### 5.1. Playwright \`beforeEach\` / \`test.beforeEach\` seed analysis
+
+The root cause was a \`test.beforeEach\` hook in a Playwright spec file that re-seeded the database without a column. If Memtrace indexed Playwright hooks with their data-flow patterns (INSERT columns, DELETE targets), \`get_impact("Test DJ")\` would flag the \`onboarding-claim.spec.ts\` seed as missing the \`bio\` column compared to \`global-setup.ts\`.
+
+This is technically feasible: index \`test.beforeEach(async ({ page }) => { sql\`INSERT INTO artists (...) VALUES (...)\` })\` as a DataMutation node with its column signature. Then compare column sets between \`global-setup.ts\` (source of truth) and each \`beforeEach\` (potential drift). Detecting column drift in test seeds across multiple spec files would be a unique Memtrace capability — no other tool does column-level seed analysis.
+
+### 5.2. CI test flake diagnostic as a queryable event
+
+The 3 CI runs for this fix each had different failure sets. \`gh run view --log-failed\` was the primary diagnostic channel — text logs, not graph data. If \`record_external_episode\` accepted CI run metadata (passed/failed tests, error messages, commit SHA) from a GitHub Actions webhook, each CI run would become an episode in the Memtrace timeline. \`get_evolution\` would then show "CI run 3: bio test started passing" as a first-class event — bridging the gap between code changes and test outcomes.
 
 ---
 
