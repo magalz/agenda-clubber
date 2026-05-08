@@ -42,9 +42,11 @@ function parseYaml(yaml) {
   let currentItem = null;
   let inBody = false;
   let bodyLines = [];
+  const ITEM_RE = /^\s+- id:\s*(\S+)/;
 
   for (const line of lines) {
-    if (line.startsWith('- id:')) {
+    const itemMatch = line.match(ITEM_RE);
+    if (itemMatch) {
       if (currentItem) {
         if (inBody) {
           currentItem.body = bodyLines.join('\n').trim();
@@ -53,20 +55,30 @@ function parseYaml(yaml) {
         }
         items.push(currentItem);
       }
-      currentItem = { id: line.match(/id: (.+)/)?.[1] || '' };
+      currentItem = { id: itemMatch[1] };
     } else if (currentItem) {
-      if (line.startsWith('    title: ')) {
-        currentItem.title = line.match(/title: ["']?(.+?)["']?$/)?.[1] || '';
-      } else if (line.startsWith('    severity: ')) {
-        currentItem.severity = line.match(/severity: (.+)/)?.[1] || '';
-      } else if (line.startsWith('    label: ')) {
-        currentItem.label = line.match(/label: (.+)/)?.[1] || '';
-      } else if (line.startsWith('    status: ')) {
-        currentItem.status = line.match(/status: (.+)/)?.[1] || '';
-      } else if (line.startsWith('    body: |')) {
+      const trimmed = line.trim();
+      const titleM = trimmed.match(/^title:\s*"(.+)"$/);
+      if (titleM) {
+        currentItem.title = titleM[1];
+        continue;
+      }
+      const sevM = trimmed.match(/^severity:\s*(.+)/);
+      if (sevM) { currentItem.severity = sevM[1]; continue; }
+      const labM = trimmed.match(/^label:\s*(.+)/);
+      if (labM) { currentItem.label = labM[1]; continue; }
+      const stM = trimmed.match(/^status:\s*(.+)/);
+      if (stM) { currentItem.status = stM[1]; continue; }
+      if (trimmed.match(/^body:\s*\|/)) {
         inBody = true;
-      } else if (inBody) {
-        bodyLines.push(line);
+        continue;
+      }
+      if (inBody) {
+        if (line.startsWith('    ') || line.trim() === '') {
+          bodyLines.push(line);
+          continue;
+        }
+        inBody = false;
       }
     }
   }
@@ -83,7 +95,7 @@ function extractLabels(yaml) {
   if (labelSection) {
     const lines = labelSection[1].split('\n').filter(Boolean);
     for (const line of lines) {
-      const match = line.match(/  (\S+): "(.+)"$/);
+      const match = line.match(/  (\S+):\s+"(.+)"$/);
       if (match) labels.push({ name: match[1], description: match[2] });
     }
   }
@@ -152,7 +164,7 @@ async function main() {
     process.exit(1);
   }
 
-  const yamlContent = readFileSync(CONFIG.yamlPath, 'utf-8');
+  const yamlContent = readFileSync(CONFIG.yamlPath, 'utf-8').replace(/\r\n/g, '\n');
   const items = parseYaml(yamlContent);
   const labels = extractLabels(yamlContent);
   const [owner, repo] = CONFIG.repo.split('/');

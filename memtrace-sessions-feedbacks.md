@@ -1,6 +1,10 @@
 # Session Analysis Protocol - Memtrace
 
-**Scope Instruction:** Analyze only the actions and data generated within the current session (present execution context). Include interactions from other agents only if they occurred within this specific flow. Do not evaluate historical data from previous sessions. Edit this file ONLY if you used memtrace in the session.
+**Scope Instruction:** Analyze only the actions and data generated within the current session (present execution context). Include interactions from other agents only if they occurred within this specific flow. Do not evaluate historical data from previous sessions. You can use the Memtrace documentation if you need.
+
+**Should you create a entry?** Edit this file ONLY if:
+- You used memtrace in the session
+- You could have use it to improve your actions but didn't for some reason (ex: customization didn't have the right tools, customization loaded too late, you didn't have access to memtrace, etc).
 
 ### 1. Analysis Dimensions
 Evaluate the session based on the following criteria:
