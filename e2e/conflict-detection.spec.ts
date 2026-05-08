@@ -20,7 +20,6 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
         test.use({ storageState: PRODUCER_STORAGE_STATE });
 
         test('RED: criar evento Techno próximo ao evento concorrente gera conflito vermelho', async ({ page }) => {
-            test.fixme(true, 'CI: Supabase unreachable — server action toast never appears');
             await page.goto('/dashboard/collective');
 
             // Grid: 30 days starting today. Seed event at today+1 (cell index 1).
@@ -61,21 +60,75 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
             await expect(updatedCells.nth(2)).toHaveAttribute('aria-label', /alto risco de conflito/);
         });
 
-        test.fixme('YELLOW: criar evento Techno em 6 dias gera conflito amarelo', async ({ page }) => {
+        test('YELLOW: criar evento Techno em 6 dias gera conflito amarelo', async ({ page }) => {
             await page.goto('/dashboard/collective');
-
-            // Click on day 6 days from tomorrow (5-day delta from seeded event = YELLOW genre)
             const cells = page.getByTestId('day-cell');
             await expect(cells).toHaveCount(30);
+
+            // Seed event at today+1. Click today+6 → 5-day delta → YELLOW genre.
+            await cells.nth(6).click();
+
+            const dialog = page.getByRole('dialog');
+            await expect(dialog).toBeVisible();
+
+            await dialog.getByRole('textbox', { name: /nome do evento/i }).fill('Festa Amarela');
+            await dialog.getByRole('textbox', { name: /local do evento/i }).fill('São Paulo, SP');
+
+            await dialog.getByRole('combobox', { name: /genero musical/i }).dispatchEvent('click');
+            await page.getByRole('option', { name: 'Techno', exact: true }).click();
+            await page.waitForTimeout(300);
+
+            const submitBtn = dialog.getByRole('button', { name: 'Salvar evento' });
+            await expect(submitBtn).toBeEnabled();
+            await submitBtn.dispatchEvent('click');
+
+            const toast = page.locator('[data-sonner-toast]');
+            await expect(toast.first()).toBeVisible({ timeout: 20000 });
+
+            await page.reload();
+            await page.waitForTimeout(500);
+
+            const updatedCells = page.getByTestId('day-cell');
+            await expect(updatedCells).toHaveCount(30);
+
+            // Cell index 6 should show YELLOW (genre conflict, 5-day window → yellow)
+            await expect(updatedCells.nth(6)).toHaveAttribute('aria-label', /médio risco de conflito/);
         });
 
-        test.fixme('GREEN: criar evento com gênero diferente não gera conflito', async ({ page }) => {
+        test('GREEN: criar evento com gênero diferente não gera conflito', async ({ page }) => {
             await page.goto('/dashboard/collective');
-
-            // Select a date close to seeded event but with different genre
-            // Fill event form with House (not Techno)
             const cells = page.getByTestId('day-cell');
             await expect(cells).toHaveCount(30);
+
+            // Click near seed event but use different genre (House ≠ Techno)
+            await cells.nth(2).click();
+
+            const dialog = page.getByRole('dialog');
+            await expect(dialog).toBeVisible();
+
+            await dialog.getByRole('textbox', { name: /nome do evento/i }).fill('Festa Verde');
+            await dialog.getByRole('textbox', { name: /local do evento/i }).fill('São Paulo, SP');
+
+            // Select House (different from seed's Techno)
+            await dialog.getByRole('combobox', { name: /genero musical/i }).dispatchEvent('click');
+            await page.getByRole('option', { name: 'House', exact: true }).click();
+            await page.waitForTimeout(300);
+
+            const submitBtn = dialog.getByRole('button', { name: 'Salvar evento' });
+            await expect(submitBtn).toBeEnabled();
+            await submitBtn.dispatchEvent('click');
+
+            const toast = page.locator('[data-sonner-toast]');
+            await expect(toast.first()).toBeVisible({ timeout: 20000 });
+
+            await page.reload();
+            await page.waitForTimeout(500);
+
+            const updatedCells = page.getByTestId('day-cell');
+            await expect(updatedCells).toHaveCount(30);
+
+            // Cell index 2 should NOT have conflict — different genre
+            await expect(updatedCells.nth(2)).not.toHaveAttribute('aria-label', /risco de conflito/);
         });
     });
 });

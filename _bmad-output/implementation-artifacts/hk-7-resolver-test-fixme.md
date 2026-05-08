@@ -39,18 +39,18 @@ so that **the test suite provides full confidence before Epic 4 begins**.
 
 ### T1 · Remover fixme do teste RED conflict detection (AC 1)
 
-- [ ] T1.1 Remover linha `test.fixme(true, 'CI: Supabase unreachable — server action toast never appears')` em `e2e/conflict-detection.spec.ts:23`
-- [ ] T1.2 Verificar que o teste RED completo (fill form → submit → toast → reload → assert `aria-label`) roda localmente com `npm run test:e2e -- --grep "RED: criar evento"`
+- [x] T1.1 Remover linha `test.fixme(true, 'CI: Supabase unreachable — server action toast never appears')` em `e2e/conflict-detection.spec.ts:23`
+- [x] T1.2 Verificar que o teste RED completo (fill form → submit → toast → reload → assert `aria-label`) roda localmente com `npm run test:e2e -- --grep "RED: criar evento"`
 
 ### T2 · Remover fixme do teste submit event registration (AC 1)
 
-- [ ] T2.1 Remover linha `test.fixme(true, 'CI: Supabase unreachable — server action toast never appears')` em `e2e/event-registration.spec.ts:24`
-- [ ] T2.2 Verificar que o teste `submits event and receives server response` roda localmente
+- [x] T2.1 Remover linha `test.fixme(true, 'CI: Supabase unreachable — server action toast never appears')` em `e2e/event-registration.spec.ts:24`
+- [x] T2.2 Verificar que o teste `submits event and receives server response` roda localmente
 
 ### T3 · Completar teste YELLOW conflict detection (AC 3)
 
-- [ ] T3.1 Substituir `test.fixme('YELLOW: criar evento Techno em 6 dias gera conflito amarelo', ...)` por `test(...)` em `e2e/conflict-detection.spec.ts:64`
-- [ ] T3.2 Completar implementação seguindo padrão do teste RED:
+- [x] T3.1 Substituir `test.fixme('YELLOW: criar evento Techno em 6 dias gera conflito amarelo', ...)` por `test(...)` em `e2e/conflict-detection.spec.ts:64`
+- [x] T3.2 Completar implementação seguindo padrão do teste RED:
   - Clicar cell index correspondente a 6 dias da data seed
   - Preencher formulário: nome do evento, local, gênero Techno
   - `dispatchEvent('click')` no botão Salvar
@@ -60,8 +60,8 @@ so that **the test suite provides full confidence before Epic 4 begins**.
 
 ### T4 · Completar teste GREEN conflict detection (AC 3)
 
-- [ ] T4.1 Substituir `test.fixme('GREEN: criar evento com gênero diferente não gera conflito', ...)` por `test(...)` em `e2e/conflict-detection.spec.ts:72`
-- [ ] T4.2 Completar implementação:
+- [x] T4.1 Substituir `test.fixme('GREEN: criar evento com gênero diferente não gera conflito', ...)` por `test(...)` em `e2e/conflict-detection.spec.ts:72`
+- [x] T4.2 Completar implementação:
   - Clicar cell próxima ao seed event
   - Preencher formulário com gênero House (diferente de Techno)
   - `dispatchEvent('click')` no botão Salvar
@@ -71,25 +71,25 @@ so that **the test suite provides full confidence before Epic 4 begins**.
 
 ### T5 · Remover fixme do teste ethical delay cancel (AC 3)
 
-- [ ] T5.1 Substituir `test.fixme('RED: Cancelar no meio do countdown mantém evento em planejamento', ...)` por `test(...)` em `e2e/ethical-delay.spec.ts:50`
-- [ ] T5.2 Verificar que o teste passa localmente
+- [x] T5.1 Substituir `test.fixme('RED: Cancelar no meio do countdown mantém evento em planejamento', ...)` por `test(...)` em `e2e/ethical-delay.spec.ts:50`
+- [x] T5.2 Verificar que o teste passa localmente
 
 ### T6 · Remover fixme dos 3 testes public artist profile — seed flake (AC 2)
 
-- [ ] T6.1 Substituir `test.fixme('renders public profile...', ...)` por `test(...)` em `e2e/public-artist-profile.spec.ts:15`
-- [ ] T6.2 Substituir `test.fixme('includes SEO meta title...', ...)` por `test(...)` em `e2e/public-artist-profile.spec.ts:30`
-- [ ] T6.3 Substituir `test.fixme('includes SEO meta description...', ...)` por `test(...)` em `e2e/public-artist-profile.spec.ts:41`
-- [ ] T6.4 Verificar que os 3 testes passam localmente
+- [x] T6.1 Substituir `test.fixme('renders public profile...', ...)` por `test(...)` em `e2e/public-artist-profile.spec.ts:15`
+- [x] T6.2 Substituir `test.fixme('includes SEO meta title...', ...)` por `test(...)` em `e2e/public-artist-profile.spec.ts:30`
+- [x] T6.3 Substituir `test.fixme('includes SEO meta description...', ...)` por `test(...)` em `e2e/public-artist-profile.spec.ts:41`
+- [x] T6.4 Verificar que os 3 testes passam localmente
 
 ### T7 · Verificar regressão unitária
 
-- [ ] T7.1 Rodar `npm run test` e confirmar 422+ testes passam
-- [ ] T7.2 Rodar `npm run lint:ci` e confirmar zero warnings
-- [ ] T7.3 Rodar `npm run type-check` e confirmar sem erros
+- [x] T7.1 Rodar `npm run test` e confirmar 422+ testes passam
+- [x] T7.2 Rodar `npm run lint:ci` e confirmar zero warnings
+- [x] T7.3 Rodar `npm run type-check` e confirmar sem erros
 
 ### T8 · Verificar CI final
 
-- [ ] T8.1 Submeter PR e verificar pipeline CI completa
+- [x] T8.1 Submeter PR e verificar pipeline CI completa
 - [ ] T8.2 Confirmar que `npm run test:e2e:ci` reporta zero `test.fixme` ou `test.skip`
 - [ ] T8.3 Confirmar que o job de QA Gate passa
 
