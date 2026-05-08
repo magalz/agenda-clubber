@@ -98,6 +98,16 @@ async function globalSetup() {
             INSERT INTO artists (artistic_name, slug, location, genre_primary, profile_id, status, is_verified, privacy_settings, bio)
             VALUES (${'Test DJ'}, ${'test-dj'}, ${'São Paulo, SP'}, ${'Techno'}, NULL, ${'approved'}, false, ${sql.json(DEFAULT_PRIVACY)}, ${'Bio do Test DJ'})
         `;
+        {
+            const verify = await sql<{ bio: string | null; slug: string }[]>`
+                SELECT bio, slug FROM artists WHERE slug = 'test-dj' LIMIT 1
+            `;
+            if (verify.length > 0) {
+                console.log(`[global-setup] Test DJ INSERT verify: slug=${verify[0].slug} bio=${JSON.stringify(verify[0].bio)}`);
+            } else {
+                console.log('[global-setup] Test DJ INSERT verify: ROW NOT FOUND');
+            }
+        }
 
         // 'Already Claimed DJ' — owned by claimer profile
         await sql`DELETE FROM artists WHERE artistic_name = ${'Already Claimed DJ'}`;
