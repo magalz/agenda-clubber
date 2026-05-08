@@ -1,0 +1,422 @@
+# Tech Debt & Product Decisions Registry
+# Automatically migrated from epic-3-retro-2026-05-05.md and deferred-work.md
+# HK.6 — Migrar Tracking de Débito para GitHub Issues
+# generated: 2026-05-08
+# next_step: run "npm run create:tech-debt-issues" to create GitHub Issues
+
+labels:
+  tech-debt: "Technical debt item that needs resolution"
+  decision-pending: "Product decision awaiting stakeholder input"
+  critical: "Blocks functionality or degrades performance"
+  high: "Significant impact but non-blocking"
+  medium: "Moderate impact, should be addressed"
+  low: "Minor improvement or nice-to-have"
+
+items:
+  # ──────────────────────────────────────────────
+  # CRÍTICO
+  # ──────────────────────────────────────────────
+  - id: D1
+    title: "updateEvent — complexidade cognitiva 28, HIGH RISK"
+    severity: critical
+    label: tech-debt
+    status: resolved
+    resolution: HK.1 — refatorado para complexidade < 15
+    body: |
+      ## Descrição
+      `updateEvent` em `src/features/calendar/actions.ts` tem complexidade cognitiva 28.
+      
+      ## Origem
+      Memtrace — detectado na retrospectiva do Épico 3 (05/05/2026).
+      
+      ## Status
+      Resolvido em HK.1 (Refatorar DayDetailSheet e updateEvent).
+
+  - id: D2
+    title: "DayDetailSheet — 230 linhas, complexidade 17"
+    severity: critical
+    label: tech-debt
+    status: resolved
+    resolution: HK.1 — quebrado em subcomponentes
+    body: |
+      ## Descrição
+      `DayDetailSheet` tem 230 linhas e complexidade cognitiva 17.
+      
+      ## Origem
+      Memtrace — detectado na retrospectiva do Épico 3 (05/05/2026).
+      
+      ## Status
+      Resolvido em HK.1 (Refatorar DayDetailSheet e updateEvent).
+
+  - id: D3
+    title: "Divergência RLS × app-layer: genrePrimary visível no app mas RLS bloqueia"
+    severity: critical
+    label: tech-debt
+    status: resolved
+    resolution: HK.2 — alinhado RLS com app-layer
+    body: |
+      ## Descrição
+      `events_select_policy` (RLS) bloqueia rows onde todas as flags de privacidade são `false`, mas o app-layer (`filterEventForViewer`) decide mostrar `genrePrimary`. As duas camadas divergem.
+      
+      ## Origem
+      Story 3.4, Review D1.
+      
+      ## Status
+      Resolvido em HK.2 (Corrigir divergência RLS e race condition Zustand).
+
+  - id: D4
+    title: "Lineup ↔ artists FK inexistente — matching string-normalizado"
+    severity: critical
+    label: tech-debt
+    status: open
+    body: |
+      ## Descrição
+      O matching de artistas no Conflict Engine é string-normalizado (lowercase + trim + diacritics strip). Não há FK `lineup_item → artists.id`. Grafias diferentes (ex: "DJ X" vs "D.J. X") não casam, e o engine não consegue rastrear o artista conflitante até seu perfil.
+      
+      ## Impacto
+      Falsos negativos no cálculo de conflitos quando o mesmo artista é grafado de forma diferente.
+      
+      ## Origem
+      Story 3.3, Section 4.
+
+  - id: D5
+    title: "Race condition queryFn → setCrossEvents no Zustand"
+    severity: critical
+    label: tech-debt
+    status: resolved
+    resolution: HK.2 — sincronização de estado corrigida
+    body: |
+      ## Descrição
+      Race condition entre `queryFn` do TanStack Query e `setCrossEvents` no Zustand store. Atualizações assíncronas podiam sobrescrever estado mais recente.
+      
+      ## Origem
+      Story 3.4, Review W1.
+      
+      ## Status
+      Resolvido em HK.2 (Corrigir divergência RLS e race condition Zustand).
+
+  # ──────────────────────────────────────────────
+  # ALTO
+  # ──────────────────────────────────────────────
+  - id: D6
+    title: "DEBT-3.2-A: Bio do Test DJ flake intermitente no CI"
+    severity: high
+    label: tech-debt
+    status: open
+    body: |
+      ## Descrição
+      O texto "Bio do Test DJ" não é encontrado pelo Playwright no perfil público `/artists/test-dj` em CI. Hipóteses: seed corrompido, race Suspense, ou `ON CONFLICT DO UPDATE` zerando bio.
+      
+      ## Origem
+      Story 3.2, CI run 2026-05-01.
+      
+      ## Referências
+      `deferred-work.md` — DEBT-3.2-A.
+
+  - id: D7
+    title: "Unsafe `as` casts nos mutations de eventos"
+    severity: high
+    label: tech-debt
+    body: |
+      ## Descrição
+      Mutações no Zustand usam type assertions (`as`) inseguras que podem mascarar incompatibilidades de schema quando o DB evolui.
+      
+      ## Origem
+      Story 3.4, Review W2.
+
+  - id: D8
+    title: "Erros engolidos em recompute de neighbors"
+    severity: high
+    label: tech-debt
+    body: |
+      ## Descrição
+      O recompute de vizinhos no Conflict Engine (`evaluate-conflict.ts`) engole exceções silenciosamente, podendo deixar conflitos não calculados sem notificação.
+      
+      ## Origem
+      Story 3.3 / 3.4.
+
+  - id: D9
+    title: "TODO: webhook stub QStash → Resend não implementado"
+    severity: high
+    label: tech-debt
+    body: |
+      ## Descrição
+      Webhook de notificação por e-mail está com stub — QStash configurado mas sem integração real com Resend (ou provedor de e-mail).
+      
+      ## Origem
+      Story 2.1.
+
+  - id: D10
+    title: "@ts-expect-error em isPlatformAdmin — enum role sem admin"
+    severity: high
+    label: tech-debt
+    body: |
+      ## Descrição
+      `@ts-expect-error` em `isPlatformAdmin` porque o enum `role` não inclui o valor `admin`. O enum precisa ser atualizado para refletir todos os roles do sistema.
+      
+      ## Origem
+      Story 2.3.
+
+  - id: D11
+    title: "Zod v4 breaking changes parcialmente resolvidas"
+    severity: high
+    label: tech-debt
+    body: |
+      ## Descrição
+      Zod v4 introduziu breaking changes (`.errors` → `.issues`, `errorMap` → `message`) que cascatearam por artists, auth e calendar. Algumas correções foram aplicadas pontualmente, mas o padrão não foi uniformizado.
+      
+      ## Origem
+      Story 3.2.
+
+  - id: D12
+    title: "searchTalents sem escapeLikePattern"
+    severity: high
+    label: tech-debt
+    body: |
+      ## Descrição
+      `searchTalents` em artist search usa `ILIKE` sem escape de padrões LIKE (`%`, `_`), permitindo que um input como "50%" retorne resultados inesperados.
+      
+      ## Origem
+      Story 2.3.
+
+  # ──────────────────────────────────────────────
+  # MÉDIO / BAIXO
+  # ──────────────────────────────────────────────
+  - id: D13
+    title: "80 dead-code candidates (Shadcn não utilizado, funções mortas)"
+    severity: medium
+    label: tech-debt
+    status: resolved
+    resolution: HK.3 — limpeza de dead code
+    body: |
+      ## Descrição
+      Memtrace detectou ~80 símbolos sem callers: componentes Shadcn UI não utilizados, funções utilitárias mortas, imports não usados.
+      
+      ## Origem
+      Memtrace — detectado na retrospectiva do Épico 3 (05/05/2026).
+      
+      ## Status
+      Resolvido em HK.3 (Limpeza de Dead Code).
+
+  - id: D14
+    title: "Índice pg_trgm para ILIKE em buscas textuais"
+    severity: medium
+    label: tech-debt
+    body: |
+      ## Descrição
+      Buscas textuais com `ILIKE` na busca de artistas e coletivos não têm índice `pg_trgm`. Performance pode degradar com crescimento da base.
+      
+      ## Origem
+      Story 2.2.
+
+  - id: D15
+    title: "Normalizar lineup de jsonb para tabela relacional com FK artists.id"
+    severity: medium
+    label: tech-debt
+    body: |
+      ## Descrição
+      O campo `lineup` nos eventos é `jsonb` com array de strings. Para habilitar matching determinístico e rastreabilidade até o perfil do artista, deve-se migrar para tabela relacional `lineup_items` com FK → `artists.id`.
+      
+      ## Origem
+      Story 3.3 — tech debt registrado em MEMORY.md.
+
+  - id: D16
+    title: "Adicionar campos city/uf separados em collectives e artists"
+    severity: medium
+    label: tech-debt
+    body: |
+      ## Descrição
+      Localidade atualmente é um campo único de texto. Para buscas geográficas precisas e futura funcionalidade de mapa, extrair `city` e `uf` como colunas separadas.
+      
+      ## Origem
+      Story 3.3 — citado como "futura story de limpeza de dados de localidade".
+
+  - id: D17
+    title: "Implementar event_logs (Audit Log) para Server Actions de eventos"
+    severity: medium
+    label: tech-debt
+    body: |
+      ## Descrição
+      NFR6 (Security) requer "Registro de criação e edições de eventos (Audit Log)". Não implementado no Épico 3. Toda criação/edição de evento deve registrar: usuário, ação, timestamp, diff.
+      
+      ## Origem
+      PRD NFR6 — não coberto em nenhuma story.
+
+  - id: D18
+    title: "Tornar code review adversarial 3 camadas obrigatório com gate de CI"
+    severity: medium
+    label: tech-debt
+    body: |
+      ## Descrição
+      Story 3.5 foi para main sem code review adversarial. O padrão #4 da retrospectiva identificou que "12 patches críticos capturados em 3.1+3.4" pela revisão 3 camadas. Deve-se criar gate de CI que bloqueie merges sem review adversarial.
+      
+      ## Origem
+      Retrospectiva Épico 3, §3 Padrão #4.
+
+  - id: D19
+    title: "UI granular de privacidade por campo (artists)"
+    severity: medium
+    label: tech-debt
+    body: |
+      ## Descrição
+      Perfil de artista não tem toggle granular de privacidade por campo (diferente de eventos que já tem). Artistas só têm opções predefinidas (Público / Coletivos / Privado / Ghost).
+      
+      ## Origem
+      Story 2.3.
+
+  - id: D20
+    title: "CHECK constraint DB em privacy_settings jsonb"
+    severity: medium
+    label: tech-debt
+    body: |
+      ## Descrição
+      `privacy_settings` em `artists` é `jsonb` sem CHECK constraint no DB. Schemas inválidos podem ser persistidos.
+      
+      ## Origem
+      Story 2.3.
+
+  - id: D21
+    title: "Promise.all falha parcial em searchRestrictedArtistByName"
+    severity: medium
+    label: tech-debt
+    body: |
+      ## Descrição
+      `searchRestrictedArtistByName` usa `Promise.all` em queries que podem falhar individualmente. Uma falha parcial derruba toda a busca.
+      
+      ## Origem
+      Story 2.3.
+
+  - id: D22
+    title: "supabase db reset não validado localmente"
+    severity: low
+    label: tech-debt
+    body: |
+      ## Descrição
+      `supabase db reset` não foi testado/validado no ambiente local dos desenvolvedores. Pode quebrar migrations ou perder dados de seed.
+      
+      ## Origem
+      Story 2.3.
+
+  - id: D23
+    title: "Health Pulse cross-collective deferido"
+    severity: low
+    label: tech-debt
+    body: |
+      ## Descrição
+      Health Pulse no calendário reflete apenas eventos do próprio coletivo. Health Pulse cross-collective (agregando TODOS os coletivos visíveis) foi deferido para reavaliação de UX e performance.
+      
+      ## Origem
+      Story 3.4 — deferred.
+
+  - id: D24
+    title: "Realtime cross-collective deferido"
+    severity: low
+    label: tech-debt
+    body: |
+      ## Descrição
+      Atualizações Realtime via Supabase Subscription só funcionam para eventos do próprio coletivo. Atualizações cross-collective (ex: outro coletivo cria evento conflitante) não aparecem sem refresh.
+      
+      ## Origem
+      Story 3.4 — deferred.
+
+  - id: D25
+    title: "Navegação Cmd+K → /artists/[slug] TODO aberto"
+    severity: low
+    label: tech-debt
+    body: |
+      ## Descrição
+      O Command Menu (Cmd+K) tem um TODO para navegar diretamente ao perfil do artista (`/artists/[slug]`). Atualmente só filtra resultados no modal.
+      
+      ## Origem
+      Story 2.2.
+
+  # ──────────────────────────────────────────────
+  # DEFERRED-WORK.MD
+  # ──────────────────────────────────────────────
+  - id: DEBT-3.2-A
+    title: "Bio do Test DJ não visível em E2E (CI-only)"
+    severity: high
+    label: tech-debt
+    body: |
+      ## Descrição
+      O texto "Bio do Test DJ" não encontrado pelo Playwright em CI no perfil `/artists/test-dj`.
+      
+      ## Hipóteses
+      1. Seed corrompido por runs CI anteriores
+      2. Race condition Suspense + cacheComponents
+      3. ON CONFLICT DO UPDATE zerando bio
+      
+      ## Origem
+      Story 3.2, CI run 2026-05-01.
+      
+      ## Referência
+      `deferred-work.md` (deprecado).
+
+  - id: BH-7
+    title: "Missing schema qualifier ON public.events em migrations"
+    severity: low
+    label: tech-debt
+    body: |
+      ## Descrição
+      Migrations 010 e 011 usam `ON events` sem qualificador de schema `public.`. Risco: search_path diferente em ambientes complexos de CI.
+      
+      ## Origem
+      Code Review de HK.2 (2026-05-06).
+
+  # ──────────────────────────────────────────────
+  # DECISÕES DE PRODUTO PENDENTES
+  # ──────────────────────────────────────────────
+  - id: DP1
+    title: "[Decisão] Eventos públicos cross-visible? Mostrar eventos de outros coletivos no grid?"
+    severity: medium
+    label: decision-pending
+    body: |
+      ## Decisão Pendente
+      Eventos de outros coletivos devem aparecer no grid do calendário? Se sim, com qual nível de detalhe?
+      
+      ## Origem
+      Story 3.3, Tópico #1.
+
+  - id: DP2
+    title: "[Decisão] Engine deve ignorar eventos 100% privados?"
+    severity: medium
+    label: decision-pending
+    body: |
+      ## Decisão Pendente
+      O Conflict Engine hoje lê TODOS os eventos independente de privacidade. Um evento completamente privado ainda gera conflito. Trade-off: utilidade do alerta vs direito de planejar em segredo.
+      
+      ## Origem
+      Story 3.3, Tópico #2.
+
+  - id: DP3
+    title: "[Decisão] Gênero do coletivo como proxy de conflito?"
+    severity: medium
+    label: decision-pending
+    body: |
+      ## Decisão Pendente
+      Quando um evento não tem `genrePrimary` definido, o engine deve usar o gênero principal do coletivo como proxy?
+      
+      ## Origem
+      Story 3.3, Tópico #3.
+
+  - id: DP4
+    title: "[Decisão] Visibilidade da fonte do conflito nas justificativas"
+    severity: low
+    label: decision-pending
+    body: |
+      ## Decisão Pendente
+      A justificativa de conflito deve revelar progressivamente mais informação (nome do coletivo, evento, data) conforme as flags de privacidade do evento conflitante?
+      
+      ## Origem
+      Story 3.3, Tópico #5.
+
+  - id: DP5
+    title: "[Decisão] Justificativa deve revelar progressivamente conforme flags de privacidade?"
+    severity: low
+    label: decision-pending
+    body: |
+      ## Decisão Pendente
+      Mesmo contexto do DP4 — precisa definir a política de revelação progressiva de dados na justificativa de conflito.
+      
+      ## Origem
+      Story 3.3, Tópico #5.

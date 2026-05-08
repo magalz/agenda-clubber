@@ -1,5 +1,15 @@
 # Deferred Work & Débito Técnico
 
+> **⚠️ DEPRECADO — 2026-05-08**
+>
+> Este arquivo foi substituído por GitHub Issues + `tech-debt.yaml`.
+> Consulte `_bmad-output/implementation-artifacts/tech-debt.yaml` para o índice programático,
+> ou as GitHub Issues no repositório [magalz/agenda-clubber](https://github.com/magalz/agenda-clubber/issues)
+> com as labels `tech-debt` e `decision-pending` para o tracking ativo.
+>
+> Para criar os issues automaticamente, execute: `npm run create:tech-debt-issues`
+> ---
+
 Issues adiadas deliberadamente para ciclos futuros. Cada entrada referencia um teste fixme ou observação.
 
 ---
