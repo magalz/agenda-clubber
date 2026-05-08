@@ -832,3 +832,91 @@ Watcher morre na desconexão MCP. Se o server salvasse `watches.json` em disco, 
 ---
 
 **Filed:** 2026-05-08
+
+---
+
+# Memtrace Session Log — Story HK.7 (Create)
+
+**Epic:** epic-housekeeping
+**Process:** criação de story hk-7 (create-story workflow)
+**Session:** 2026-05-08 — Resolver Todos os test.fixme (8 E2E tests, 4 spec files)
+**Agent:** opencode-go/deepseek-v4-flash
+**Commits:** `f2ffcce`
+
+---
+
+## 1. Memtrace Utilization
+
+| Phase | Tool Call | Purpose |
+|-------|-----------|---------|
+| Activation (prepend) | `get_codebase_briefing(summary)` | Repo scale (1221 symbols, 5 modules, 80 dead-code candidates, 3 API routes) |
+| Pre-analysis | `list_indexed_repositories` | Discover available repos — agenda-clubber indexed with 0 nodes |
+
+**Skipped (prescribed by customization but not applicable):**
+- `get_symbol_context` — no TS symbol target (hk.7 targets E2E .spec.ts files, which are Playwright tests, not runtime symbols)
+- `get_impact` — no runtime code to trace (hk.7 modifies only test files)
+- `find_dependency_path` — no code dependencies between hk.7 and next story
+- `get_process_flow` — no execution flow to trace (E2E tests are test orchestration, not runtime flows)
+- `get_evolution` — would have shown recent changes in e2e/ directory
+
+---
+
+## 2. Counterfactual Analysis
+
+- **Story creation**: Without Memtrace, same `Read` + `grep` workflow would have been used — test files are `.ts` but they are Playwright spec files (.spec.ts), which don't have formal caller/callee relationships the graph traces
+- **Test analysis**: `grep` found all 8 `test.fixme` across 4 files directly — Memtrace's `find_code` would have been slower (need to read the actual file contents anyway)
+- **Codebase awareness**: `get_codebase_briefing` provided baseline (1221 symbols, 422+ tests, 80 dead-code) — useful for AC 4 ("all 422+ unit tests must continue passing")
+- **Previous story intelligence**: HK.6 and HK.4 story files were read via `Read` (markdown) — Memtrace doesn't index markdown
+
+---
+
+## 3. Measurable Gains
+
+| Metric | With Memtrace | Without (estimate) |
+|--------|---------------|-------------------|
+| Repo scale awareness | 1 call (`get_codebase_briefing`) — 1221 symbols, 422+ tests | Manual directory traversal |
+| test.fixme discovery | Via `grep` (not Memtrace) | Same — `grep` is faster for content search |
+| Previous story context | Via `Read` on .md files | Same — Memtrace doesn't index markdown |
+| Architecture context | Via `Read` on architecture.md | Same — Memtrace doesn't index markdown |
+
+**Note:** This story targets only E2E test files (4 `.spec.ts` files). These are Playwright tests — not runtime code used by the production system. Memtrace indexes them as TypeScript symbols but without meaningful caller/callee edges (tests call Playwright APIs, not internal functions). The primary analysis was content search (`grep` for `test.fixme`) + reading existing test bodies. Memtrace contributed ~15% (codebase briefing + status verification) — consistent with the infra/docs pattern observed in HK.4 through HK.6.
+
+---
+
+## 4. Usage Optimization
+
+### 4.1. `get_evolution` não chamado para contexto temporal
+
+Não chamei `get_evolution(mode=compound)` na ativação. Para uma story que resolve `test.fixme`, `get_evolution` teria revelado:
+- Se arquivos `e2e/*.spec.ts` foram modificados recentemente (mudanças do HK.4 no seed)
+- Se o baseline de testes foi alterado nas últimas sprints
+- Se há working-tree não commitado (que não havia — confirmado por `git status`)
+
+**Insight**: adicionar `get_evolution` como prep step obrigatório mesmo para stories de teste. O custo é 1 call e o diagnóstico (working-tree, mudanças recentes) é imediato.
+
+### 4.2. `find_code` não usado para buscar specs
+
+`grep` foi mais eficiente que `find_code` para achar `test.fixme` — é busca de conteúdo, não de símbolo. Mas `find_code("test.fixme")` teria confirmado que não há `test.fixme` em arquivos não-E2E (ex: unit tests).
+
+**Insight**: para stories que envolvem padrões de código específicos (`test.fixme`, `test.skip`), `find_code` serve como validação de escopo ("só existe nestes arquivos") enquanto `grep` serve para leitura de conteúdo.
+
+### 4.3. `find_dead_code` não chamado — justificado
+
+HK.7 não adiciona novos símbolos (remove apenas tags e completa testes existentes). `find_dead_code` não teria mostrado nada relevante. Se houvesse extração de funções compartilhadas entre testes, aí sim valeria a chamada.
+
+---
+
+## 5. Feature Recommendation
+
+### 5.1. Playwright test.fixme como nó detectável
+
+`test.fixme` em Playwright spec files é um padrão semântico — significa "teste com bug conhecido". Se Memtrace indexasse `test.fixme` e `test.skip` como propriedades de nó de teste, seria possível:
+- `find_code("test.fixme")` retornar lista exata de testes skipped com descrição
+- `get_evolution` mostrar "test.fixme removido" como mudança significativa
+- Rastreabilidade: "story HK.7 removeu 8 test.fixme" teria suporte de grafo
+
+Tecnicamente viável (AST pattern + node property), e resolveria o gap desta sessão onde `grep` foi a ferramentas mais eficaz.
+
+---
+
+**Filed:** 2026-05-08
