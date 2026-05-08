@@ -84,7 +84,7 @@ development_status:
   hk-4-pipeline-ci-2-0-e-unificacao-db: done
   hk-5-gate-de-qa-automatizado: done
   hk-6-migrar-tracking-para-github-issues: done
-  hk-7-resolver-test-fixme: review
+  hk-7-resolver-test-fixme: done
   epic-housekeeping-retrospective: optional
 
   epic-4: backlog

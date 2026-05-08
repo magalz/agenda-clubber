@@ -2,7 +2,7 @@
 
 [Risk: LOW — Apenas alterações em E2E tests, nenhum código de runtime]
 
-Status: review
+Status: done
 
 ## Story
 
