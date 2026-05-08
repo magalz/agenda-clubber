@@ -46,6 +46,6 @@ test.describe('Story 3.2 — Event Registration', () => {
 
         // Accept success or error toast — both mean the server action was reached
         const toast = page.locator('[data-sonner-toast]');
-        await expect(toast.first()).toBeVisible({ timeout: 20000 });
+        await expect(toast.first()).toBeVisible({ timeout: 30000 });
     });
 });

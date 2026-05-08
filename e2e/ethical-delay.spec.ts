@@ -67,7 +67,7 @@ test.describe('Story 3.5 — Ethical Delay Component', () => {
                     if (content?.includes('Evento Delay Ético')) {
                         found = true;
 
-                        const confirmBtn = page.getByRole('listitem').filter({ hasText: 'Evento Delay Ético' }).getByRole('button', { name: /confirmar evento/i });
+                        const confirmBtn = sheet.getByRole('button', { name: /confirmar evento/i }).first();
                         await confirmBtn.click();
 
                         const ethicalDialog = page.locator('[role="alertdialog"]');
