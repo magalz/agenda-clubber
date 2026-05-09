@@ -102,16 +102,20 @@ items:
     title: "DEBT-3.2-A: Bio do Test DJ flake intermitente no CI"
     severity: high
     label: tech-debt
-    status: open
+    status: resolved
+    resolution: "PR #79 — re-seed do Test DJ via global-setup.ts corrige bio corrompida no CI"
     body: |
       ## Descrição
       O texto "Bio do Test DJ" não é encontrado pelo Playwright no perfil público `/artists/test-dj` em CI. Hipóteses: seed corrompido, race Suspense, ou `ON CONFLICT DO UPDATE` zerando bio.
-      
+
       ## Origem
       Story 3.2, CI run 2026-05-01.
-      
+
       ## Referências
       `deferred-work.md` — DEBT-3.2-A.
+
+      ## Status
+      Resolvido em PR #79 (fix bio do Test DJ via global-setup.ts).
 
   - id: D7
     title: "Unsafe `as` casts nos mutations de eventos"

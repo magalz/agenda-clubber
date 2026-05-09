@@ -13,6 +13,7 @@
     "test:e2e:ci": "playwright test",
     "lint:ci": "eslint . --max-warnings=0",
     "preflight": "node _bmad/scripts/preflight.mjs",
+    "session:start": "node _bmad/scripts/session-start.mjs",
     "qa:gate": "node scripts/qa-gate.mjs",
     "create:tech-debt-issues": "node scripts/create-tech-debt-issues.mjs"
   },

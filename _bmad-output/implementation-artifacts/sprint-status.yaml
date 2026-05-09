@@ -1,5 +1,5 @@
 ﻿# generated: terça-feira, 14 de abril de 2026
-# last_updated: sexta-feira, 8 de maio de 2026 (hk-7 → ready-for-dev)
+# last_updated: sábado, 9 de maio de 2026 (epic-housekeeping → done; pre-Épico-4 iniciado; epic-4 NÃO iniciar)
 # project: Agenda Clubber
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: terça-feira, 14 de abril de 2026
-last_updated: sexta-feira, 8 de maio de 2026 (hk-7 → ready-for-dev)
+last_updated: sábado, 9 de maio de 2026 (hk-7 → done; epic-housekeeping retro concluída)
 project: Agenda Clubber
 project_key: NOKEY
 tracking_system: file-system
@@ -77,7 +77,7 @@ development_status:
 
   # Épico Housekeeping — inserido após a retrospectiva do Épico 3 (05/05/2026).
   # Bloqueador para o Épico 4 — não iniciar Épico 4 antes deste concluído.
-  epic-housekeeping: in-progress
+  epic-housekeeping: done
   hk-1-refatorar-daydetailsheet-e-updateevent: done
   hk-2-corrigir-divergencia-rls-e-race-condition: done
   hk-3-limpeza-de-dead-code: done
@@ -85,9 +85,19 @@ development_status:
   hk-5-gate-de-qa-automatizado: done
   hk-6-migrar-tracking-para-github-issues: done
   hk-7-resolver-test-fixme: done
-  epic-housekeeping-retrospective: optional
+  epic-housekeeping-retrospective: done
 
-  epic-4: backlog
+  # Pré-Épico 4 — fase de preparação obrigatória
+  # Bloqueador para Épico 4 — não iniciar 4.1 antes de concluído.
+  # Ver _bmad-output/implementation-artifacts/epic-4-readiness.md
+  epic-4-readiness: in-progress
+  pre-4-resolve-product-decisions: ready-for-dev   # correct-course resolve DP1/DP2/DP4
+  pre-4-spike-resend: backlog
+  pre-4-spike-evolution-api: backlog
+  pre-4-spike-conflict-persistence: backlog
+  pre-4-spike-whatsapp-schema: backlog
+
+  epic-4: backlog  # NÃO iniciar até epic-4-readiness done
   4-1-painel-lateral-de-resolucao-de-conflitos-sheet: backlog
   4-2-notificacoes-de-conflitos-via-e-mail: backlog
   4-3-notificacoes-admin-via-whatsapp-group: backlog
