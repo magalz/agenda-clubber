@@ -375,6 +375,18 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
 
     **The developer now has everything needed for flawless implementation!**
   </output>
+
+  <!-- QA DUAL-ENTRY: remind the human to run QA-Design before dev-story -->
+  <output>**📋 PRÓXIMO PASSO — QA-Design (Obrigatório)**
+
+    Antes de chamar `/bmad-dev-story`, execute o QA-Design:
+
+    1. `/bmad-tea` → ATDD (gera acceptance test scaffolds)
+    2. `/bmad-tea` → Test Design (define estratégia de teste)
+
+    Não pule esta etapa. Os checkboxes do QA-Design no story file
+    DEVEM estar preenchidos antes do dev-story aceitar começar.
+  </output>
 </step>
 
 </workflow>

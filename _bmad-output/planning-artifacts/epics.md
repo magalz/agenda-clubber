@@ -564,6 +564,11 @@ So that the test suite provides full confidence before Epic 4 begins.
 
 ## Epic 4: Mensageria e Notificações Assíncronas (WhatsApp/Email)
 
+> ⚠️ **NÃO INICIAR.** Este épico requer fase de preparação obrigatória.
+> Ver `_bmad-output/implementation-artifacts/epic-4-readiness.md` para o mapa completo de bloqueadores.
+> Decisões de produto DP1/DP2/DP4 estão em aberto. Schema não preparado (whatsapp_phone, conflitos persistidos, Resend, Evolution API).
+> **Pré-requisito:** `epic-4-readiness` deve estar `done` antes de qualquer story 4.x.
+
 Garantir uma comunicação cirúrgica e facilitar a resolução bilateral de conflitos através de automações em background e canais de contato direto.
 
 ### Story 4.1: Painel Lateral de Resolução de Conflitos (Sheet) (UX-DR5)

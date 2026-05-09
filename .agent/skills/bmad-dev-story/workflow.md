@@ -170,6 +170,22 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
     </action>
     <action if="story file inaccessible">HALT: "Cannot develop story without access to story file"</action>
     <action if="incomplete task or subtask requirements ambiguous">ASK user to clarify or HALT</action>
+
+    <!-- QA DUAL-ENTRY: block if QA-Design checkboxes are empty -->
+    <action>Check the story file for a "QA Maturity Checklist" or "QA-Design" section</action>
+    <check if="story has QA-Design checkboxes AND (all are unchecked OR section is missing)">
+      <output>🚫 **QA-Design não concluído.**
+
+        Os checkboxes de QA-Design no story file estão vazios ou ausentes.
+        Antes de implementar, execute o QA-Design:
+
+        1. `/bmad-tea` → ATDD
+        2. `/bmad-tea` → Test Design
+
+        O Dev Story não pode prosseguir sem QA-Design.
+      </output>
+      <action>HALT - QA-Design checkboxes must be filled</action>
+    </check>
   </step>
 
   <step n="2" goal="Load project context and story information">
@@ -445,6 +461,17 @@ Load config from `{project-root}/_bmad/bmm/config.yaml` and resolve:
       <action>Suggest checking {sprint_status} to see project progress</action>
     </check>
     <action>Remain flexible - allow user to choose their own path or ask for other assistance</action>
+
+    <!-- QA DUAL-ENTRY: suggest QA-Verify after implementation -->
+    <output>**📋 PRÓXIMO PASSO — QA-Verify (Recomendado)**
+
+      Após o code-review, execute o QA-Verify:
+
+      1. `/bmad-tea` → Test Review (audita qualidade dos testes)
+      2. `/bmad-tea` → Trace (verifica rastreabilidade ACs → testes)
+
+      Isto garante que a qualidade da implementação foi validada.
+    </output>
   </step>
 
 </workflow>

@@ -2,7 +2,7 @@
 
 [Risk: LOW — Process/infrastructure story, no runtime code changes]
 
-Status: review
+Status: done
 
 ## Story
 

@@ -1,6 +1,6 @@
 # Story HK.1: Refatorar DayDetailSheet e updateEvent
 
-Status: review
+Status: done
 
 ## Story
 

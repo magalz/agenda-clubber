@@ -5,10 +5,14 @@ PRE-FLIGHT CHECK — EXECUTAR ANTES DE QUALQUER AÇÃO
 ═══════════════════════════════════════════════════════════
 
 **STOP.** Antes de planejar, ler artefatos, listar diretórios ou executar
-qualquer ação no projeto, execute a sequência abaixo. Pular esta etapa
+qualquer ação no projeto, execute o pre-flight. Pular esta etapa
 é violar instrução explícita do projeto.
 
-Pode ser feito manualmente (comandos abaixo) ou via script automatizado:
+Execução preferida (faz pre-flight + resolve customizações):
+
+    npm run session:start
+
+Equivalente manual:
 
     npm run preflight
 
@@ -88,6 +92,27 @@ Antes de marcar story como `done` no sprint-status, verificar:
 - [ ] Review Findings preenchido (se houve review)
 
 Story file incompleto = story não está done.
+
+═══════════════════════════════════════════════════════════
+DEAD CODE VALIDATION
+═══════════════════════════════════════════════════════════
+
+Antes de remover candidatos de `find_dead_code`, consulte
+`docs/memtrace-pitfalls.md` para evitar falsos positivos
+conhecidos (Record dispatch, função como valor, framework
+entry points, MSW, Vitest mocks, ghosts históricos).
+
+Use `node scripts/validate-dead-code.mjs` para classificar
+automaticamente cada candidato.
+
+═══════════════════════════════════════════════════════════
+MEMTRACE FEEDBACK
+═══════════════════════════════════════════════════════════
+
+Ao final de qualquer sessão onde ferramentas Memtrace foram
+usadas (ou poderiam ter sido), registre feedback:
+
+    /bmad-memtrace-feedback
 
 ═══════════════════════════════════════════════════════════
 CONVENÇÕES DE BRANCH
