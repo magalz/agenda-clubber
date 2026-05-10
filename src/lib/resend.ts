@@ -1,6 +1,10 @@
 import { Resend } from 'resend';
 
-export const resendClient = new Resend(process.env.RESEND_API_KEY ?? '');
+function getResendClient(): Resend {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) throw new Error('Missing API key. Pass it to the constructor `new Resend("re_123")`');
+    return new Resend(key);
+}
 
 export async function sendArtistClaimInvitation(
     email: string,
@@ -14,7 +18,7 @@ export async function sendArtistClaimInvitation(
     const claimUrl = `${siteUrl}/claim-artist?name=${encodeURIComponent(artisticName)}`;
 
     try {
-        await resendClient.emails.send({
+        await getResendClient().emails.send({
             from: 'Agenda Clubber <noreply@agendaclubber.com>',
             to: email,
             subject: `Seu perfil foi criado na Agenda Clubber, ${artisticName}!`,
