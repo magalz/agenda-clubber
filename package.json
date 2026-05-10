@@ -15,7 +15,8 @@
     "preflight": "node _bmad/scripts/preflight.mjs",
     "session:start": "node _bmad/scripts/session-start.mjs",
     "qa:gate": "node scripts/qa-gate.mjs",
-    "create:tech-debt-issues": "node scripts/create-tech-debt-issues.mjs"
+    "create:tech-debt-issues": "node scripts/create-tech-debt-issues.mjs",
+    "ci:local": "node scripts/ci-local.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",

@@ -134,7 +134,7 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
                 if (count < 30) return null;
                 const label = await updatedCells.nth(15).getAttribute('aria-label');
                 return label;
-            }, { timeout: 15000, message: 'GREEN: cell should show event without RED conflict after reload' }).toMatch(/evento/);
+            }, { timeout: 15000, message: 'GREEN: cell should show baixo risco (not alto risco) after reload' }).toMatch(/baixo risco/);
         });
     });
 });
