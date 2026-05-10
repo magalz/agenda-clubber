@@ -1,5 +1,6 @@
 import { verifySignatureAppRouter } from "@upstash/qstash/nextjs";
 import { z } from "zod";
+import { sendArtistClaimInvitation } from "@/lib/resend";
 
 const payloadSchema = z.object({
     artistId: z.string().uuid(),
@@ -20,13 +21,20 @@ async function handler(req: Request) {
         return Response.json({ error: "Invalid payload" }, { status: 400 });
     }
 
-    console.info("[artist-claim-invitation]", {
-        category: "artist-claim-invitation",
-        data: parsed.data,
-    });
+    const { email, artisticName } = parsed.data;
 
-    // TODO(story-2.x): replace stub with Resend/transactional provider integration
-    return Response.json({ ok: true, stub: true });
+    const result = await sendArtistClaimInvitation(email, artisticName);
+    if (!result.sent) {
+        console.error("[artist-claim-invitation] Failed to send email", {
+            error: result.error,
+            email,
+            artisticName,
+        });
+        return Response.json({ ok: false, error: result.error }, { status: 500 });
+    }
+
+    console.info("[artist-claim-invitation] Email sent", { email, artisticName });
+    return Response.json({ ok: true });
 }
 
 export async function POST(req: Request) {

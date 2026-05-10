@@ -52,13 +52,13 @@
 
 | Pré-requisito | Estado | Severidade |
 |---------------|--------|------------|
-| D9 — Resend integration | ❌ TODO ativo: `"replace stub with Resend/transactional provider integration"` em `webhooks/notifications/artist-claim/route.ts:28` | 🔴 Bloqueador técnico |
+| D9 — Resend integration | ✅ Stub substituído por Resend (`sendArtistClaimInvitation`) | 🟢 OK |
 | QStash funcional (envia → consome) | ✅ Já tem (Story 2.1) | ✅ OK |
 | DP2 (notificar conflito com evento privado?) | ❌ Aberto | 🔴 Bloqueador de produto |
 
 ### Ações necessárias
-1. **Spike pré-4-1**: Resend integration — substituir stub QStash → Resend, padronizar template de email transacional
-2. Resolver DP2 via `bmad-correct-course`
+1. ✅ Spike pré-4-1: Resend integration concluída — stub substituído por `sendArtistClaimInvitation` com template HTML
+2. ✅ DP2 resolvido via `bmad-correct-course`
 
 ---
 
@@ -81,14 +81,14 @@
 
 | Pré-requisito | Estado | Severidade |
 |---------------|--------|------------|
-| Conflitos persistidos no DB (com status mutável) | ❌ Hoje compute-on-write (Q5). Status mutual exigiria `event_conflicts` table ou coluna nova | 🔴 Bloqueador de schema |
-| Status `consensual_agreement` novo | ❌ Schema atual só tem `planning` / `confirmed` em events; não há concept de "conflict resolution status" | 🔴 Bloqueador de schema |
+| Conflitos persistidos no DB (com status mutável) | ✅ `event_conflicts` table criada (migration 013); `syncConflictPairs` integrado ao `evaluateAndPersist` | 🟢 OK |
+| Status `consensual_agreement` novo | ✅ `ConflictResolutionStatus` type criado: `open → a_resolved → b_resolved → consensual_agreement` | 🟢 OK |
 | Realtime cross-collective (D24) | ❌ Deferido no Épico 3 | 🟡 Pode ficar pra v2 |
 
 ### Ações necessárias
-1. **Spike pré-4-3**: Conflict persistence model — decidir `event_conflicts` table com status, vs flag em events
-2. Migration definida
-3. Resolver DP1 (ambos precisam ver o conflito para resolvê-lo)
+1. ✅ Spike pré-4-3: `event_conflicts` table com status (open → a_resolved → b_resolved → consensual_agreement)
+2. ✅ Migration 013 definida (supabase/migrations/013_event_conflicts.sql)
+3. ✅ DP1 resolvido via `bmad-correct-course` (ambos veem o conflito)
 
 ---
 
@@ -100,9 +100,9 @@ Fase 0b — Schema:   decidir whatsapp_phone (dedicated vs jsonb)
 Fase 0c — Tooling:  decidir Evolution API (self-host vs SaaS)
                      ↓
 Fase 1 — Spikes técnicas (4 spikes, podem rodar em paralelo com Fase 0):
-  Spike 1: Resend integration (D9)
+  Spike 1: ✅ Resend integration (D9)
   Spike 2: Evolution API setup
-  Spike 3: Conflict persistence model
+  Spike 3: ✅ Conflict persistence model
   Spike 4: WhatsApp schema migration
                      ↓
 Fase 2 — Atualizar PRD/epics.md com base nas spikes

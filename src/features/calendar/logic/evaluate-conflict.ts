@@ -2,9 +2,10 @@ import 'server-only';
 
 import { db as drizzleDb } from '@/db';
 import { events } from '@/db/schema/events';
+import { eventConflicts } from '@/db/schema/event-conflicts';
 import { collectives } from '@/db/schema/collectives';
 import { artists } from '@/db/schema/artists';
-import { eq, and, gte, lte, ne, sql, inArray } from 'drizzle-orm';
+import { eq, and, gte, lte, ne, sql, inArray, or } from 'drizzle-orm';
 import type { ConflictEvaluation, ConflictLevel, ResolvedLineupEntry, RuleHit } from '../types';
 import { normalizeArtistName, isSameLocale } from './normalize';
 import { evaluateGenreRule } from './rules/genre-window';
@@ -203,6 +204,66 @@ export function shiftDate(dateStr: string, days: number): string {
     return d.toISOString().split('T')[0];
 }
 
+export async function syncConflictPairs(eventId: string, db: DbClient): Promise<void> {
+    const candidate = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!candidate.length) return;
+
+    const ev = candidate[0];
+    const startDate = shiftDate(ev.eventDate, -15);
+    const endDate = shiftDate(ev.eventDate, 15);
+
+    const neighbors = await db
+        .select({ id: events.id, conflictLevel: events.conflictLevel })
+        .from(events)
+        .where(and(gte(events.eventDate, startDate), lte(events.eventDate, endDate), ne(events.id, eventId)));
+
+    const candidateLevel = ev.conflictLevel;
+
+    const activeNeighborIds = new Set(
+        candidateLevel && candidateLevel !== 'green'
+            ? neighbors.filter((n) => n.conflictLevel && n.conflictLevel !== 'green').map((n) => n.id)
+            : []
+    );
+
+    const existingPairs = await db
+        .select()
+        .from(eventConflicts)
+        .where(or(eq(eventConflicts.eventAId, eventId), eq(eventConflicts.eventBId, eventId)));
+
+    const resolvedPairIds = new Set<string>();
+
+    for (const pair of existingPairs) {
+        const otherId = pair.eventAId === eventId ? pair.eventBId : pair.eventAId;
+        if (activeNeighborIds.has(otherId)) {
+            if (pair.status === 'open') {
+                resolvedPairIds.add(otherId);
+                continue;
+            }
+            if (pair.status === 'consensual_agreement') {
+                resolvedPairIds.add(otherId);
+                continue;
+            }
+        }
+        await db.delete(eventConflicts).where(eq(eventConflicts.id, pair.id));
+    }
+
+    for (const neighborId of activeNeighborIds) {
+        if (resolvedPairIds.has(neighborId)) continue;
+
+        const [aId, bId] = [eventId, neighborId].sort();
+        await db
+            .insert(eventConflicts)
+            .values({
+                eventAId: aId,
+                eventBId: bId,
+                rule: 'genre',
+                level: candidateLevel as 'yellow' | 'red',
+                justification: ev.conflictJustification ?? 'Conflito detectado',
+            })
+            .onConflictDoNothing({ target: [eventConflicts.eventAId, eventConflicts.eventBId, eventConflicts.rule] });
+    }
+}
+
 export async function evaluateAndPersist(eventId: string, db: DbClient): Promise<ConflictEvaluation> {
     const evaluation = await evaluateConflict(eventId, db);
     await db
@@ -212,6 +273,9 @@ export async function evaluateAndPersist(eventId: string, db: DbClient): Promise
             conflictJustification: evaluation.justification,
         })
         .where(eq(events.id, eventId));
+
+    await syncConflictPairs(eventId, db);
+
     return evaluation;
 }
 
