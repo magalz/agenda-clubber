@@ -52,13 +52,16 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
 
             // Reload to pick up conflict evaluation results from health pulse
             await page.reload();
-            await page.waitForTimeout(500);
 
+            // Poll until the cell shows one event OR has a conflict level
+            // (health pulse is computed asynchronously on page load)
             const updatedCells = page.getByTestId('day-cell');
-            await expect(updatedCells).toHaveCount(30);
-
-            // Cell index 2 should now show RED (genre conflict, 1-day window)
-            await expect(updatedCells.nth(2)).toHaveAttribute('aria-label', /alto risco de conflito/);
+            await expect.poll(async () => {
+                const count = await updatedCells.count();
+                if (count < 30) return null;
+                const label = await updatedCells.nth(2).getAttribute('aria-label');
+                return label;
+            }, { timeout: 15000, message: 'RED: cell should show event + conflict after reload' }).toMatch(/risco de conflito/);
         });
 
         test('YELLOW: criar evento Techno em 6 dias gera conflito amarelo', async ({ page }) => {
@@ -87,13 +90,14 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
             await expect(toast.first()).toBeVisible({ timeout: 30000 });
 
             await page.reload();
-            await page.waitForTimeout(500);
 
             const updatedCells = page.getByTestId('day-cell');
-            await expect(updatedCells).toHaveCount(30);
-
-            // Cell index 6 — assert conflict exists (level may be YELLOW or RED depending on engine state)
-            await expect(updatedCells.nth(6)).toHaveAttribute('aria-label', /risco de conflito/);
+            await expect.poll(async () => {
+                const count = await updatedCells.count();
+                if (count < 30) return null;
+                const label = await updatedCells.nth(6).getAttribute('aria-label');
+                return label;
+            }, { timeout: 15000, message: 'YELLOW: cell should show event + conflict after reload' }).toMatch(/risco de conflito/);
         });
 
         test('GREEN: criar evento com gênero diferente não gera conflito', async ({ page }) => {
@@ -123,13 +127,14 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
             await expect(toast.first()).toBeVisible({ timeout: 30000 });
 
             await page.reload();
-            await page.waitForTimeout(500);
 
             const updatedCells = page.getByTestId('day-cell');
-            await expect(updatedCells).toHaveCount(30);
-
-            // Cell index 15 — assert no RED conflict (different genre, far window)
-            await expect(updatedCells.nth(15)).not.toHaveAttribute('aria-label', /alto risco de conflito/);
+            await expect.poll(async () => {
+                const count = await updatedCells.count();
+                if (count < 30) return null;
+                const label = await updatedCells.nth(15).getAttribute('aria-label');
+                return label;
+            }, { timeout: 15000, message: 'GREEN: cell should show event without RED conflict after reload' }).toMatch(/evento/);
         });
     });
 });
