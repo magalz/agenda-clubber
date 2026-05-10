@@ -239,6 +239,10 @@ export async function syncConflictPairs(eventId: string, db: DbClient): Promise<
                 resolvedPairIds.add(otherId);
                 continue;
             }
+            if (pair.status === 'consensual_agreement') {
+                resolvedPairIds.add(otherId);
+                continue;
+            }
         }
         await db.delete(eventConflicts).where(eq(eventConflicts.id, pair.id));
     }
