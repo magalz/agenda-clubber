@@ -74,6 +74,12 @@ export function CreateCollectiveForm({
                             <Input id="youtube" name="youtube" type="url" placeholder="https://youtube.com/..." />
                             {state.error?.fieldErrors?.youtube && <p className="text-sm text-neon-red">{state.error.fieldErrors.youtube[0]}</p>}
                         </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="whatsappPhone">WhatsApp</Label>
+                            <Input id="whatsappPhone" name="whatsappPhone" type="tel" placeholder="+5511999999999" />
+                            {state.error?.fieldErrors?.whatsappPhone && <p className="text-sm text-neon-red">{state.error.fieldErrors.whatsappPhone[0]}</p>}
+                            <p className="text-xs text-muted-foreground">Formato internacional (ex: +5511999999999)</p>
+                        </div>
                     </div>
                 </div>
 

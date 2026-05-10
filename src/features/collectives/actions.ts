@@ -8,6 +8,7 @@ import { collectiveMembers } from "@/db/schema/collective-members";
 import { profiles } from "@/db/schema/auth";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
+import { e164PhoneOptional } from "@/lib/validations";
 
 const httpsUrl = z.union([
     z.literal(""),
@@ -25,6 +26,7 @@ export const createCollectiveSchema = z.object({
     youtube: httpsUrl,
     soundcloud: httpsUrl,
     instagram: httpsUrl,
+    whatsappPhone: e164PhoneOptional,
 });
 
 const MAX_LOGO_SIZE = 5 * 1024 * 1024; // 5MB
@@ -59,6 +61,7 @@ export async function createCollectiveAction(
         youtube: formData.get("youtube") || undefined,
         soundcloud: formData.get("soundcloud") || undefined,
         instagram: formData.get("instagram") || undefined,
+        whatsappPhone: formData.get("whatsappPhone") || undefined,
     };
 
     const parsed = createCollectiveSchema.safeParse(rawData);
@@ -75,7 +78,7 @@ export async function createCollectiveAction(
         };
     }
 
-    const { name, location, genrePrimary, genreSecondary, description, youtube, soundcloud, instagram } = parsed.data;
+    const { name, location, genrePrimary, genreSecondary, description, youtube, soundcloud, instagram, whatsappPhone } = parsed.data;
 
     // Validate logo file if provided
     const logoRaw = formData.get("logo");
@@ -152,6 +155,7 @@ export async function createCollectiveAction(
                 description,
                 logoUrl,
                 socialLinks: { youtube, soundcloud, instagram },
+                whatsappPhone,
                 ownerId: profileId,
                 status: "pending_approval",
             }).returning({ id: collectives.id });

@@ -94,7 +94,7 @@ development_status:
   pre-4-resolve-product-decisions: ready-for-dev   # correct-course resolve DP1/DP2/DP4
   pre-4-spike-resend: done
   pre-4-spike-evolution-api: backlog
-  pre-4-spike-conflict-persistence: backlog
+  pre-4-spike-conflict-persistence: done
   pre-4-spike-whatsapp-schema: backlog
 
   epic-4: backlog  # NÃO iniciar até epic-4-readiness done
