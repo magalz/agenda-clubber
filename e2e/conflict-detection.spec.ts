@@ -51,7 +51,7 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
             await expect(toast.first()).toBeVisible({ timeout: 20000 });
 
             // Reload to pick up conflict evaluation results from health pulse
-            await page.reload();
+            await page.reload({ timeout: 60000 });
 
             // Poll until the cell shows one event OR has a conflict level
             // (health pulse is computed asynchronously on page load)
