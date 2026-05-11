@@ -274,7 +274,6 @@ export async function evaluateAndPersist(eventId: string, db: DbClient): Promise
         })
         .where(eq(events.id, eventId));
 
-    // Fire-and-forget: syncConflictPairs roda em background sem travar o retorno
     syncConflictPairs(eventId, db).catch((err) => {
         console.error('[ConflictEngine] syncConflictPairs failed:', err);
     });
