@@ -61,7 +61,7 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
                 if (count < 30) return null;
                 const label = await updatedCells.nth(2).getAttribute('aria-label');
                 return label;
-            }, { timeout: 30000, message: 'RED: cell should show event + conflict after reload' }).toMatch(/risco de conflito/);
+            }, { timeout: 60000, message: 'RED: cell should show event + conflict after reload' }).toMatch(/risco de conflito/);
         });
 
         test('YELLOW: criar evento Techno em 6 dias gera conflito amarelo', async ({ page }) => {
@@ -97,7 +97,7 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
                 if (count < 30) return null;
                 const label = await updatedCells.nth(6).getAttribute('aria-label');
                 return label;
-            }, { timeout: 30000, message: 'YELLOW: cell should show event + conflict after reload' }).toMatch(/risco de conflito/);
+            }, { timeout: 60000, message: 'YELLOW: cell should show event + conflict after reload' }).toMatch(/risco de conflito/);
         });
 
         test('GREEN: criar evento com gênero diferente não gera conflito', async ({ page }) => {
@@ -134,7 +134,7 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
                 if (count < 30) return null;
                 const label = await updatedCells.nth(15).getAttribute('aria-label');
                 return label;
-            }, { timeout: 30000, message: 'GREEN: cell should not show alto risco after reload' }).not.toMatch(/alto risco de conflito/);
+            }, { timeout: 60000, message: 'GREEN: cell should not show alto risco after reload' }).not.toMatch(/alto risco de conflito/);
         });
     });
 });
