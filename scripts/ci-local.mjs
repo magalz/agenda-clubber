@@ -33,7 +33,7 @@ function run(cmd, opts = {}) {
     console.log(`\n  → ${cmd}`);
     try {
         execSync(cmd, { cwd: ROOT, stdio: 'inherit', encoding: 'utf-8', ...opts });
-    } catch (e) {
+    } catch {
         console.error(`\n  ✘ Failed: ${cmd}`);
         process.exit(1);
     }
