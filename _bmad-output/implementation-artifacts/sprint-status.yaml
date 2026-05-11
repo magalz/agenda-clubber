@@ -90,12 +90,13 @@ development_status:
   # Pré-Épico 4 — fase de preparação obrigatória
   # Bloqueador para Épico 4 — não iniciar 4.1 antes de concluído.
   # Ver _bmad-output/implementation-artifacts/epic-4-readiness.md
-  epic-4-readiness: in-progress
-  pre-4-resolve-product-decisions: ready-for-dev   # correct-course resolve DP1/DP2/DP4
+  epic-4-readiness: done
+  pre-4-resolve-product-decisions: done   # correct-course resolveu DP1-DP5 (10/05)
   pre-4-spike-resend: done
-  pre-4-spike-evolution-api: backlog
+  pre-4-spike-evolution-api: done
   pre-4-spike-conflict-persistence: done
-  pre-4-spike-whatsapp-schema: backlog
+  pre-4-spike-whatsapp-schema: done
+  pre-4-spike-local-supabase: done   # PR13 — CI local offline
 
   epic-4: backlog  # NÃO iniciar até epic-4-readiness done
   4-1-painel-lateral-de-resolucao-de-conflitos-sheet: backlog

@@ -1,8 +1,8 @@
 # Epic 4 Readiness — Mapa de Bloqueadores e Pré-requisitos
 
-**Status:** 🔴 NÃO INICIAR — fase de preparação obrigatória em andamento
+**Status:** ✅ PRONTO — Fase de preparação concluída. Épico 4 pode começar.
 **Documento canônico:** Use este doc como fonte de verdade para o que precisa acontecer antes do Épico 4.
-**Última atualização:** 09/05/2026 (pós-retro Épico Housekeeping)
+**Última atualização:** 11/05/2026 (pós-PR #83 — todas as spikes + CI local)
 
 ---
 
