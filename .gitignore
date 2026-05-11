@@ -55,3 +55,9 @@ test-results/
 .logs/
 .memdb/
 .memtrace/
+
+# Playwright report
+playwright-report/
+
+# Supabase CLI temp
+supabase/.temp/

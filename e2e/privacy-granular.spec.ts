@@ -8,12 +8,13 @@ test.describe('Cross-collective privacy granular', () => {
         await page.goto('/dashboard/collective');
         await page.waitForSelector('[role="grid"]', { timeout: 10000 });
 
-        const cells = page.locator('[role="grid"] [role="gridcell"], [data-testid="day-cell"]');
+        const cells = page.getByTestId('day-cell');
         const count = await cells.count();
 
         for (let i = 0; i < count; i++) {
             await page.keyboard.press('Escape');
-            await page.waitForTimeout(300);
+            await page.waitForTimeout(200);
+            if (i >= (await cells.count())) break;
             await cells.nth(i).click();
 
             const sheet = page.locator('[role="dialog"]');
@@ -36,12 +37,13 @@ test.describe('Cross-collective privacy granular', () => {
         await page.goto('/dashboard/collective');
         await page.waitForSelector('[role="grid"]', { timeout: 10000 });
 
-        const cells = page.locator('[role="grid"] [role="gridcell"], [data-testid="day-cell"]');
+        const cells = page.getByTestId('day-cell');
         const count = await cells.count();
 
         for (let i = 0; i < count; i++) {
             await page.keyboard.press('Escape');
-            await page.waitForTimeout(300);
+            await page.waitForTimeout(200);
+            if (i >= (await cells.count())) break;
             await cells.nth(i).click();
 
             const sheet = page.locator('[role="dialog"]');
@@ -64,12 +66,13 @@ test.describe('Cross-collective privacy granular', () => {
         await page.goto('/dashboard/collective');
         await page.waitForSelector('[role="grid"]', { timeout: 10000 });
 
-        const cells = page.locator('[role="grid"] [role="gridcell"], [data-testid="day-cell"]');
+        const cells = page.getByTestId('day-cell');
         const count = await cells.count();
 
         for (let i = 0; i < count; i++) {
             await page.keyboard.press('Escape');
-            await page.waitForTimeout(300);
+            await page.waitForTimeout(200);
+            if (i >= (await cells.count())) break;
             await cells.nth(i).click();
 
             const sheet = page.locator('[role="dialog"]');
@@ -92,12 +95,13 @@ test.describe('Cross-collective privacy granular', () => {
         await page.goto('/dashboard/collective');
         await page.waitForSelector('[role="grid"]', { timeout: 10000 });
 
-        const cells = page.locator('[role="grid"] [role="gridcell"], [data-testid="day-cell"]');
+        const cells = page.getByTestId('day-cell');
         const count = await cells.count();
 
         for (let i = 0; i < count; i++) {
             await page.keyboard.press('Escape');
-            await page.waitForTimeout(300);
+            await page.waitForTimeout(200);
+            if (i >= (await cells.count())) break;
             await cells.nth(i).click();
 
             const sheet = page.locator('[role="dialog"]');

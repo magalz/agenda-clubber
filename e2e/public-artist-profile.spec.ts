@@ -72,7 +72,7 @@ test.describe('Public Artist Profile — produtor (Collectives Only)', () => {
         await page.goto('/artists/collectives-dj');
 
         await expect(page.getByRole('heading', { name: 'Collectives DJ' })).toBeVisible();
-        await expect(page.getByText('Bio secreta do Collectives DJ')).toBeVisible();
+        await expect(page.getByRole('paragraph').filter({ hasText: 'Bio secreta do Collectives DJ' })).toBeVisible();
     });
 
     test('produtor cannot access ghost profile', async ({ page }) => {
