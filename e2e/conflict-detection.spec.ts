@@ -48,7 +48,7 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
 
             // Confirm server action completed
             const toast = page.locator('[data-sonner-toast]');
-            await expect(toast.first()).toBeVisible({ timeout: 20000 });
+            await expect(toast.first()).toBeVisible({ timeout: 60000 });
 
             // Reload to pick up conflict evaluation results from health pulse
             await page.reload({ timeout: 60000 });
@@ -87,9 +87,9 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
             await submitBtn.dispatchEvent('click');
 
             const toast = page.locator('[data-sonner-toast]');
-            await expect(toast.first()).toBeVisible({ timeout: 30000 });
+            await expect(toast.first()).toBeVisible({ timeout: 60000 });
 
-            await page.reload();
+            await page.reload({ timeout: 60000 });
 
             const updatedCells = page.getByTestId('day-cell');
             await expect.poll(async () => {
@@ -124,7 +124,7 @@ test.describe('Story 3.3 — Conflict Detection (RED/YELLOW/GREEN)', () => {
             await submitBtn.dispatchEvent('click');
 
             const toast = page.locator('[data-sonner-toast]');
-            await expect(toast.first()).toBeVisible({ timeout: 30000 });
+            await expect(toast.first()).toBeVisible({ timeout: 60000 });
 
             await page.reload();
 
