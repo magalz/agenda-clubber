@@ -48,3 +48,25 @@ Ao final de qualquer sessão onde ferramentas Memtrace foram usadas
 
 Isso anexa um entry padronizado em `docs/memtrace-sessions-feedbacks.md`
 e registra um episódio externo no graph do Memtrace.
+
+## PR CHECKLIST — OBRIGATÓRIO ANTES DE ABRIR PR
+
+STOP. Nunca abrir PR sem validar localmente primeiro:
+
+1. Certifique-se de que o Supabase Docker está rodando:
+   ```
+   npx supabase status
+   ```
+
+2. Execute a pipeline completa local:
+   ```
+   npm run ci:local
+   ```
+   Isso roda: lint → typecheck → build → unit (456) → E2E (42 testes)
+
+3. Só abrir PR se TODOS os passos passarem.
+
+4. Abrir PR:
+   ```
+   gh pr create --title "tipo(escopo): descrição"
+   ```

@@ -10,16 +10,31 @@
  * Prerequisites:
  *   - Docker running
  *   - `supabase start` running (with migrations applied)
- *   - Supabase env vars in .env.local (NEXT_PUBLIC_SUPABASE_URL, etc.)
+ *   - Supabase env vars in .env.local or set in shell
  *
- * Note: Env vars are loaded from .env.local. If you haven't configured
- * them yet, run `npx supabase status` to get the correct values.
+ * Note: This script loads .env.local automatically if available.
+ *       If not, set the env vars manually before running.
  */
 
 import { execSync } from 'node:child_process';
+import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dirname, '..');
+
+// Load .env.local manually (Next.js-style)
+const envLocal = resolve(ROOT, '.env.local');
+if (existsSync(envLocal)) {
+    const lines = readFileSync(envLocal, 'utf-8').split('\n');
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) continue;
+        const eqIdx = trimmed.indexOf('=');
+        const key = trimmed.slice(0, eqIdx).trim();
+        const val = trimmed.slice(eqIdx + 1).trim();
+        if (!process.env[key]) process.env[key] = val;
+    }
+}
 
 const required = ['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'DATABASE_URL'];
 for (const key of required) {
@@ -65,6 +80,10 @@ if (!skipBuild) {
 // Step 3: Unit Tests
 console.log('\n── 3. Unit Tests ────────────────────────────────');
 run('npm run test', { env: { ...process.env, CI: 'true' } });
+
+// Step 4: E2E Tests
+console.log('\n── 4. E2E Tests ─────────────────────────────────');
+run('npx playwright test', { env: { ...process.env, CI: 'true' }, timeout: 5 * 60 * 1000 });
 
 console.log('\n═══════════════════════════════════════════════');
 console.log('  ✅ CI: LOCAL pipeline passed!');

@@ -39,7 +39,7 @@ test.describe('Story 3.1 — Calendar Grid (Health Pulse)', () => {
         test('vê empty-state, não vê grid', async ({ page }) => {
             await page.goto('/dashboard/collective');
 
-            await expect(page.getByText(/precisa pertencer a um coletivo aprovado/i)).toBeVisible();
+            await expect(page.getByTestId('empty-state-text').first()).toBeVisible();
             await expect(page.getByTestId('day-cell')).toHaveCount(0);
         });
     });

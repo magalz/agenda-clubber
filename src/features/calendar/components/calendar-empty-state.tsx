@@ -16,7 +16,7 @@ export function CalendarEmptyState({ variant = 'default' }: Props) {
                 <CardTitle className="text-lg">Planejamento Indisponível</CardTitle>
             </CardHeader>
             <CardContent>
-                <p className="text-muted-foreground text-sm">{message}</p>
+                <p data-testid="empty-state-text" className="text-muted-foreground text-sm">{message}</p>
             </CardContent>
         </Card>
     );
