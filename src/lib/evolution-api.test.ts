@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { sendAdminGroupMessage, generateAdminGroupDeepLink } from './evolution-api';
+import { sendAdminGroupMessage, generateAdminGroupDeepLink, formatAdminNotificationMessage } from './evolution-api';
 
 const ORIGINAL_ENV = process.env;
 
@@ -46,6 +46,38 @@ describe('sendAdminGroupMessage', () => {
         expect(body.text).toBe('Teste de conflito!');
 
         vi.unstubAllGlobals();
+    });
+});
+
+describe('formatAdminNotificationMessage', () => {
+    beforeEach(() => {
+        process.env.NEXT_PUBLIC_SITE_URL = 'https://agendaclubber.com';
+    });
+
+    it('formata mensagem para collective', () => {
+        const msg = formatAdminNotificationMessage('collective', 'Coletivo Ignis', '2026-05-12T14:30:00-03:00');
+        expect(msg).toContain('Cadastro de Coletivo');
+        expect(msg).toContain('Coletivo Ignis');
+        expect(msg).toContain('2026-05-12T14:30:00-03:00');
+        expect(msg).toContain('/admin');
+    });
+
+    it('formata mensagem para artist', () => {
+        const msg = formatAdminNotificationMessage('artist', 'DJ Teste', '2026-05-12T15:00:00Z');
+        expect(msg).toContain('Cadastro de Artista');
+        expect(msg).toContain('DJ Teste');
+    });
+
+    it('formata mensagem para claim', () => {
+        const msg = formatAdminNotificationMessage('claim', 'MC Exemplo', '2026-05-12T16:00:00Z');
+        expect(msg).toContain('Reivindicação de Perfil');
+        expect(msg).toContain('MC Exemplo');
+    });
+
+    it('usa fallback da SITE_URL se variavel nao configurada', () => {
+        delete process.env.NEXT_PUBLIC_SITE_URL;
+        const msg = formatAdminNotificationMessage('collective', 'Teste', new Date().toISOString());
+        expect(msg).toContain('agendaclubber.com/admin');
     });
 });
 

@@ -53,10 +53,11 @@ vi.mock("next/navigation", () => ({
 }));
 
 // ─── QStash mock ─────────────────────────────────────────────────────────────
-const mockEnqueueArtistClaimInvitation = vi.fn();
-vi.mock("@/features/notifications/qstash", () => ({
-    enqueueArtistClaimInvitation: (...args: unknown[]) => mockEnqueueArtistClaimInvitation(...args),
+const qstashMocks = vi.hoisted(() => ({
+    enqueueArtistClaimInvitation: vi.fn(),
+    enqueueAdminWhatsAppNotification: vi.fn().mockResolvedValue({ queued: true }),
 }));
+vi.mock("@/features/notifications/qstash", () => qstashMocks);
 
 // ─── Chain helpers ────────────────────────────────────────────────────────────
 function setupSelectChain() {
@@ -72,8 +73,9 @@ function setupInsertChain(returnedId = "artist-uuid-123") {
     mockInsert.mockReturnValue({ values: mockValues });
 }
 
-function setupUpdateChain(rowCount = 1) {
-    mockUpdateWhere.mockResolvedValue({ rowCount });
+function setupUpdateChain(_rowCount = 1) {
+    const mockReturning = vi.fn().mockResolvedValue([{ id: "updated-id" }]);
+    mockUpdateWhere.mockReturnValue({ returning: mockReturning });
     mockSet.mockReturnValue({ where: mockUpdateWhere });
     mockUpdate.mockReturnValue({ set: mockSet });
 }
@@ -352,7 +354,7 @@ describe("createOnTheFlyArtistAction", () => {
         vi.clearAllMocks();
         setupSelectChain();
         setupInsertChain(ARTIST_ID);
-        mockEnqueueArtistClaimInvitation.mockResolvedValue({ queued: true });
+        qstashMocks.enqueueArtistClaimInvitation.mockResolvedValue({ queued: true });
     });
 
     it("happy path com e-mail → emailQueued true, artista com profileId=null e genrePrimary=null", async () => {
@@ -376,7 +378,7 @@ describe("createOnTheFlyArtistAction", () => {
             artisticName: "DJ On The Fly",
             status: 'approved',
         }));
-        expect(mockEnqueueArtistClaimInvitation).toHaveBeenCalledWith(expect.objectContaining({
+        expect(qstashMocks.enqueueArtistClaimInvitation).toHaveBeenCalledWith(expect.objectContaining({
             artistId: ARTIST_ID,
             email: "artista@cena.com",
         }));
@@ -391,7 +393,7 @@ describe("createOnTheFlyArtistAction", () => {
 
         expect(result.error).toBeNull();
         expect(result.data?.emailQueued).toBe(false);
-        expect(mockEnqueueArtistClaimInvitation).not.toHaveBeenCalled();
+        expect(qstashMocks.enqueueArtistClaimInvitation).not.toHaveBeenCalled();
         expect(mockInsert).toHaveBeenCalled();
     });
 
@@ -407,7 +409,7 @@ describe("createOnTheFlyArtistAction", () => {
         expect(result.error?.code).toBe("VALIDATION_ERROR");
         expect(result.error?.fieldErrors?.artisticName).toBeDefined();
         expect(mockInsert).not.toHaveBeenCalled();
-        expect(mockEnqueueArtistClaimInvitation).not.toHaveBeenCalled();
+        expect(qstashMocks.enqueueArtistClaimInvitation).not.toHaveBeenCalled();
     });
 
     it("nome duplicado → DUPLICATE_NAME, sem insert, sem enqueue", async () => {
@@ -419,7 +421,7 @@ describe("createOnTheFlyArtistAction", () => {
 
         expect(result.error?.code).toBe("DUPLICATE_NAME");
         expect(mockInsert).not.toHaveBeenCalled();
-        expect(mockEnqueueArtistClaimInvitation).not.toHaveBeenCalled();
+        expect(qstashMocks.enqueueArtistClaimInvitation).not.toHaveBeenCalled();
     });
 
     it("sem autenticação → UNAUTHORIZED", async () => {
@@ -445,7 +447,7 @@ describe("createOnTheFlyArtistAction", () => {
         setupAuthenticatedUser();
         setupAdminCheck(true);
         setupDuplicateCheck(false);
-        mockEnqueueArtistClaimInvitation.mockResolvedValue({ queued: false, error: "QStash timeout" });
+        qstashMocks.enqueueArtistClaimInvitation.mockResolvedValue({ queued: false, error: "QStash timeout" });
 
         const result = await createOnTheFlyArtistAction(
             INITIAL_STATE,
@@ -456,6 +458,22 @@ describe("createOnTheFlyArtistAction", () => {
         expect(result.data?.success).toBe(true);
         expect(result.data?.emailQueued).toBe(false);
         expect(mockInsert).toHaveBeenCalled();
+    });
+
+    // ─── T4: WhatsApp notificação adicional ────────────────────────────────────────
+    it("chama enqueueAdminWhatsAppNotification apos criacao bem-sucedida (T4)", async () => {
+        setupAuthenticatedUser();
+        setupAdminCheck(true);
+        setupDuplicateCheck(false);
+
+        await createOnTheFlyArtistAction(INITIAL_STATE, makeFormData({ email: "artista@cena.com" }));
+
+        expect(qstashMocks.enqueueAdminWhatsAppNotification).toHaveBeenCalledTimes(1);
+        expect(qstashMocks.enqueueAdminWhatsAppNotification).toHaveBeenCalledWith({
+            type: 'artist',
+            name: 'DJ On The Fly',
+            timestamp: expect.any(String),
+        });
     });
 });
 
@@ -549,14 +567,21 @@ describe("claimArtistProfileAction", () => {
     function setupArtistRecord(overrides: { profileId?: string | null; status?: string } = {}) {
         const record = {
             id: ARTIST_ID,
+            artisticName: "DJ Claim Teste",
             profileId: overrides.profileId ?? null,
             status: overrides.status ?? 'approved',
         };
         mockLimit.mockResolvedValueOnce([record]);
     }
 
+    function setupNoPreExistingArtist() {
+        // Pre-upload check: no existing artist for this profile
+        mockLimit.mockResolvedValueOnce([]);
+    }
+
     beforeEach(() => {
         vi.clearAllMocks();
+        mockLimit.mockReset();
         setupSelectChain();
         setupUpdateChain(1);
         setupStorage();
@@ -600,6 +625,7 @@ describe("claimArtistProfileAction", () => {
     it("artista com status != approved → NOT_CLAIMABLE", async () => {
         setupAuthenticatedArtist();
         setupArtistRecord({ profileId: null, status: 'pending_approval' });
+        setupNoPreExistingArtist();
 
         const result = await claimArtistProfileAction(ARTIST_ID, INITIAL_STATE, makeFormData());
 
@@ -609,6 +635,7 @@ describe("claimArtistProfileAction", () => {
     it("sucesso → status='pending_approval', profile_id gravado", async () => {
         setupAuthenticatedArtist();
         setupArtistRecord();
+        setupNoPreExistingArtist();
 
         try {
             await claimArtistProfileAction(ARTIST_ID, INITIAL_STATE, makeFormData());
@@ -631,6 +658,26 @@ describe("claimArtistProfileAction", () => {
         expect(result.error?.code).toBe("VALIDATION_ERROR");
         expect(result.error?.fieldErrors?.genrePrimary).toBeDefined();
     });
+
+    // ─── T5: WhatsApp notification no claim flow ──────────────────────────────────
+    it("chama enqueueAdminWhatsAppNotification apos claim bem-sucedido (T5)", async () => {
+        setupAuthenticatedArtist();
+        setupArtistRecord();
+        setupNoPreExistingArtist();
+
+        try {
+            await claimArtistProfileAction(ARTIST_ID, INITIAL_STATE, makeFormData());
+        } catch {
+            // redirect() throws NEXT_REDIRECT — expected
+        }
+
+        expect(qstashMocks.enqueueAdminWhatsAppNotification).toHaveBeenCalledTimes(1);
+        expect(qstashMocks.enqueueAdminWhatsAppNotification).toHaveBeenCalledWith({
+            type: 'claim',
+            name: 'DJ Claim Teste',
+            timestamp: expect.any(String),
+        });
+    });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -652,10 +699,12 @@ describe("saveArtistOnboardingAction — status e privacySettings", () => {
         mockGetUser.mockResolvedValue({ data: { user: { id: "user-uuid" } }, error: null });
         mockLimit.mockResolvedValueOnce([{ id: "profile-uuid" }]); // profile
         mockLimit.mockResolvedValueOnce([]); // duplicate check (no duplicate)
+        mockLimit.mockResolvedValueOnce([]); // uniqueSlug check (slug not taken)
     }
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockLimit.mockReset();
         setupSelectChain();
         setupInsertChain();
         setupStorage();

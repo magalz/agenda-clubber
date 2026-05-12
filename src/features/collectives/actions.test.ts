@@ -1,5 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createCollectiveSchema } from './actions';
+
+const mockEnqueueAdminWhatsAppNotification = vi.fn();
+vi.mock("@/features/notifications/qstash", () => ({
+    enqueueAdminWhatsAppNotification: (...args: unknown[]) => mockEnqueueAdminWhatsAppNotification(...args),
+}));
 
 describe('createCollectiveSchema — whatsappPhone', () => {
     const base = {
@@ -46,3 +51,8 @@ describe('createCollectiveSchema — whatsappPhone', () => {
         expect(result.success).toBe(true);
     });
 });
+
+// ─── T3 ATDD: createCollectiveAction deve enfileirar notificação WhatsApp ─────
+// A notificação fire-and-forget foi adicionada em collectives/actions.ts:181-186.
+// Teste de integração (mock de DB, auth, redirect, storage) é necessário
+// para verificar a chamada com type='collective' após inserção bem-sucedida.

@@ -73,6 +73,28 @@ export async function sendAdminGroupMessage(
     });
 }
 
+const TYPE_LABELS: Record<string, string> = {
+    collective: "Cadastro de Coletivo",
+    artist: "Cadastro de Artista",
+    claim: "Reivindicação de Perfil",
+};
+
+export function formatAdminNotificationMessage(
+    type: 'collective' | 'artist' | 'claim',
+    name: string,
+    timestamp: string
+): string {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://agendaclubber.com";
+    const label = TYPE_LABELS[type] ?? type;
+    return [
+        "🔔 Nova solicitação pendente no Agenda Clubber",
+        `Tipo: ${label}`,
+        `Nome: ${name}`,
+        `Data: ${timestamp}`,
+        `👉 Acesse o painel admin: ${siteUrl}/admin`,
+    ].join("\n");
+}
+
 export function generateAdminGroupDeepLink(): string {
     const { adminGroupId } = getConfig();
     if (!adminGroupId) return '';
