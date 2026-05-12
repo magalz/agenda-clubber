@@ -9,6 +9,7 @@ import { profiles } from "@/db/schema/auth";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { e164PhoneOptional } from "@/lib/validations";
+import { enqueueAdminWhatsAppNotification } from "@/features/notifications/qstash";
 
 const httpsUrl = z.union([
     z.literal(""),
@@ -178,6 +179,15 @@ export async function createCollectiveAction(
             error: { message: "Erro ao criar o coletivo.", code: "DB_ERROR" },
         };
     }
+
+    // Fire-and-forget: notificar admin sobre novo coletivo pendente
+    void enqueueAdminWhatsAppNotification({
+        type: 'collective',
+        name,
+        timestamp: new Date().toISOString(),
+    }).then(res => {
+        if (!res.queued) console.error("[createCollectiveAction] Falha ao notificar admin:", res.error);
+    });
 
     redirect("/dashboard/collective");
 }

@@ -17,7 +17,7 @@ import {
 import { validateMagicBytes } from "./validators";
 import { DEFAULT_PRIVACY_SETTINGS } from "./types";
 import { uniqueSlug } from "./slug";
-import { enqueueArtistClaimInvitation } from "@/features/notifications/qstash";
+import { enqueueArtistClaimInvitation, enqueueAdminWhatsAppNotification } from "@/features/notifications/qstash";
 import { escapeLikePattern } from "@/lib/db/like-pattern";
 
 export async function checkDuplicateArtist(name: string) {
@@ -327,6 +327,14 @@ export async function createOnTheFlyArtistAction(
         }
     }
 
+    void enqueueAdminWhatsAppNotification({
+        type: 'artist',
+        name: artisticName,
+        timestamp: new Date().toISOString(),
+    }).then(res => {
+        if (!res.queued) console.error("[createOnTheFlyArtistAction] Falha ao notificar admin:", res.error);
+    });
+
     return { data: { success: true, artistId, emailQueued }, error: null };
 }
 
@@ -503,10 +511,10 @@ export async function claimArtistProfileAction(
     }
 
     // 6. Defensive query: verify artist exists and is claimable
-    let artistRow: { id: string; profileId: string | null; status: string }[];
+    let artistRow: { id: string; profileId: string | null; status: string; artisticName: string }[];
     try {
         artistRow = await db
-            .select({ id: artists.id, profileId: artists.profileId, status: artists.status })
+            .select({ id: artists.id, profileId: artists.profileId, status: artists.status, artisticName: artists.artisticName })
             .from(artists)
             .where(eq(artists.id, artistId))
             .limit(1);
@@ -607,6 +615,14 @@ export async function claimArtistProfileAction(
         }
         return { data: null, error: { message: "Erro ao reivindicar perfil", code: "DB_ERROR" } };
     }
+
+    void enqueueAdminWhatsAppNotification({
+        type: 'claim',
+        name: artistRow[0]?.artisticName ?? "Artista Desconhecido",
+        timestamp: new Date().toISOString(),
+    }).then(res => {
+        if (!res.queued) console.error("[claimArtistProfileAction] Falha ao notificar admin:", res.error);
+    });
 
     redirect("/dashboard/artist");
 }
