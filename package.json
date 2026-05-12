@@ -15,6 +15,7 @@
     "preflight": "node _bmad/scripts/preflight.mjs",
     "session:start": "node _bmad/scripts/session-start.mjs",
     "qa:gate": "node scripts/qa-gate.mjs",
+    "qa:memtrace": "node scripts/qa-memtrace.mjs",
     "create:tech-debt-issues": "node scripts/create-tech-debt-issues.mjs",
     "ci:local": "node scripts/ci-local.mjs"
   },

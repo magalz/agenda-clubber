@@ -11,10 +11,12 @@
  *   2. memtrace-pitfalls.md — is it a known false-positive pattern?
  *
  * Outputs a table with confidence levels:
- *   GHOST     — symbol not found on disk (Memtrace historical bug)
+ *   GHOST     — symbol not found on disk (Memtrace historical safety net)
  *   FALSE_POS — matches a known false-positive pattern
  *   SUSPECT   — found in source but not referenced (likely dead)
- *   CONFIRMED — grep-found and grep-callees both zero (verified dead)
+ *
+ * Note: GHOST and \\?\\ path duplication are no longer Memtrace bugs
+ * (fixed upstream in v0.3.90+). GHOST kept as safety net.
  *
  * Usage:
  *   node scripts/validate-dead-code.mjs          # uses find_dead_code MCP output
@@ -102,7 +104,7 @@ function classify(name) {
   }
 
   // 3. Found in source but unreferenced — likely dead
-  return { verdict: 'SUSPECT', label: '🔍 SUSPECT', reason: 'Found in source, zero callers — likely dead code' };
+  return { verdict: 'SUSPECT', label: '🔍 SUSPECT', reason: 'Found in source, zero callers — review' };
 }
 
 function main() {
@@ -165,9 +167,9 @@ function main() {
     return { name, file: path, line, verdict, label, reason };
   });
 
-  // Sort: ghosts & false positives last
+  // Sort: suspects first, false positives & ghosts last
   results.sort((a, b) => {
-    const order = { SUSPECT: 0, CONFIRMED: 1, FALSE_POS: 2, GHOST: 3 };
+    const order = { SUSPECT: 0, FALSE_POS: 1, GHOST: 2 };
     return (order[a.verdict] ?? 9) - (order[b.verdict] ?? 9);
   });
 
@@ -175,7 +177,7 @@ function main() {
   console.log(`  ${results.length} candidates analyzed (${unique.length} unique)`);
   console.log('');
 
-  const counters = { SUSPECT: 0, FALSE_POS: 0, GHOST: 0, CONFIRMED: 0 };
+  const counters = { SUSPECT: 0, FALSE_POS: 0, GHOST: 0 };
   for (const r of results) {
     counters[r.verdict] = (counters[r.verdict] || 0) + 1;
     console.log(`  ${r.label.padEnd(30)} ${r.name.padEnd(40)} ${r.reason}`);
@@ -185,7 +187,7 @@ function main() {
   console.log('── Summary ──────────────────────────────────────────');
   console.log(`  🔍 SUSPECT      ${counters.SUSPECT}  — Likely dead code (review recommended)`);
   console.log(`  ⚠️  FALSE_POS    ${counters.FALSE_POS}  — Known false positive (skip)`);
-  console.log(`  👻 GHOST         ${counters.GHOST}  — Memtrace historial ghost (bug, upstream)`);
+  console.log(`  👻 GHOST         ${counters.GHOST}  — Safety net (bug fixed upstream in v0.3.90+)`);
   console.log('');
 
   if (counters.SUSPECT > 0) {

@@ -42,6 +42,7 @@ Core,bmad-party-mode,Party Mode,PM,Orchestrate multi-agent discussions when you 
 Core,bmad-review-adversarial-general,Adversarial Review,AR,"Use for quality assurance or before finalizing deliverables. Code Review in other modules runs this automatically, but also useful for document reviews.",[path],anytime,false,,,,,false,,,
 Core,bmad-review-edge-case-hunter,Edge Case Hunter Review,ECH,Use alongside adversarial review for orthogonal coverage — method-driven not attitude-driven.,[path],anytime,false,,,,,false,,,
 Core,bmad-shard-doc,Shard Document,SD,Use when doc becomes too large (>500 lines) to manage effectively.,[path],anytime,false,,,,,false,,,
+Core,bmad-memtrace-feedback,Memtrace Feedback,MF,Register structured feedback about Memtrace usage at end of sessions. Records to memtrace-sessions-feedbacks.md and optionally calls record_external_episode.,,anytime,false,,,,,false,docs/memtrace-sessions-feedbacks.md,feedback entry
 Creative Intelligence Suite,_meta,,,,,,false,,,,,,,https://cis-docs.bmad-method.org/llms.txt,
 Creative Intelligence Suite,bmad-brainstorming,Brainstorming,BS,Facilitate brainstorming sessions using one or more techniques.,,anytime,false,,,,,false,output_folder,brainstorming session results,
 Creative Intelligence Suite,bmad-cis-design-thinking,Design Thinking,DT,Guide human-centered design processes using empathy-driven methodologies.,,anytime,false,,,,,false,output_folder,design thinking,

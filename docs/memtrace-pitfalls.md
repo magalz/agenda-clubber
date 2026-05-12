@@ -55,13 +55,13 @@ Implementações mock registradas no setup do Vitest.
 
 **Como validar:** Verificar se está em `vitest.setup.ts` ou similar.
 
-## 6. Ghosts Históricos (Bug Memtrace)
+## 6. Ghosts Históricos ✅ RESOLVIDO v0.3.90+
 
-Símbolos que existiam em commits antigos e foram removidos, mas o `find_dead_code` ainda os lista porque inclui nodes de episódios históricos do git replay. Bug reportado upstream.
+O bug de ghosts históricos foi **corrigido upstream na v0.3.90**. O `find_dead_code` agora filtra por HEAD por padrão, excluindo símbolos de commits antigos.
 
-**Exemplo:** 17 exports Shadcn (`CommandSeparator`, `DialogTrigger`, `SheetTrigger`, etc.) removidos no HK.3.
-
-**Como validar:** `rg "NomeDoSimbolo" src/` — se 0 matches, é ghost histórico.
+- Símbolos removidos (ex: 17 exports Shadcn do HK.3) **não aparecem mais** no `find_dead_code`
+- Para restaurar o comportamento antigo (incluir históricos), passe `include_historical: true`
+- O validador ainda mantém a classificação GHOST como safety net residual
 
 ---
 

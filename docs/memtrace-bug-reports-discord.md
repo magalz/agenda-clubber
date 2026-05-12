@@ -1,3 +1,22 @@
+# Memtrace Bug Reports — Status dos 5 Bugs Reportados ao Upstream
+
+**Última atualização:** 11/05/2026
+**Versão atual:** Memtrace 0.3.93
+
+| # | Bug | Reportado em | Corrigido em | Status |
+|---|-----|-------------|-------------|--------|
+| 1 | `delete_repository` — `bad kind 164` | v0.3.86 | v0.3.90 | ✅ Fixado |
+| 2 | `find_dead_code` — ghosts históricos | v0.3.86 | v0.3.90 | ✅ Fixado |
+| 3 | Path `\\?\` — duplicatas no Windows | v0.3.86 | v0.3.90 | ✅ Fixado |
+| 4 | Daemon morre no Windows | v0.3.86 | v0.3.90 | ✅ Fixado |
+| 5 | Watchers perdidos no disconnect | v0.3.86 | v0.3.90 | ✅ Fixado |
+
+**Notas de verificação:**
+- Reindex com `clear_existing=true` confirmou path normalization (BUG #3) e ausência de ghosts (BUG #2)
+- Daemon e watchers (BUG #4, #5) serão verificados por teste no próximo ciclo
+
+---
+
 ═══════════════════════════════════════════════════════════
 BUG 1/5 — `delete_repository` fails with codec error
 ═══════════════════════════════════════════════════════════

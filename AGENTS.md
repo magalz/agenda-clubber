@@ -33,11 +33,38 @@ Nunca pular QA-Design. Se os checkboxes do QA-Design no story file estiverem vaz
 
 Story file incompleto = story não está done.
 
-## DEAD CODE VALIDATION
+## MEMTRACE QA GATE — OBRIGATÓRIO
 
-Antes de remover candidatos de `find_dead_code`, consulte
-`docs/memtrace-pitfalls.md` para evitar falsos positivos.
-Use `node scripts/validate-dead-code.mjs` para classificar.
+Ao final de qualquer implementação (dev-story, bug fix, refactor),
+execute o gate de qualidade Memtrace antes de abrir PR:
+
+```mdc
+1. Execute find_dead_code via MCP e salve o output:
+   mcp__memtrace__find_dead_code(repo_id="agenda-clubber")
+   → Salvar em .claude/dead-code-candidates.json
+
+2. Execute o gate:
+   npm run qa:memtrace
+
+3. Revise SUSPECTs se houver:
+   - Se código realmente morto: remova
+   - Se falso positivo conhecido: documente em docs/memtrace-pitfalls.md
+   - Re-rode npm run qa:memtrace até passar (exit code 0)
+
+4. Só prossiga para PR se o gate passar.
+```
+
+Para contextos (MCP não disponível), use o validador offline:
+`node scripts/validate-dead-code.mjs --file <caminho>`
+
+Consulte também `docs/memtrace-pitfalls.md` para falsos positivos estruturais.
+Nota: bugs de ghosts históricos e path `\\?\` foram corrigidos no Memtrace v0.3.90+.
+
+## MEMTRACE SETUP
+
+O arquivo `.memtrace-workspace` (raiz do projeto) ancla o ambiente
+Memtrace. Tanto `memtrace mcp` quanto `memtrace start` convergem
+para o mesmo `.memdb`, evitando o "0 nodes" por anchor mismatch.
 
 ## MEMTRACE FEEDBACK
 
