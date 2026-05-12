@@ -94,16 +94,22 @@ Antes de marcar story como `done` no sprint-status, verificar:
 Story file incompleto = story não está done.
 
 ═══════════════════════════════════════════════════════════
-DEAD CODE VALIDATION
+MEMTRACE QA GATE — OBRIGATÓRIO
 ═══════════════════════════════════════════════════════════
 
-Antes de remover candidatos de `find_dead_code`, consulte
-`docs/memtrace-pitfalls.md` para evitar falsos positivos
-conhecidos (Record dispatch, função como valor, framework
-entry points, MSW, Vitest mocks, ghosts históricos).
+Ao final de qualquer implementação (dev-story, bug fix, refactor),
+execute o gate de qualidade Memtrace antes de abrir PR:
 
-Use `node scripts/validate-dead-code.mjs` para classificar
-automaticamente cada candidato.
+    1. mcp__memtrace__find_dead_code(repo_id="agenda-clubber")
+       → salvar em .claude/dead-code-candidates.json
+    2. npm run qa:memtrace
+    3. Revisar SUSPECTs se houver
+    4. Só prosseguir para PR se o gate passar
+
+Para MCP indisponível: node scripts/validate-dead-code.mjs --file <caminho>
+
+Consulte docs/memtrace-pitfalls.md para falsos positivos estruturais.
+Nota: ghosts históricos e path \\?\\ corrigidos no Memtrace v0.3.90+.
 
 ═══════════════════════════════════════════════════════════
 MEMTRACE FEEDBACK

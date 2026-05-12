@@ -6,11 +6,11 @@ Memtrace is an exceptional structural analysis tool, but `find_dead_code` has kn
 
 1. **Structural false positives**: Memtrace cannot detect dynamic dispatch via Record (runtime lookup), functions passed as values (reference vs. call edge), framework entry points (Next.js route handlers, Playwright globalSetup), MSW handlers, and Vitest mocks. These patterns are impossible to detect via static AST analysis alone.
 
-2. **Historical ghost bug**: `find_dead_code` includes nodes from old commits where already-removed symbols still existed. This happens because git history replay (performed during indexing) creates nodes for every version of every symbol, and the query does not properly filter for the current HEAD state.
+2. ~~**Historical ghost bug**~~ ✅ **Fixed in v0.3.90+**: `find_dead_code` now filters by HEAD by default. Symbols from old commits (ghosts) no longer appear. Pass `include_historical: true` for the old behavior.
 
-3. **Windows path duplication**: The `\\?\` prefix in Memtrace's internal file paths causes the same symbol to appear 2-3 times in results.
+3. ~~**Windows path duplication**~~ ✅ **Fixed in v0.3.90+**: The `\\?\` prefix and mixed separators are now normalized at three layers (walker, scanner, query). The same symbol no longer appears duplicated.
 
-**Without this validator**, agents and developers waste time investigating ghosts or, worse, remove code that appears dead but is actually in use through runtime-undetectable patterns.
+**Without this validator**, agents and developers still waste time on structural false positives (item 1). Items 2 and 3 are fixed upstream.
 
 ---
 
@@ -27,21 +27,22 @@ Memtrace find_dead_code  →  JSON candidates  →  validate-dead-code.mjs  → 
 ### Script Steps
 
 1. **Receive candidates**: The script accepts input in two ways:
-   - MCP agent mode: passing `find_dead_code` output as JSON
-   - CLI mode: `node scripts/validate-dead-code.mjs --file <path>.json`
+    - MCP agent mode: passing `find_dead_code` output as JSON
+    - CLI mode: `node scripts/validate-dead-code.mjs --file <path>.json`
 
-2. **Deduplicate**: Removes duplicate entries caused by the Windows `\\?\` path bug, keeping one instance per symbol name.
+2. **Deduplicate**: Removes duplicate entries (safety net — the `\\?\` path bug was fixed in v0.3.90, but dedup costs nothing).
 
-3. **Classify each candidate** into 4 categories:
+3. **Classify each candidate** into 3 categories:
 
-   | Category | Label | Meaning | Action |
-   |----------|-------|---------|--------|
-   | `GHOST` | 👻 | Symbol no longer exists in source code. It's a historical commit node Memtrace didn't filter. | Ignore — upstream bug |
-   | `FALSE_POS` | ⚠️ | Known false-positive pattern (Record dispatch, function as value, framework entry point, MSW, Vitest mock) | Ignore — known limitation |
-   | `SUSPECT` | 🔍 | Symbol exists in source but zero callers detected. Likely actually dead. | Review manually |
-   | `CONFIRMED` | ✅ | Verified dead across multiple checks. | Safe to remove |
+    | Category | Label | Meaning | Action |
+    |----------|-------|---------|--------|
+    | `GHOST` | 👻 | Symbol no longer exists in source code. Residual — ghost bug was fixed in v0.3.90. | Ignore — safety net |
+    | `FALSE_POS` | ⚠️ | Known false-positive pattern (Record dispatch, function as value, framework entry point, MSW, Vitest mock) | Ignore — known limitation |
+    | `SUSPECT` | 🔍 | Symbol exists in source but zero callers detected. Likely actually dead. | Review manually |
 
-4. **Cross-reference with grep**: For each candidate, runs `rg -l <symbol> src/` to verify the symbol exists in the current code. If not found, classifies as `GHOST`.
+    > The `CONFIRMED` category was removed — never used in practice; SUSPECT → manual review covers the same case.
+
+4. **Cross-reference with grep**: For each candidate, runs `rg -l <symbol> src/` to verify the symbol exists in the current code. If not found, classifies as `GHOST` (safety net).
 
 5. **Cross-reference with pitfalls catalog**: Each candidate is matched against regex patterns from `docs/memtrace-pitfalls.md`. If matched, classifies as `FALSE_POS` with the documented reason.
 

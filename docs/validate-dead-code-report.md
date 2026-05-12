@@ -6,11 +6,11 @@ O Memtrace é uma ferramenta excepcional para análise estrutural de código, ma
 
 1. **Falsos positivos estruturais**: Memtrace não detecta dispatch dinâmico via Record (runtime lookup), funções passadas como valor (referência vs call edge), framework entry points (Next.js route handlers, Playwright globalSetup), MSW handlers, e mocks do Vitest. Estes padrões são impossíveis de detectar via análise estática de AST.
 
-2. **Bug de ghosts históricos**: O `find_dead_code` inclui nodes de commits antigos onde símbolos já removidos ainda existiam. Isso acontece porque o git history replay (feito durante a indexação) cria nodes para cada versão de cada símbolo, e a query não filtra adequadamente para o estado atual do HEAD.
+2. ~~**Bug de ghosts históricos**~~ ✅ **Resolvido na v0.3.90+**: O `find_dead_code` agora filtra por HEAD por padrão. Símbolos de commits antigos (ghosts) não aparecem mais. Passe `include_historical: true` para o comportamento antigo.
 
-3. **Path duplication no Windows**: O `\\?\ ` prefix nos file paths internos do Memtrace faz com que o mesmo símbolo apareça 2-3 vezes nos resultados.
+3. ~~**Path duplication no Windows**~~ ✅ **Resolvido na v0.3.90+**: O prefixo `\\?\` e a mistura de separadores são normalizados em 3 camadas (walker, scanner, query). O mesmo símbolo não aparece mais duplicado.
 
-**Sem este validador**, o agente ou o desenvolvedor perde tempo investigando fantasmas ou, pior, remove código que parece dead mas está sendo usado via padrão runtime-indetectável.
+**Sem este validador**, o agente ou o desenvolvedor perde tempo investigando falsos positivos estruturais que ainda existem (item 1). Os itens 2 e 3 foram corrigidos upstream.
 
 ---
 
@@ -30,18 +30,19 @@ Memtrace find_dead_code  →  JSON candidates  →  validate-dead-code.mjs  → 
    - Modo agente MCP: passando o output do `find_dead_code` como JSON
    - Modo CLI: `node scripts/validate-dead-code.mjs --file <caminho>.json`
 
-2. **Deduplica**: Remove entradas duplicadas causadas pelo bug de path `\\?\` (Windows), mantendo apenas uma instância por nome de símbolo.
+2. **Deduplica**: Remove entradas duplicadas (safety net — o bug de path `\\?\` foi corrigido na v0.3.90, mas a dedup não custa nada).
 
-3. **Classifica cada candidato** em 4 categorias:
+3. **Classifica cada candidato** em 3 categorias:
 
    | Categoria | Label | Significado | Ação |
    |-----------|-------|-------------|------|
-   | `GHOST` | 👻 | Símbolo não existe mais no código fonte. É um node de commit histórico que o Memtrace não filtrou. | Ignorar — bug upstream |
+   | `GHOST` | 👻 | Símbolo não existe mais no código fonte. Residual — bug de ghosts históricos foi corrigido na v0.3.90. | Ignorar — safety net |
    | `FALSE_POS` | ⚠️ | Padrão conhecido de falso positivo estrutural (Record dispatch, função como valor, framework entry point, MSW, Vitest mock) | Ignorar — limitação conhecida |
    | `SUSPECT` | 🔍 | Símbolo existe no código fonte mas zero callers detectados. Provavelmente dead de verdade. | Revisar manualmente |
-   | `CONFIRMED` | ✅ | Símbolo verificado como morto em múltiplas etapas. | Remover com segurança |
 
-4. **Validação cruzada com grep**: Para cada candidato, o script executa `rg -l <symbol> src/` para verificar se o símbolo existe no código atual. Se não existir, classifica como `GHOST`.
+   > A categoria `CONFIRMED` foi removida — nunca foi usada na prática e o fluxo SUSPECT → revisão manual cobre o mesmo caso.
+
+4. **Validação cruzada com grep**: Para cada candidato, o script executa `rg -l <symbol> src/` para verificar se o símbolo existe no código atual. Se não existir, classifica como `GHOST` (safety net).
 
 5. **Validação contra catálogo de pitfalls**: Cada candidato é comparado com regex patterns do catálogo em `docs/memtrace-pitfalls.md`. Se houver match, classifica como `FALSE_POS` com a razão documentada.
 
