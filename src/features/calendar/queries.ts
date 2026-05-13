@@ -73,6 +73,7 @@ export async function getConflictingEvents(eventId: string): Promise<Conflicting
         .where(inArray(events.id, otherIds));
 
     const collectiveIds = [...new Set(otherEvents.map((e) => e.collectiveId))];
+    if (collectiveIds.length === 0) return [];
 
     const collectiveRows = await db
         .select({

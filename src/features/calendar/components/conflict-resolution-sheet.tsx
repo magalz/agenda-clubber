@@ -12,7 +12,6 @@ import { CollectiveCard } from '@/features/collectives/components/collective-car
 import type { ConflictingEventInfo } from '../types';
 
 type Props = {
-    eventId: string;
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     conflicts: ConflictingEventInfo[];

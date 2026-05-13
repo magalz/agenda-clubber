@@ -85,7 +85,6 @@ export function CalendarGridClient({ collectiveId, dates, pulseRecord, initialEv
                 }}
             />
             <ConflictResolutionSheet
-                eventId={selectedConflictEventId ?? ''}
                 isOpen={selectedConflictEventId !== null}
                 onOpenChange={(open) => {
                     if (!open) setSelectedConflictEventId(null);
