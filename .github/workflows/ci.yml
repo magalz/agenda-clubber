@@ -67,13 +67,13 @@ jobs:
         run: npx drizzle-kit migrate 2>&1 | cat
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      - name: Verify schema columns
+      - name: Verify and repair schema
         run: |
           npx tsx -e "
             (async () => {
               const postgres = require('postgres');
               const sql = postgres(process.env.DATABASE_URL, { max: 1, prepare: false, onnotice: (n) => {} });
-              
+
               // Verify core tables exist
               const tables = await sql\`
                 SELECT table_name FROM information_schema.tables
@@ -82,28 +82,61 @@ jobs:
               console.log('Public tables:', tables.length);
               for (const t of tables) console.log(' -', t.table_name);
               if (tables.length === 0) { console.error('ERROR: no public tables created'); process.exit(1); }
-              
-              // Verify expected columns exist (catch migration journal drift)
-              const checks = [
-                { table: 'collectives', column: 'whatsapp_phone', fix: \"ALTER TABLE collectives ADD COLUMN IF NOT EXISTS whatsapp_phone TEXT\" },
+
+              // Find migrations whose effects are missing (journal drift fix)
+              const applied = await sql\`
+                SELECT migration_name FROM __drizzle_migrations ORDER BY id
+              \`.catch(() => []);
+
+              const knownColumns = [
+                { table: 'collectives', column: 'whatsapp_phone', sql: \"ALTER TABLE collectives ADD COLUMN IF NOT EXISTS whatsapp_phone TEXT\" },
               ];
-              
+              const knownTables = [
+                { table: 'event_conflicts' },
+              ];
+
               let fixed = 0;
-              for (const { table, column, fix } of checks) {
+              for (const { table } of knownTables) {
+                const exists = await sql\`
+                  SELECT table_name FROM information_schema.tables
+                  WHERE table_schema = 'public' AND table_name = \${table}
+                \`;
+                if (exists.length === 0 && applied.length > 0) {
+                  console.warn('WARN: missing table', table, '— reapplying migration...');
+                  // Check which migration creates this table and re-run it
+                  const migration = applied.find(m => m.migration_name.includes(table));
+                  if (migration) {
+                    // Drop the stale journal entry so drizzle re-applies it
+                    await sql\`DELETE FROM __drizzle_migrations WHERE migration_name = \${migration.migration_name}\`;
+                    console.log('  Dropped stale journal entry:', migration.migration_name);
+                    fixed++;
+                  }
+                }
+              }
+
+              for (const { table, column, sql: fixSql } of knownColumns) {
                 const col = await sql\`
                   SELECT column_name FROM information_schema.columns
                   WHERE table_schema = 'public' AND table_name = \${table} AND column_name = \${column}
                 \`;
                 if (col.length === 0) {
                   console.warn('WARN: missing column', table + '.' + column, '— applying fix...');
-                  await sql.unsafe(fix);
+                  await sql.unsafe(fixSql);
                   fixed++;
                 }
               }
-              
-              if (fixed > 0) console.log('Fixed', fixed, 'missing column(s)');
-              console.log('Schema verification: PASS');
-              await sql.end();
+
+              if (fixed > 0) {
+                console.log('Fixed', fixed, 'missing item(s) — re-running drizzle-kit migrate...');
+                await sql.end();
+                await require('child_process').execSync('npx drizzle-kit migrate 2>&1 | cat', {
+                  stdio: 'inherit',
+                  env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
+                });
+              } else {
+                console.log('Schema verification: PASS');
+                await sql.end();
+              }
             })();
           "
         env:
