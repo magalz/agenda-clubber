@@ -312,6 +312,11 @@ async function globalSetup() {
         `;
 
         // ── 8b. Seed event_conflicts for Story 4.1 (Conflict Resolution Sheet) ────
+        // Ensure required columns exist (defensive — handles CI migration journal drift)
+        await sql`
+            ALTER TABLE collectives ADD COLUMN IF NOT EXISTS whatsapp_phone TEXT
+        `.catch(() => {});
+
         const otherEventId = await sql`
             SELECT id FROM events WHERE collective_id = ${otherCollectiveId} LIMIT 1
         `.then((rows) => rows[0]?.id);

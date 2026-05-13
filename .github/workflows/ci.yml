@@ -67,12 +67,14 @@ jobs:
         run: npx drizzle-kit migrate 2>&1 | cat
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      - name: Verify public tables
+      - name: Verify schema columns
         run: |
           npx tsx -e "
             (async () => {
               const postgres = require('postgres');
               const sql = postgres(process.env.DATABASE_URL, { max: 1, prepare: false, onnotice: (n) => {} });
+              
+              // Verify core tables exist
               const tables = await sql\`
                 SELECT table_name FROM information_schema.tables
                 WHERE table_schema = 'public' ORDER BY table_name
@@ -80,8 +82,28 @@ jobs:
               console.log('Public tables:', tables.length);
               for (const t of tables) console.log(' -', t.table_name);
               if (tables.length === 0) { console.error('ERROR: no public tables created'); process.exit(1); }
+              
+              // Verify expected columns exist (catch migration journal drift)
+              const checks = [
+                { table: 'collectives', column: 'whatsapp_phone', fix: \"ALTER TABLE collectives ADD COLUMN IF NOT EXISTS whatsapp_phone TEXT\" },
+              ];
+              
+              let fixed = 0;
+              for (const { table, column, fix } of checks) {
+                const col = await sql\`
+                  SELECT column_name FROM information_schema.columns
+                  WHERE table_schema = 'public' AND table_name = \${table} AND column_name = \${column}
+                \`;
+                if (col.length === 0) {
+                  console.warn('WARN: missing column', table + '.' + column, '— applying fix...');
+                  await sql.unsafe(fix);
+                  fixed++;
+                }
+              }
+              
+              if (fixed > 0) console.log('Fixed', fixed, 'missing column(s)');
+              console.log('Schema verification: PASS');
               await sql.end();
-              console.log('Migration verification: PASS');
             })();
           "
         env:
