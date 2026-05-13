@@ -15,6 +15,7 @@ type Props = {
     isTogglePending: boolean;
     onStatusChange: (eventId: string, status: 'planning' | 'confirmed') => void;
     onToggleVisibility: (eventId: string, field: string, value: boolean) => void;
+    onConflictClick?: (eventId: string) => void;
 };
 
 export function EventCard({
@@ -24,6 +25,7 @@ export function EventCard({
     isTogglePending,
     onStatusChange,
     onToggleVisibility,
+    onConflictClick,
 }: Props) {
     const isOwn = Boolean(collectiveId && event.collectiveId === collectiveId);
     const displayEvent = isOwn ? event : filterEventForViewer(event, { kind: 'anon' }, false);
@@ -35,9 +37,18 @@ export function EventCard({
     return (
         <li className="border border-border rounded-md p-3">
             <div className="flex items-center gap-2 mb-1">
-                {event.conflictLevel && (
+                {event.conflictLevel && (event.conflictLevel === 'green' ? (
                     <ConflictBadge level={event.conflictLevel} justification={event.conflictJustification} />
-                )}
+                ) : (
+                    <button
+                        type="button"
+                        className="cursor-pointer inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
+                        aria-label={`Ver detalhes do conflito: ${event.conflictJustification ?? 'sem detalhes'}`}
+                        onClick={() => onConflictClick?.(event.id)}
+                    >
+                        <ConflictBadge level={event.conflictLevel} justification={event.conflictJustification} />
+                    </button>
+                ))}
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                     event.status === 'confirmed'
                         ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'

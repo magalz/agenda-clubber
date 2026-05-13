@@ -28,6 +28,7 @@ export function DayDetailSheet({ collectiveId, date, isOpen, onOpenChange }: Pro
     const events = useCalendarStore((s) => s.events);
     const crossEvents = useCalendarStore((s) => s.crossEvents);
     const patchEvent = useCalendarStore((s) => s.updateEvent);
+    const setSelectedConflictEventId = useCalendarStore((s) => s.setSelectedConflictEventId);
 
     const statusMutation = useMutation({
         mutationFn: async ({ eventId, status }: { eventId: string; status: 'planning' | 'confirmed' }) => {
@@ -114,6 +115,7 @@ export function DayDetailSheet({ collectiveId, date, isOpen, onOpenChange }: Pro
                                     onToggleVisibility={(eventId, field, value) =>
                                         toggleMutation.mutate({ eventId, field, value })
                                     }
+                                    onConflictClick={(eventId) => setSelectedConflictEventId(eventId)}
                                 />
                             ))}
                         </ul>

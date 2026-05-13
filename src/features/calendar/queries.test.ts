@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockSelect = vi.fn();
 const mockFrom = vi.fn();
 const mockWhere = vi.fn();
+const mockLeftJoin = vi.fn();
 
 vi.mock('@/db', () => ({
     db: {
@@ -16,10 +17,29 @@ vi.mock('drizzle-orm', () => ({
     gte: vi.fn(),
     lte: vi.fn(),
     eq: vi.fn(),
+    ne: vi.fn(),
+    or: vi.fn(),
 }));
 
 vi.mock('@/db/schema/events', () => ({
     events: {},
+}));
+
+vi.mock('@/db/schema/event-conflicts', () => ({
+    eventConflicts: {},
+}));
+
+vi.mock('@/db/schema/collectives', () => ({
+    collectives: {},
+}));
+
+vi.mock('./logic/visibility', () => ({
+    filterEventForViewer: vi.fn((event: Record<string, unknown>) => ({
+        ...event,
+        name: 'Em Planejamento',
+        locationName: 'Em Planejamento',
+        lineup: [],
+    })),
 }));
 
 import { getHealthPulseForRange } from './queries';
@@ -111,5 +131,111 @@ describe('getHealthPulseForRange', () => {
 
         const dayKey = formatDateKey(dates[0]);
         expect(pulseMap.get(dayKey)).toBe('yellow');
+    });
+});
+
+describe('getConflictingEvents', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockWhere.mockResolvedValue([]);
+        mockFrom.mockReturnValue({ where: mockWhere });
+        mockLeftJoin.mockReturnValue({ where: mockWhere });
+        mockSelect.mockReturnValue({ from: mockFrom });
+    });
+
+    it('ATDD-4.1-07: returns conflicting events from event_conflicts table', async () => {
+        const { getConflictingEvents } = await import('./queries');
+
+        mockWhere.mockResolvedValueOnce([
+            { eventAId: 'ev-1', eventBId: 'ev-2', rule: 'genre', level: 'red', justification: 'Mesmo gênero Techno', status: 'open' },
+        ]);
+
+        mockWhere.mockResolvedValueOnce([
+            {
+                id: 'ev-2',
+                collectiveId: 'coll-b',
+                name: 'Festa Concorrente',
+                eventDate: '2026-05-05',
+                locationName: 'Recife, PE',
+                genrePrimary: 'Techno',
+                lineup: ['DJ Externo'],
+                status: 'planning',
+                isNamePublic: true,
+                isLocationPublic: true,
+                isLineupPublic: true,
+                conflictLevel: 'red',
+                conflictJustification: 'Mesmo gênero Techno',
+                createdAt: new Date('2026-05-01'),
+            },
+        ]);
+
+        mockWhere.mockResolvedValueOnce([
+            {
+                id: 'coll-b',
+                name: 'Coletivo B',
+                logoUrl: 'https://example.com/logo.png',
+                whatsappPhone: '+5511999999999',
+                socialLinks: { instagram: '@coletivo_b' },
+            },
+        ]);
+
+        const result = await getConflictingEvents('ev-1');
+
+        expect(result).toHaveLength(1);
+        expect(result[0].collective.name).toBe('Coletivo B');
+        expect(result[0].justification).toBe('Mesmo gênero Techno');
+    });
+
+    it('ATDD-4.1-08: applies filterEventForViewer to external events', async () => {
+        const { getConflictingEvents } = await import('./queries');
+
+        mockWhere.mockResolvedValueOnce([
+            { eventAId: 'ev-1', eventBId: 'ev-3', rule: 'genre', level: 'yellow', justification: 'Gênero House próximo', status: 'open' },
+        ]);
+
+        mockWhere.mockResolvedValueOnce([
+            {
+                id: 'ev-3',
+                collectiveId: 'coll-c',
+                name: 'Festa Privada',
+                eventDate: '2026-05-08',
+                locationName: 'Local Secreto',
+                genrePrimary: 'House',
+                lineup: ['Artista X'],
+                status: 'planning',
+                isNamePublic: false,
+                isLocationPublic: false,
+                isLineupPublic: false,
+                conflictLevel: 'yellow',
+                conflictJustification: 'Gênero House próximo',
+                createdAt: new Date('2026-05-01'),
+            },
+        ]);
+
+        mockWhere.mockResolvedValueOnce([
+            {
+                id: 'coll-c',
+                name: 'Coletivo C',
+                logoUrl: null,
+                whatsappPhone: null,
+                socialLinks: null,
+            },
+        ]);
+
+        const result = await getConflictingEvents('ev-1');
+
+        expect(result).toHaveLength(1);
+        expect(result[0].event.name).toBe('Em Planejamento');
+        expect(result[0].event.locationName).toBe('Em Planejamento');
+    });
+
+    it('returns empty array when no active conflicts', async () => {
+        const { getConflictingEvents } = await import('./queries');
+
+        mockWhere.mockResolvedValueOnce([]);
+
+        const result = await getConflictingEvents('ev-no-conflicts');
+
+        expect(result).toEqual([]);
     });
 });

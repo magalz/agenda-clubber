@@ -112,9 +112,10 @@ describe('DayDetailSheet', () => {
             <DayDetailSheet date={new Date('2026-05-04T12:00:00Z')} isOpen={true} onOpenChange={vi.fn()} />
         );
 
-        const dot = screen.getByLabelText(/Conflito Vermelho/);
+        const dots = screen.getAllByLabelText(/Conflito Vermelho/);
+        const dot = dots.find((d) => d.className?.includes('bg-neon-red'));
         expect(dot).toBeDefined();
-        expect(dot.className).toContain('bg-neon-red');
+        expect(dot!.className).toContain('bg-neon-red');
         expect(screen.getByText('Conflito Vermelho: Mesmo gênero (Techno) em janela de 48h')).toBeDefined();
     });
 
@@ -129,9 +130,10 @@ describe('DayDetailSheet', () => {
             <DayDetailSheet date={new Date('2026-05-04T12:00:00Z')} isOpen={true} onOpenChange={vi.fn()} />
         );
 
-        const dot = screen.getByLabelText(/Conflito Amarelo/);
+        const dots = screen.getAllByLabelText(/Conflito Amarelo/);
+        const dot = dots.find((d) => d.className?.includes('bg-neon-yellow'));
         expect(dot).toBeDefined();
-        expect(dot.className).toContain('bg-neon-yellow');
+        expect(dot!.className).toContain('bg-neon-yellow');
     });
 
     it('shows GREEN dot for GREEN conflict', () => {
@@ -145,9 +147,10 @@ describe('DayDetailSheet', () => {
             <DayDetailSheet date={new Date('2026-05-04T12:00:00Z')} isOpen={true} onOpenChange={vi.fn()} />
         );
 
-        const dot = screen.getByLabelText(/Conflito Verde/);
+        const dots = screen.getAllByLabelText(/Conflito Verde/);
+        const dot = dots.find((d) => d.className?.includes('bg-neon-green'));
         expect(dot).toBeDefined();
-        expect(dot.className).toContain('bg-neon-green');
+        expect(dot!.className).toContain('bg-neon-green');
     });
 
     it('does not show dot when conflictLevel is null', () => {

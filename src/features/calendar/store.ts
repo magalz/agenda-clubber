@@ -6,12 +6,14 @@ interface CalendarStore {
     isSheetOpen: boolean;
     events: CalendarEvent[];
     crossEvents: CalendarEvent[];
+    selectedConflictEventId: string | null;
     setSelectedDate: (date: Date | null) => void;
     setEvents: (events: CalendarEvent[]) => void;
     setCrossEvents: (events: CalendarEvent[]) => void;
     addEvent: (event: CalendarEvent) => void;
     removeEvent: (id: string) => void;
     updateEvent: (id: string, patch: Partial<CalendarEvent>) => void;
+    setSelectedConflictEventId: (id: string | null) => void;
 }
 
 export const useCalendarStore = create<CalendarStore>((set) => ({
@@ -19,6 +21,7 @@ export const useCalendarStore = create<CalendarStore>((set) => ({
     isSheetOpen: false,
     events: [],
     crossEvents: [],
+    selectedConflictEventId: null,
     setSelectedDate: (date) => set({ selectedDate: date, isSheetOpen: date !== null }),
     setEvents: (events) => set({ events }),
     setCrossEvents: (crossEvents) => set({ crossEvents }),
@@ -29,4 +32,5 @@ export const useCalendarStore = create<CalendarStore>((set) => ({
     updateEvent: (id, patch) => set((s) => ({
         events: s.events.map((e) => e.id === id ? { ...e, ...patch } : e),
     })),
+    setSelectedConflictEventId: (id) => set({ selectedConflictEventId: id }),
 }));

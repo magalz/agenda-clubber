@@ -44,3 +44,14 @@ export interface CalendarEvent {
     conflictJustification: string | null;
     createdAt: string;
 }
+
+export interface ConflictingEventInfo {
+    event: CalendarEvent;
+    collective: {
+        name: string;
+        logoUrl: string | null;
+        whatsappPhone: string | null;
+        instagramUrl: string | null;
+    };
+    justification: string;
+}

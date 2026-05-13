@@ -10,9 +10,10 @@ import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
 import { evaluateAndPersist, getNeighborIds } from './logic/evaluate-conflict';
 import { getCrossCollectiveEventsForRange } from './events-queries';
+import { getConflictingEvents } from './queries';
 import { authorizeAndFetchEvent, buildUpdateData, recomputeConflicts, calculateEventDateUtc } from './helpers';
 import type { UpdateData } from './helpers';
-import type { CalendarEvent } from './types';
+import type { CalendarEvent, ConflictingEventInfo } from './types';
 
 type ActionResult<T> = { data: T | null; error: { message: string; code: string } | null };
 
@@ -181,4 +182,10 @@ export async function updateEventStatus(
     revalidatePath('/dashboard/collective');
 
     return { data: updated, error: null };
+}
+
+export async function getConflictingEventsAction(
+    eventId: string
+): Promise<ConflictingEventInfo[]> {
+    return getConflictingEvents(eventId);
 }

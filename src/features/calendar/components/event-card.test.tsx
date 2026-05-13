@@ -265,6 +265,108 @@ describe('EventCard', () => {
         expect(onStatusChange).toHaveBeenCalledWith('ev-1', 'confirmed');
     });
 
+    describe('EventCard conflict click', () => {
+        it('ATDD-4.1-01: calls onConflictClick when RED badge is clicked', async () => {
+            const user = userEvent.setup();
+            const onConflictClick = vi.fn();
+
+            render(
+                <EventCard
+                    event={{
+                        ...baseEvent,
+                        conflictLevel: 'red',
+                        conflictJustification: 'Conflito crítico',
+                        collectiveId: 'coll-b',
+                    }}
+                    collectiveId="coll-a"
+                    isStatusPending={false}
+                    isTogglePending={false}
+                    onStatusChange={vi.fn()}
+                    onToggleVisibility={vi.fn()}
+                    onConflictClick={onConflictClick}
+                />
+            );
+
+            const badgeButton = screen.getByRole('button', { name: /Ver detalhes do conflito/i });
+            await user.click(badgeButton);
+
+            expect(onConflictClick).toHaveBeenCalledWith('ev-1');
+        });
+
+        it('ATDD-4.1-02: calls onConflictClick when YELLOW badge is clicked', async () => {
+            const user = userEvent.setup();
+            const onConflictClick = vi.fn();
+
+            render(
+                <EventCard
+                    event={{
+                        ...baseEvent,
+                        conflictLevel: 'yellow',
+                        conflictJustification: 'Gênero próximo',
+                        collectiveId: 'coll-b',
+                    }}
+                    collectiveId="coll-a"
+                    isStatusPending={false}
+                    isTogglePending={false}
+                    onStatusChange={vi.fn()}
+                    onToggleVisibility={vi.fn()}
+                    onConflictClick={onConflictClick}
+                />
+            );
+
+            const badgeButton = screen.getByRole('button', { name: /Ver detalhes do conflito/i });
+            await user.click(badgeButton);
+
+            expect(onConflictClick).toHaveBeenCalledWith('ev-1');
+        });
+
+        it('ATDD-4.1-03: does NOT call onConflictClick when GREEN badge is clicked (static)', () => {
+            const onConflictClick = vi.fn();
+
+            render(
+                <EventCard
+                    event={{
+                        ...baseEvent,
+                        conflictLevel: 'green',
+                        conflictJustification: 'Sem conflitos',
+                        collectiveId: 'coll-b',
+                    }}
+                    collectiveId="coll-a"
+                    isStatusPending={false}
+                    isTogglePending={false}
+                    onStatusChange={vi.fn()}
+                    onToggleVisibility={vi.fn()}
+                    onConflictClick={onConflictClick}
+                />
+            );
+
+            expect(screen.queryByRole('button', { name: /Ver detalhes do conflito/i })).toBeNull();
+        });
+
+        it('ATDD-4.1-04: conflict badge button has aria-label', () => {
+            render(
+                <EventCard
+                    event={{
+                        ...baseEvent,
+                        conflictLevel: 'red',
+                        conflictJustification: 'Conflito crítico',
+                        collectiveId: 'coll-b',
+                    }}
+                    collectiveId="coll-a"
+                    isStatusPending={false}
+                    isTogglePending={false}
+                    onStatusChange={vi.fn()}
+                    onToggleVisibility={vi.fn()}
+                    onConflictClick={vi.fn()}
+                />
+            );
+
+            const badgeButton = screen.getByRole('button', { name: /Ver detalhes do conflito/i });
+            expect(badgeButton).toBeDefined();
+            expect(badgeButton.getAttribute('aria-label')).toContain('Ver detalhes do conflito');
+        });
+    });
+
     it('calls onStatusChange with planning when clicking "Reabrir planejamento" on confirmed event', async () => {
         const user = userEvent.setup();
         const onStatusChange = vi.fn();
