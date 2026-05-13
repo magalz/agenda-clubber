@@ -3,15 +3,36 @@ services:
     image: evoapicloud/evolution-api:latest
     container_name: agenda-clubber-evolution
     ports:
-      - "8081:8080"
+      - "8082:8080"
     environment:
       AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY:-agenda-clubber-dev-key}
-      SERVER_URL: http://localhost:8081
+      SERVER_URL: http://192.168.0.63:8082
       DATABASE_PROVIDER: postgresql
-      DATABASE_CONNECTION_URI: postgresql://evolution:evolution@evolution-db:5432/evolution?schema=public
+      DATABASE_CONNECTION_URI: postgresql://evolution:evolution@172.21.0.2:5432/evolution?schema=public
       LOG_LEVEL: info
+      # Performance & Stability Fixes (Baileys)
+      CACHE_LOCAL_ENABLED: "true"
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
+      DATABASE_SAVE_MESSAGE_UPDATE: "true"
+      DATABASE_SAVE_MESSAGE_DELETE: "true"
+      DATABASE_SAVE_CHATS: "false"
+      DATABASE_SAVE_CONTACTS: "false"
+      DATABASE_SAVE_DATA_CHATS: "false"
+      DATABASE_SAVE_DATA_HISTORIC: "false"
+      # Workaround for Pre-key timeout & Version Mismatch
+      CONFIG_SESSION_PHONE_VERSION: "2.3000.1015901307"
+      INSTANCE_RECONNECT_ON_BOOT: "true"
     depends_on:
       - evolution-db
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
     restart: unless-stopped
 
   evolution-db:
@@ -29,3 +50,7 @@ services:
 
 volumes:
   evolution_pgdata:
+
+networks:
+  default:
+    driver: bridge

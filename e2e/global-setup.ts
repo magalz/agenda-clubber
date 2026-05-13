@@ -55,6 +55,24 @@ async function globalSetup() {
     const sql = postgres(databaseUrl, { max: 1, prepare: false });
 
     try {
+        // ── 0. Self-repair: ensure CI schema artifacts exist (shared DB journal drift) ──
+        await sql`CREATE TABLE IF NOT EXISTS event_conflicts (
+            id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+            event_a_id uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+            event_b_id uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+            rule text NOT NULL,
+            level text NOT NULL,
+            justification text NOT NULL,
+            status text DEFAULT 'open' NOT NULL,
+            resolved_by_a uuid REFERENCES profiles(id),
+            resolved_by_b uuid REFERENCES profiles(id),
+            resolved_at_a timestamptz,
+            resolved_at_b timestamptz,
+            created_at timestamptz DEFAULT now() NOT NULL,
+            updated_at timestamptz DEFAULT now() NOT NULL
+        )`.catch(() => {});
+        await sql`ALTER TABLE collectives ADD COLUMN IF NOT EXISTS whatsapp_phone TEXT`.catch(() => {});
+
         // ── 1. Ensure test users exist ──────────────────────────────────────────
         const { data: { users: allUsers } } = await admin.auth.admin.listUsers({ perPage: 1000 });
 
@@ -171,13 +189,13 @@ async function globalSetup() {
         if (existingOtherCollective.length > 0) {
             otherCollectiveId = existingOtherCollective[0].id;
             await sql`
-                UPDATE collectives SET status = 'active', owner_id = ${otherProducerProfileId}
+                UPDATE collectives SET status = 'active', owner_id = ${otherProducerProfileId}, whatsapp_phone = ${'+5511987654321'}
                 WHERE id = ${otherCollectiveId}
             `;
         } else {
             const rows = await sql<{ id: string }[]>`
-                INSERT INTO collectives (name, location, genre_primary, owner_id, status)
-                VALUES (${otherCollectiveName}, ${'Recife, PE'}, ${'Techno'}, ${otherProducerProfileId}, ${'active'})
+                INSERT INTO collectives (name, location, genre_primary, owner_id, status, whatsapp_phone)
+                VALUES (${otherCollectiveName}, ${'Recife, PE'}, ${'Techno'}, ${otherProducerProfileId}, ${'active'}, ${'+5511987654321'})
                 RETURNING id
             `;
             otherCollectiveId = rows[0].id;
@@ -310,6 +328,55 @@ async function globalSetup() {
                 ${producerProfileId}
             )
         `;
+
+        // ── 8b. Seed event_conflicts for Story 4.1 (Conflict Resolution Sheet) ────
+        const otherEventId = await sql`
+            SELECT id FROM events WHERE collective_id = ${otherCollectiveId} LIMIT 1
+        `.then((rows) => rows[0]?.id);
+
+        const delayEventId = await sql`
+            SELECT id FROM events WHERE name = ${'Evento Delay Ético'} LIMIT 1
+        `.then((rows) => rows[0]?.id);
+
+        if (otherEventId && delayEventId) {
+            await sql`
+                INSERT INTO event_conflicts (event_a_id, event_b_id, rule, level, justification, status)
+                VALUES (${delayEventId}, ${otherEventId}, ${'genre'}, ${'red'}, ${'Conflito Vermelho: Mesmo gênero Techno em janela de 48h'}, ${'open'})
+            `;
+        }
+
+        // ── 8c. Seed YELLOW conflict event + pair for Story 4.1 (privacy masking) ──
+        const yellowEventDate = new Date();
+        yellowEventDate.setUTCDate(yellowEventDate.getUTCDate() + 7);
+        const yellowEventDateStr = yellowEventDate.toISOString().split('T')[0];
+        const yellowEventUtc = new Date(`${yellowEventDateStr}T12:00:00Z`);
+
+        await sql`
+            INSERT INTO events (collective_id, name, event_date, event_date_utc, location_name, genre_primary, status, conflict_level, conflict_justification, created_by)
+            VALUES (
+                ${e2eCollectiveId},
+                ${'Evento Amarelo'},
+                ${yellowEventDateStr},
+                ${yellowEventUtc},
+                ${'São Paulo, SP'},
+                ${'Techno'},
+                ${'planning'},
+                ${'yellow'},
+                ${'Conflito Amarelo: Mesmo gênero Techno em janela de 5 dias'},
+                ${producerProfileId}
+            )
+        `;
+
+        const yellowEventId = await sql`
+            SELECT id FROM events WHERE name = ${'Evento Amarelo'} LIMIT 1
+        `.then((rows) => rows[0]?.id);
+
+        if (yellowEventId && otherEventId) {
+            await sql`
+                INSERT INTO event_conflicts (event_a_id, event_b_id, rule, level, justification, status)
+                VALUES (${yellowEventId}, ${otherEventId}, ${'genre'}, ${'yellow'}, ${'Conflito Amarelo: Mesmo gênero Techno em janela de 5 dias'}, ${'open'})
+            `;
+        }
 
         // ── 9. Sign in other producer user ──────────────────────────────────────────
         await saveStorageState(supabaseUrl, publishableKey, E2E_OTHER_PRODUCER_EMAIL, E2E_OTHER_PRODUCER_PASSWORD, OTHER_COLLECTIVE_STORAGE_STATE);

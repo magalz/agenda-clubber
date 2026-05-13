@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DayCell } from './day-cell';
 import { DayDetailSheet } from './day-detail-sheet';
+import { ConflictResolutionSheet } from './conflict-resolution-sheet';
 import { WeekdayHeader } from './weekday-header';
 import { formatDateKey } from '../date-range';
 import { useCalendarStore } from '../store';
 import { useEventRealtime, useCrossCollectiveEvents } from '../hooks';
-import type { ConflictLevelRecord, CalendarEvent } from '../types';
+import { getConflictingEventsAction } from '../actions';
+import type { ConflictLevelRecord, CalendarEvent, ConflictingEventInfo } from '../types';
 
 type Props = {
     collectiveId: string;
@@ -17,9 +19,36 @@ type Props = {
 };
 
 export function CalendarGridClient({ collectiveId, dates, pulseRecord, initialEvents }: Props) {
-    const { selectedDate, isSheetOpen, setSelectedDate, setEvents } = useCalendarStore();
+    const { selectedDate, isSheetOpen, setSelectedDate, setEvents, selectedConflictEventId, setSelectedConflictEventId } = useCalendarStore();
 
     const dateObjects = useMemo(() => dates.map((d) => new Date(d)), [dates]);
+
+    const [conflicts, setConflicts] = useState<ConflictingEventInfo[]>([]);
+    const [conflictsLoading, setConflictsLoading] = useState(false);
+    const [conflictsError, setConflictsError] = useState<string | null>(null);
+
+    useEffect(() => {
+        let ignore = false;
+
+        if (selectedConflictEventId) {
+            setConflictsLoading(true);
+            setConflictsError(null);
+            getConflictingEventsAction(selectedConflictEventId)
+                .then((data) => {
+                    if (!ignore) setConflicts(data);
+                })
+                .catch(() => {
+                    if (!ignore) setConflictsError('Erro ao carregar detalhes do conflito');
+                })
+                .finally(() => {
+                    if (!ignore) setConflictsLoading(false);
+                });
+        } else {
+            setConflicts([]);
+        }
+
+        return () => { ignore = true; };
+    }, [selectedConflictEventId]);
 
     useEffect(() => {
         setEvents(initialEvents);
@@ -54,6 +83,15 @@ export function CalendarGridClient({ collectiveId, dates, pulseRecord, initialEv
                 onOpenChange={(open) => {
                     if (!open) setSelectedDate(null);
                 }}
+            />
+            <ConflictResolutionSheet
+                isOpen={selectedConflictEventId !== null}
+                onOpenChange={(open) => {
+                    if (!open) setSelectedConflictEventId(null);
+                }}
+                conflicts={conflicts}
+                isLoading={conflictsLoading}
+                error={conflictsError}
             />
         </>
     );
