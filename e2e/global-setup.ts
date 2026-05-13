@@ -55,6 +55,24 @@ async function globalSetup() {
     const sql = postgres(databaseUrl, { max: 1, prepare: false });
 
     try {
+        // ── 0. Self-repair: ensure CI schema artifacts exist (shared DB journal drift) ──
+        await sql`CREATE TABLE IF NOT EXISTS event_conflicts (
+            id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+            event_a_id uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+            event_b_id uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+            rule text NOT NULL,
+            level text NOT NULL,
+            justification text NOT NULL,
+            status text DEFAULT 'open' NOT NULL,
+            resolved_by_a uuid REFERENCES profiles(id),
+            resolved_by_b uuid REFERENCES profiles(id),
+            resolved_at_a timestamptz,
+            resolved_at_b timestamptz,
+            created_at timestamptz DEFAULT now() NOT NULL,
+            updated_at timestamptz DEFAULT now() NOT NULL
+        )`.catch(() => {});
+        await sql`ALTER TABLE collectives ADD COLUMN IF NOT EXISTS whatsapp_phone TEXT`.catch(() => {});
+
         // ── 1. Ensure test users exist ──────────────────────────────────────────
         const { data: { users: allUsers } } = await admin.auth.admin.listUsers({ perPage: 1000 });
 
@@ -312,11 +330,6 @@ async function globalSetup() {
         `;
 
         // ── 8b. Seed event_conflicts for Story 4.1 (Conflict Resolution Sheet) ────
-        // Ensure required columns exist (defensive — handles CI migration journal drift)
-        await sql`
-            ALTER TABLE collectives ADD COLUMN IF NOT EXISTS whatsapp_phone TEXT
-        `.catch(() => {});
-
         const otherEventId = await sql`
             SELECT id FROM events WHERE collective_id = ${otherCollectiveId} LIMIT 1
         `.then((rows) => rows[0]?.id);
