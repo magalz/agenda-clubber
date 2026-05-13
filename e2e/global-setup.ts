@@ -327,6 +327,39 @@ async function globalSetup() {
             `;
         }
 
+        // ── 8c. Seed YELLOW conflict event + pair for Story 4.1 (privacy masking) ──
+        const yellowEventDate = new Date();
+        yellowEventDate.setUTCDate(yellowEventDate.getUTCDate() + 7);
+        const yellowEventDateStr = yellowEventDate.toISOString().split('T')[0];
+        const yellowEventUtc = new Date(`${yellowEventDateStr}T12:00:00Z`);
+
+        await sql`
+            INSERT INTO events (collective_id, name, event_date, event_date_utc, location_name, genre_primary, status, conflict_level, conflict_justification, created_by)
+            VALUES (
+                ${e2eCollectiveId},
+                ${'Evento Amarelo'},
+                ${yellowEventDateStr},
+                ${yellowEventUtc},
+                ${'São Paulo, SP'},
+                ${'Techno'},
+                ${'planning'},
+                ${'yellow'},
+                ${'Conflito Amarelo: Mesmo gênero Techno em janela de 5 dias'},
+                ${producerProfileId}
+            )
+        `;
+
+        const yellowEventId = await sql`
+            SELECT id FROM events WHERE name = ${'Evento Amarelo'} LIMIT 1
+        `.then((rows) => rows[0]?.id);
+
+        if (yellowEventId && otherEventId) {
+            await sql`
+                INSERT INTO event_conflicts (event_a_id, event_b_id, rule, level, justification, status)
+                VALUES (${yellowEventId}, ${otherEventId}, ${'genre'}, ${'yellow'}, ${'Conflito Amarelo: Mesmo gênero Techno em janela de 5 dias'}, ${'open'})
+            `;
+        }
+
         // ── 9. Sign in other producer user ──────────────────────────────────────────
         await saveStorageState(supabaseUrl, publishableKey, E2E_OTHER_PRODUCER_EMAIL, E2E_OTHER_PRODUCER_PASSWORD, OTHER_COLLECTIVE_STORAGE_STATE);
 
