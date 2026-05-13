@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DayCell } from './day-cell';
 import { DayDetailSheet } from './day-detail-sheet';
 import { ConflictResolutionSheet } from './conflict-resolution-sheet';
@@ -27,26 +27,28 @@ export function CalendarGridClient({ collectiveId, dates, pulseRecord, initialEv
     const [conflictsLoading, setConflictsLoading] = useState(false);
     const [conflictsError, setConflictsError] = useState<string | null>(null);
 
-    const fetchConflicts = useCallback(async (eventId: string) => {
-        setConflictsLoading(true);
-        setConflictsError(null);
-        try {
-            const data = await getConflictingEventsAction(eventId);
-            setConflicts(data);
-        } catch {
-            setConflictsError('Erro ao carregar detalhes do conflito');
-        } finally {
-            setConflictsLoading(false);
-        }
-    }, []);
-
     useEffect(() => {
+        let ignore = false;
+
         if (selectedConflictEventId) {
-            fetchConflicts(selectedConflictEventId);
+            setConflictsLoading(true);
+            setConflictsError(null);
+            getConflictingEventsAction(selectedConflictEventId)
+                .then((data) => {
+                    if (!ignore) setConflicts(data);
+                })
+                .catch(() => {
+                    if (!ignore) setConflictsError('Erro ao carregar detalhes do conflito');
+                })
+                .finally(() => {
+                    if (!ignore) setConflictsLoading(false);
+                });
         } else {
             setConflicts([]);
         }
-    }, [selectedConflictEventId, fetchConflicts]);
+
+        return () => { ignore = true; };
+    }, [selectedConflictEventId]);
 
     useEffect(() => {
         setEvents(initialEvents);

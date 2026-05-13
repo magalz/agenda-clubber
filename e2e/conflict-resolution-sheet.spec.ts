@@ -17,10 +17,10 @@ test.describe('Story 4.1 — Conflict Resolution Sheet', () => {
 
         test('ATDD-4.1-06: RED conflict badge click opens conflict resolution sheet with WhatsApp button', async ({ page }) => {
             await page.goto('/dashboard/collective');
-            await page.waitForTimeout(2000);
 
             // Find a day cell with a RED conflict event
             const cells = page.locator('[data-testid="day-cell"]');
+            await expect(cells.first()).toBeVisible({ timeout: 10000 });
             const count = await cells.count();
 
             let found = false;
@@ -53,9 +53,9 @@ test.describe('Story 4.1 — Conflict Resolution Sheet', () => {
 
         test('ATDD-4.1-12: YELLOW conflict with masked event shows "Em Planejamento"', async ({ page }) => {
             await page.goto('/dashboard/collective');
-            await page.waitForTimeout(2000);
 
             const cells = page.locator('[data-testid="day-cell"]');
+            await expect(cells.first()).toBeVisible({ timeout: 10000 });
             const count = await cells.count();
 
             let found = false;
@@ -87,9 +87,9 @@ test.describe('Story 4.1 — Conflict Resolution Sheet', () => {
 
         test('ATDD-4.1-18: GREEN event badge is not clickable', async ({ page }) => {
             await page.goto('/dashboard/collective');
-            await page.waitForTimeout(2000);
 
             const cells = page.locator('[data-testid="day-cell"]');
+            await expect(cells.first()).toBeVisible({ timeout: 10000 });
             const count = await cells.count();
 
             let foundGreen = false;

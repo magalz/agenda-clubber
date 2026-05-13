@@ -19,6 +19,7 @@ vi.mock('drizzle-orm', () => ({
     eq: vi.fn(),
     ne: vi.fn(),
     or: vi.fn(),
+    inArray: vi.fn(),
 }));
 
 vi.mock('@/db/schema/events', () => ({

@@ -4,7 +4,7 @@ import { db } from '@/db';
 import { events } from '@/db/schema/events';
 import { eventConflicts } from '@/db/schema/event-conflicts';
 import { collectives } from '@/db/schema/collectives';
-import { and, gte, lte, eq, or } from 'drizzle-orm';
+import { and, gte, lte, eq, or, inArray } from 'drizzle-orm';
 import type { HealthPulseMap, ConflictLevel, ConflictingEventInfo } from './types';
 import { formatDateKey } from './date-range';
 import { aggregateHighestLevel } from './health-pulse';
@@ -70,7 +70,7 @@ export async function getConflictingEvents(eventId: string): Promise<Conflicting
     const otherEvents = await db
         .select()
         .from(events)
-        .where(and(...otherIds.map((id) => eq(events.id, id))));
+        .where(inArray(events.id, otherIds));
 
     const collectiveIds = [...new Set(otherEvents.map((e) => e.collectiveId))];
 
@@ -83,7 +83,7 @@ export async function getConflictingEvents(eventId: string): Promise<Conflicting
             socialLinks: collectives.socialLinks,
         })
         .from(collectives)
-        .where(and(...collectiveIds.map((id) => eq(collectives.id, id))));
+        .where(inArray(collectives.id, collectiveIds));
 
     const collectiveMap = new Map(collectiveRows.map((c) => [c.id, c]));
 

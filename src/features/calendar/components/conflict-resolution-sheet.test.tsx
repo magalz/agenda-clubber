@@ -170,7 +170,7 @@ describe('ConflictResolutionSheet', () => {
 
         const igLink = screen.getByRole('link', { name: /Ver Instagram/i });
         expect(igLink).toBeDefined();
-        expect(igLink.getAttribute('href')).toBe('https://instagram.com/@coletivo_x');
+        expect(igLink.getAttribute('href')).toBe('https://instagram.com/coletivo_x');
     });
 
     it('ATDD-4.1-15: hides WhatsApp button when phone is null', () => {

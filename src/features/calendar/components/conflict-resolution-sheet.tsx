@@ -22,14 +22,14 @@ type Props = {
 
 function formatWaLink(phone: string | null): string | null {
     if (!phone) return null;
-    const cleaned = phone.replace(/[+\s\-()]/g, '');
+    const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length === 0) return null;
     return `https://wa.me/${cleaned}`;
 }
 
 function formatIgLink(instagramUrl: string | null): string | null {
     if (!instagramUrl || instagramUrl.trim().length === 0) return null;
-    const trimmed = instagramUrl.trim();
+    const trimmed = instagramUrl.trim().replace(/^@/, '');
     if (trimmed.startsWith('http')) return trimmed;
     return `https://instagram.com/${trimmed}`;
 }
