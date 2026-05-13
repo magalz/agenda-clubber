@@ -171,13 +171,13 @@ async function globalSetup() {
         if (existingOtherCollective.length > 0) {
             otherCollectiveId = existingOtherCollective[0].id;
             await sql`
-                UPDATE collectives SET status = 'active', owner_id = ${otherProducerProfileId}
+                UPDATE collectives SET status = 'active', owner_id = ${otherProducerProfileId}, whatsapp_phone = ${'+5511987654321'}
                 WHERE id = ${otherCollectiveId}
             `;
         } else {
             const rows = await sql<{ id: string }[]>`
-                INSERT INTO collectives (name, location, genre_primary, owner_id, status)
-                VALUES (${otherCollectiveName}, ${'Recife, PE'}, ${'Techno'}, ${otherProducerProfileId}, ${'active'})
+                INSERT INTO collectives (name, location, genre_primary, owner_id, status, whatsapp_phone)
+                VALUES (${otherCollectiveName}, ${'Recife, PE'}, ${'Techno'}, ${otherProducerProfileId}, ${'active'}, ${'+5511987654321'})
                 RETURNING id
             `;
             otherCollectiveId = rows[0].id;
@@ -310,6 +310,22 @@ async function globalSetup() {
                 ${producerProfileId}
             )
         `;
+
+        // ── 8b. Seed event_conflicts for Story 4.1 (Conflict Resolution Sheet) ────
+        const otherEventId = await sql`
+            SELECT id FROM events WHERE collective_id = ${otherCollectiveId} LIMIT 1
+        `.then((rows) => rows[0]?.id);
+
+        const delayEventId = await sql`
+            SELECT id FROM events WHERE name = ${'Evento Delay Ético'} LIMIT 1
+        `.then((rows) => rows[0]?.id);
+
+        if (otherEventId && delayEventId) {
+            await sql`
+                INSERT INTO event_conflicts (event_a_id, event_b_id, rule, level, justification, status)
+                VALUES (${delayEventId}, ${otherEventId}, ${'genre'}, ${'red'}, ${'Conflito Vermelho: Mesmo gênero Techno em janela de 48h'}, ${'open'})
+            `;
+        }
 
         // ── 9. Sign in other producer user ──────────────────────────────────────────
         await saveStorageState(supabaseUrl, publishableKey, E2E_OTHER_PRODUCER_EMAIL, E2E_OTHER_PRODUCER_PASSWORD, OTHER_COLLECTIVE_STORAGE_STATE);
