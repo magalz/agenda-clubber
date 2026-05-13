@@ -83,58 +83,61 @@ jobs:
               for (const t of tables) console.log(' -', t.table_name);
               if (tables.length === 0) { console.error('ERROR: no public tables created'); process.exit(1); }
 
-              // Find migrations whose effects are missing (journal drift fix)
-              const applied = await sql\`
-                SELECT migration_name FROM __drizzle_migrations ORDER BY id
-              \`.catch(() => []);
+              // Check known migration artifacts and add any missing (handles journal drift)
+              const repairs = [];
 
-              const knownColumns = [
-                { table: 'collectives', column: 'whatsapp_phone', sql: \"ALTER TABLE collectives ADD COLUMN IF NOT EXISTS whatsapp_phone TEXT\" },
-              ];
-              const knownTables = [
-                { table: 'event_conflicts' },
-              ];
-
-              let fixed = 0;
-              for (const { table } of knownTables) {
-                const exists = await sql\`
-                  SELECT table_name FROM information_schema.tables
-                  WHERE table_schema = 'public' AND table_name = \${table}
-                \`;
-                if (exists.length === 0 && applied.length > 0) {
-                  console.warn('WARN: missing table', table, '— reapplying migration...');
-                  // Check which migration creates this table and re-run it
-                  const migration = applied.find(m => m.migration_name.includes(table));
-                  if (migration) {
-                    // Drop the stale journal entry so drizzle re-applies it
-                    await sql\`DELETE FROM __drizzle_migrations WHERE migration_name = \${migration.migration_name}\`;
-                    console.log('  Dropped stale journal entry:', migration.migration_name);
-                    fixed++;
-                  }
-                }
+              // 012: collectives.whatsapp_phone
+              const hasWhatsapp = await sql\`
+                SELECT column_name FROM information_schema.columns
+                WHERE table_schema = 'public' AND table_name = 'collectives' AND column_name = 'whatsapp_phone'
+              \`;
+              if (hasWhatsapp.length === 0) {
+                repairs.push(\"ALTER TABLE collectives ADD COLUMN IF NOT EXISTS whatsapp_phone TEXT\");
               }
 
-              for (const { table, column, sql: fixSql } of knownColumns) {
-                const col = await sql\`
-                  SELECT column_name FROM information_schema.columns
-                  WHERE table_schema = 'public' AND table_name = \${table} AND column_name = \${column}
-                \`;
-                if (col.length === 0) {
-                  console.warn('WARN: missing column', table + '.' + column, '— applying fix...');
-                  await sql.unsafe(fixSql);
-                  fixed++;
-                }
+              // 013: event_conflicts table
+              const hasConflicts = await sql\`
+                SELECT table_name FROM information_schema.tables
+                WHERE table_schema = 'public' AND table_name = 'event_conflicts'
+              \`;
+              if (hasConflicts.length === 0) {
+                repairs.push(\`
+                  CREATE TABLE IF NOT EXISTS event_conflicts (
+                    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+                    event_a_id uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+                    event_b_id uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+                    rule text NOT NULL,
+                    level text NOT NULL CHECK (level IN ('yellow', 'red')),
+                    justification text NOT NULL,
+                    status text DEFAULT 'open' NOT NULL CHECK (status IN ('open', 'a_resolved', 'b_resolved', 'consensual_agreement')),
+                    resolved_by_a uuid REFERENCES profiles(id),
+                    resolved_by_b uuid REFERENCES profiles(id),
+                    resolved_at_a timestamptz,
+                    resolved_at_b timestamptz,
+                    created_at timestamptz DEFAULT now() NOT NULL,
+                    updated_at timestamptz DEFAULT now() NOT NULL
+                  )
+                \`);
               }
 
-              if (fixed > 0) {
-                console.log('Fixed', fixed, 'missing item(s) — re-running drizzle-kit migrate...');
+              if (repairs.length > 0) {
+                console.log('Repairing', repairs.length, 'missing schema artifact(s)...');
+                for (const r of repairs) await sql.unsafe(r);
+
+                // Drop stale journal entries so drizzle re-runs their migration files
+                await sql.unsafe(\`
+                  DELETE FROM __drizzle_migrations
+                  WHERE migration_name IN ('012_collectives_whatsapp_phone', '013_event_conflicts')
+                \`);
+
+                // Re-run drizzle migrate to create fresh journal entries
                 await sql.end();
-                await require('child_process').execSync('npx drizzle-kit migrate 2>&1 | cat', {
+                require('child_process').execSync('npx drizzle-kit migrate 2>&1 | cat', {
                   stdio: 'inherit',
                   env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
                 });
               } else {
-                console.log('Schema verification: PASS');
+                console.log('Schema verification: PASS (no repairs needed)');
                 await sql.end();
               }
             })();
