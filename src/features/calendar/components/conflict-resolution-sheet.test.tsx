@@ -59,7 +59,6 @@ describe('ConflictResolutionSheet', () => {
     it('ATDD-4.1-05: renders sheet title when open with conflicts loaded', () => {
         render(
             <ConflictResolutionSheet
-                eventId="ev-1"
                 isOpen={true}
                 onOpenChange={vi.fn()}
                 conflicts={[baseConflictingEvent]}
@@ -87,7 +86,6 @@ describe('ConflictResolutionSheet', () => {
 
         render(
             <ConflictResolutionSheet
-                eventId="ev-1"
                 isOpen={true}
                 onOpenChange={vi.fn()}
                 conflicts={[maskedEvent]}
@@ -111,7 +109,6 @@ describe('ConflictResolutionSheet', () => {
 
         render(
             <ConflictResolutionSheet
-                eventId="ev-1"
                 isOpen={true}
                 onOpenChange={vi.fn()}
                 conflicts={[confirmedEvent]}
@@ -127,7 +124,6 @@ describe('ConflictResolutionSheet', () => {
     it('ATDD-4.1-11: shows empty state when no conflicts', () => {
         render(
             <ConflictResolutionSheet
-                eventId="ev-1"
                 isOpen={true}
                 onOpenChange={vi.fn()}
                 conflicts={[]}
@@ -142,7 +138,6 @@ describe('ConflictResolutionSheet', () => {
     it('ATDD-4.1-13: renders WhatsApp button with correct wa.me link', () => {
         render(
             <ConflictResolutionSheet
-                eventId="ev-1"
                 isOpen={true}
                 onOpenChange={vi.fn()}
                 conflicts={[baseConflictingEvent]}
@@ -159,7 +154,6 @@ describe('ConflictResolutionSheet', () => {
     it('ATDD-4.1-14: renders Instagram button with correct link', () => {
         render(
             <ConflictResolutionSheet
-                eventId="ev-1"
                 isOpen={true}
                 onOpenChange={vi.fn()}
                 conflicts={[baseConflictingEvent]}
@@ -181,7 +175,6 @@ describe('ConflictResolutionSheet', () => {
 
         render(
             <ConflictResolutionSheet
-                eventId="ev-1"
                 isOpen={true}
                 onOpenChange={vi.fn()}
                 conflicts={[noWa]}
@@ -201,7 +194,6 @@ describe('ConflictResolutionSheet', () => {
 
         render(
             <ConflictResolutionSheet
-                eventId="ev-1"
                 isOpen={true}
                 onOpenChange={vi.fn()}
                 conflicts={[noIg]}
@@ -216,7 +208,6 @@ describe('ConflictResolutionSheet', () => {
     it('ATDD-4.1-17: buttons open in new tab with noopener noreferrer', () => {
         render(
             <ConflictResolutionSheet
-                eventId="ev-1"
                 isOpen={true}
                 onOpenChange={vi.fn()}
                 conflicts={[baseConflictingEvent]}
@@ -237,7 +228,6 @@ describe('ConflictResolutionSheet', () => {
     it('ATDD-4.1-19: WhatsApp button has descriptive aria-label', () => {
         render(
             <ConflictResolutionSheet
-                eventId="ev-1"
                 isOpen={true}
                 onOpenChange={vi.fn()}
                 conflicts={[baseConflictingEvent]}
@@ -253,7 +243,6 @@ describe('ConflictResolutionSheet', () => {
     it('ATDD-4.1-20: Instagram button has descriptive aria-label', () => {
         render(
             <ConflictResolutionSheet
-                eventId="ev-1"
                 isOpen={true}
                 onOpenChange={vi.fn()}
                 conflicts={[baseConflictingEvent]}
@@ -269,7 +258,6 @@ describe('ConflictResolutionSheet', () => {
     it('shows loading skeleton while fetching', () => {
         render(
             <ConflictResolutionSheet
-                eventId="ev-1"
                 isOpen={true}
                 onOpenChange={vi.fn()}
                 conflicts={[]}
